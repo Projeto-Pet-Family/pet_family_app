@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
+import 'package:pet_family_app/widgets/app_text_field.dart';
 
 class WhoManyPets extends StatefulWidget {
   const WhoManyPets({super.key});
@@ -54,24 +55,10 @@ class _WhoManyPetsState extends State<WhoManyPets> {
                 ),
               ),
               const SizedBox(height: 30),
-              SizedBox(
-                width: 150,
-                child: TextField(
-                  controller: _quantityPetsController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(50),
-                      borderSide: const BorderSide(color: Color(0XFFCCCCCC)),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
+              AppTextField(
+                controller: _quantityPetsController,
+                keyboardType: TextInputType.number,
+                hintText: 'Digites quantos pets quer adicionar',
               ),
               const SizedBox(height: 40),
               if (_petQuantity != null && _petQuantity! > 0) ...[

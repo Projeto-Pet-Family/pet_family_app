@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
+import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_drop_down.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 
@@ -100,6 +102,14 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
                   controller: observationAnimalController,
                   labelText: 'Observações (opcional)',
                   hintText: 'Digite mais sobre seu pet',
+                ),
+                SizedBox(height: 30),
+                AppButton(
+                  onPressed: () {
+                    context.go('/insert-your-datas');
+                  },
+                  label: 'Próximo',
+                  fontSize: 20,
                 ),
               ],
             ),
