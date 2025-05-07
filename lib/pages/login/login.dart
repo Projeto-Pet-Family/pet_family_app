@@ -54,6 +54,8 @@ class _LoginState extends State<Login> {
                   controller: passwordController,
                   labelText: 'Senha',
                   hintText: 'Digite sua senha',
+                  obscureText: true, //ocultando o texto digitado
+                  isPasswordField: true, //ativa a visibilidade de senha
                 ),
                 SizedBox(height: 10),
                 Align(
