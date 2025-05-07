@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class AppTextField extends StatelessWidget {
+class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
     required this.controller,
@@ -9,6 +9,8 @@ class AppTextField extends StatelessWidget {
     this.hintText,
     this.keyboardType = TextInputType.text,
     this.inputFormatters = const [],
+    this.obscureText = false, // oculta o texto digitado
+    this.isPasswordField = false, //visibilidade de senha
   });
 
   final TextEditingController controller;
@@ -16,17 +18,38 @@ class AppTextField extends StatelessWidget {
   final String? hintText;
   final TextInputType keyboardType;
   final List<TextInputFormatter> inputFormatters;
+  final bool obscureText; //oculta o texto digitado
+  final bool isPasswordField; //visibilidade de senha
+
+  @override
+  State<AppTextField> createState() => _AppTextFieldState();
+}
+
+class _AppTextFieldState extends State<AppTextField> {
+ late bool _obscureText; 
+
+ @override
+ void initState() {
+  super.initState();
+  _obscureText = widget.obscureText; // Inicializa o estado do texto oculto
+ }
+   //Função que alterna a visibilidade da senha
+  void _toggleVisibility() {
+    setState(() {
+      _obscureText = !_obscureText;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (labelText != null)
+        if (widget.labelText != null)
           Padding(
             padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              labelText!,
+            child: Text(widget.labelText!,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w300,
@@ -34,16 +57,19 @@ class AppTextField extends StatelessWidget {
               ),
             ),
           ),
-        if (labelText != null) const SizedBox(height: 4),
+        if (widget.labelText != null) const SizedBox(height: 4),
         TextFormField(
-          controller: controller,
+          controller: widget.controller,
+          obscureText: _obscureText,
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: widget.hintText,
             hintStyle: const TextStyle(
               color: Color(0xFFCCCCCC),
               fontSize: 16,
               fontWeight: FontWeight.w200,
+              
             ),
+          
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(50),
               borderSide: const BorderSide(
@@ -69,6 +95,16 @@ class AppTextField extends StatelessWidget {
               horizontal: 16,
               vertical: 18,
             ),
+              // Adiciona botão de visibilidade se for campo de senha
+            suffixIcon: widget.isPasswordField
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility, // alterna o ícone
+                      color: Colors.grey,
+                    ),
+                    onPressed: _toggleVisibility, // alterna o estado ao clicar
+                  )
+                : null, 
           ),
           style: const TextStyle(
             color: Colors.black,
@@ -76,8 +112,8 @@ class AppTextField extends StatelessWidget {
             fontWeight: FontWeight.w400,
           ),
           cursorColor: const Color(0xFF8692DE),
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
+          keyboardType: widget.keyboardType,
+          inputFormatters: widget.inputFormatters,
         ),
       ],
     );
