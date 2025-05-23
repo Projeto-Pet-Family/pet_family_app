@@ -16,6 +16,18 @@ dependencies:
   brasil_fields: ^1.17.0
   pinput: ^5.0.1
   google_maps_flutter: ^2.2.3
+  flutter_native_splash: ^2.4.6
+  flutter_rating_bar: ^4.0.1
+  intl: ^0.20.2
+
+flutter_native_splash:
+  color: "#42a5f5"
+  image: assets/logos/logo.png
+  android: true
+  ios: true
+  web: true
+  android_gravity: center
+  ios_content_mode: center
 
 dev_dependencies:
   flutter_test:
@@ -27,6 +39,8 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/images/
+    - assets/logos/
   
   fonts:
     - family: Lexend

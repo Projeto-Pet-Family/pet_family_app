@@ -56,7 +56,9 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                 ),
                 const SizedBox(height: 30),
                 AppButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.go('/confirm-your-datas');
+                  },
                   label: 'Próximo',
                   fontSize: 20,
                 ),

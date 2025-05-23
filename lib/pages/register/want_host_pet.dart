@@ -22,7 +22,7 @@ class WantHostPet extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  context.go('/login');
+                  context.go('/who-many-pets');
                 },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

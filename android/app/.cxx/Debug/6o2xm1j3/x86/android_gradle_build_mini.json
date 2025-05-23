@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/home/johndmark/development/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/johndmark/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/johndmark/Documentos/Faculdade/pet_family_app/android/app/.cxx/Debug/6o2xm1j3/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/johndmark/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/johndmark/Documentos/Faculdade/pet_family_app/android/app/.cxx/Debug/6o2xm1j3/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

@@ -58,7 +58,7 @@ class _WhoManyPetsState extends State<WhoManyPets> {
               AppTextField(
                 controller: _quantityPetsController,
                 keyboardType: TextInputType.number,
-                hintText: 'Digites quantos pets quer adicionar',
+                hintText: 'Digite quantos pets quer adicionar',
               ),
               const SizedBox(height: 40),
               if (_petQuantity != null && _petQuantity! > 0) ...[

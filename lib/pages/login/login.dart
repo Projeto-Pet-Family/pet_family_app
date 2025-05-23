@@ -90,7 +90,9 @@ class _LoginState extends State<Login> {
                   child: AppButton(
                     label: 'Entrar',
                     fontSize: 30,
-                    onPressed: () {},
+                    onPressed: () {
+                      context.go('/core-navigation');
+                    },
                   ),
                 ),
                 GestureDetector(

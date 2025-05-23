@@ -1,0 +1,1 @@
+/home/johndmark/Documentos/Faculdade/pet_family_app/build/app/intermediates/cxx/Debug/6o2xm1j3/obj/arm64-v8a

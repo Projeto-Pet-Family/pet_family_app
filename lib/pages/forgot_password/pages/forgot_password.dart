@@ -72,7 +72,7 @@ class ForgotPassword extends StatelessWidget {
                         isScrollControlled: true,
                         builder: (BuildContext context) => ModalSend(
                           iconTitle: Icon(Icons.phone_android_outlined),
-                          textTitle: 'VIremos te enviar um token pelo seu SMS digite abaixo seu número de telefone:',
+                          textTitle: 'Iremos te enviar um token pelo seu SMS digite abaixo seu número de telefone:',
                           label: 'Telefone',
                           hint: 'Digite seu telefone',
                         ),
