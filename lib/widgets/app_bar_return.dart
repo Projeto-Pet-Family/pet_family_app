@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AppBarReturn extends StatelessWidget {
-  const AppBarReturn({super.key});
+  const AppBarReturn({
+    super.key,
+    required this.route,
+  });
+
+  final String route;
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +18,7 @@ class AppBarReturn extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () {
-              Navigator.pop(context);
+              context.go(route);
             },
             child: Icon(
               Icons.arrow_back,

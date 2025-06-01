@@ -22,7 +22,7 @@ class _ChoosePetState extends State<ChoosePet> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(),
+            AppBarReturn(route: '/core-navigation',),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

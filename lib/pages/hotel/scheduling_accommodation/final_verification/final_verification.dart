@@ -21,7 +21,7 @@ class _FinalVerificationState extends State<FinalVerification> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const AppBarReturn(),
+            AppBarReturn(route: '/core-navigation',),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

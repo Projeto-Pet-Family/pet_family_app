@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_family_app/pages/edit_booking/modal/remove_pet/remove_pet.dart';
 
 class PetsBookingTemplate extends StatefulWidget {
   final String name;
@@ -51,7 +52,15 @@ class _PetsBookingTemplateState extends State<PetsBookingTemplate> {
                   ),
                 ],
               ),
-              Icon(Icons.add),
+              GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (BuildContext context) => RemovePet(),
+                  );
+                },
+                child: Icon(Icons.remove),
+              ),
             ],
           ),
         ),

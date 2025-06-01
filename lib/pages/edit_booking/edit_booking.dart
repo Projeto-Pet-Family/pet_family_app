@@ -21,7 +21,7 @@ class _EditBookingState extends State<EditBooking> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(),
+            AppBarReturn(route: '/core-navigation',),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

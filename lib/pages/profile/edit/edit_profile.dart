@@ -26,7 +26,7 @@ class _EditProfileState extends State<EditProfile> {
         child: Center(
           child: Column(
             children: [
-              AppBarReturn(),
+              AppBarReturn(route: '/core-navigation',),
               SizedBox(height: 50),
               Text(
                 'editando',
