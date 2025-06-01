@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_family_app/pages/profile/edit/edit_profile/edited_profile_modal.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
@@ -26,7 +27,9 @@ class _EditProfileState extends State<EditProfile> {
         child: Center(
           child: Column(
             children: [
-              AppBarReturn(route: '/core-navigation',),
+              AppBarReturn(
+                route: '/core-navigation',
+              ),
               SizedBox(height: 50),
               Text(
                 'editando',
@@ -71,7 +74,12 @@ class _EditProfileState extends State<EditProfile> {
               ),
               SizedBox(height: 50),
               AppButton(
-                onPressed: () {},
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (BuildContext context) => EditedProfileModal(),
+                  );
+                },
                 label: 'Alterar seus dados',
                 fontSize: 25,
               ),

@@ -74,6 +74,15 @@ class _ProfileState extends State<Profile> {
                     context.go('/edit-profile');
                   },
                 ),
+                SizedBox(height: 8),
+                ButtonOptionProfileTemplate(
+                  icon: Icons.pets,
+                  title: 'Seu(s) pet(s)',
+                  description: 'Veja todos os seus pets',
+                  onTap: () {
+                    context.go('/edit-pet');
+                  },
+                ),
               ],
             ),
           ),
