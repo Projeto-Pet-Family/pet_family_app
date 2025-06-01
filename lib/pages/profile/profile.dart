@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pet_family_app/pages/profile/option_profile_template.dart';
+import 'package:pet_family_app/pages/profile/button_option_profile_template.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -66,7 +66,7 @@ class _ProfileState extends State<Profile> {
                   ],
                 ),
                 SizedBox(height: 50),
-                OptionProfileTemplate(
+                ButtonOptionProfileTemplate(
                   icon: Icons.person,
                   title: 'Seu perfil',
                   description: 'Veja todos os detalhes do seu perfil',

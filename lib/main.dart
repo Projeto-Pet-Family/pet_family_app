@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/navigation/bottom_navigation.dart';
+import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
 
 import 'package:pet_family_app/pages/forgot_password/pages/forgot_password.dart';
 import 'package:pet_family_app/pages/hotel/hotel.dart';
@@ -117,6 +118,10 @@ final router = GoRouter(
     GoRoute(
       path: '/edit-pet',
       builder: (context, state) => EditPet(),
+    ),
+    GoRoute(
+      path: '/edit-booking',
+      builder: (context, state) => EditBooking(),
     ),
   ],
 );

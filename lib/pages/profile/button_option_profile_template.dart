@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class OptionProfileTemplate extends StatelessWidget {
-  const OptionProfileTemplate({
+class ButtonOptionProfileTemplate extends StatelessWidget {
+  const ButtonOptionProfileTemplate({
     super.key,
     required this.icon,
     required this.title,
