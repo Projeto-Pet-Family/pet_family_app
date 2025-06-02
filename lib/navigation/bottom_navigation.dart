@@ -49,11 +49,22 @@ class _CoreNavigationState extends State<CoreNavigation> {
         unselectedLabelStyle: TextStyle(color: Color(0xFF474343)),
         currentIndex: itemSelected,
         items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month), label: 'Agendamentos'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Buscar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month),
+            label: 'Agendamentos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
         ],
         onTap: changePage,
       ),

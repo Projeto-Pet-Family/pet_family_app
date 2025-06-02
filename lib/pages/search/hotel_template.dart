@@ -3,11 +3,37 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 
-class HotelTemplate extends StatelessWidget {
+class HotelTemplate extends StatefulWidget {
+  final String name;
+  final String street;
+  final int number;
+  final String neighborhood;
+  final String city;
+  final String state;
+  final String uf;
+  final String zipCode;
+  final String complement;
+  final int idHotel;
+
   const HotelTemplate({
-    super.key
+    super.key,
+    required this.name,
+    required this.street,
+    required this.number,
+    required this.neighborhood,
+    required this.city,
+    required this.state,
+    required this.uf,
+    required this.zipCode,
+    required this.complement,
+    required this.idHotel,
   });
 
+  @override
+  State<HotelTemplate> createState() => _HotelTemplateState();
+}
+
+class _HotelTemplateState extends State<HotelTemplate> {
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -32,30 +58,17 @@ class HotelTemplate extends StatelessWidget {
                       color: Color(0xFF1C1B1F),
                     ),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Hotel 1',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w300,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Aberto',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w300,
-                          color: Color(0xFF60F700),
-                        ),
-                      )
-                    ],
+                  Text(
+                    widget.name,
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Rua dos Pinguins, 24, São Caetano do Sul, São Paulo',
+                    '${widget.street}, ${widget.number}, ${widget.neighborhood}, ${widget.city}, ${widget.state}, ${widget.uf}, ${widget.zipCode}, ${widget.complement}',
                     style: TextStyle(
                       fontWeight: FontWeight.w400,
                       color: Color(0xFFCCCCCC),
@@ -94,9 +107,7 @@ class HotelTemplate extends StatelessWidget {
                           Icons.star,
                           color: Colors.white,
                         ),
-                        onRatingUpdate: (rating) {
-                          print(rating);
-                        },
+                        onRatingUpdate: (rating) {},
                       ),
                     ],
                   ),
