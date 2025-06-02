@@ -22,7 +22,7 @@ class _ChooseDataState extends State<ChooseData> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(route: '/core-navigation',),
+            AppBarReturn(route: '/choose-pet',),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

@@ -37,7 +37,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Pagamento: PIX\nValor total: R\$ 185,00',
+              'Pagamento: PIX\nValor total: R\$ 80,00',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 20),

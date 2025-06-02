@@ -16,11 +16,11 @@ class DatasInformations extends StatelessWidget {
         SizedBox(height: 10),
         ItemVerification(
           title: 'Início',
-          informations: '25/07/2025',
+          informations: '03/06/2025',
         ),
         ItemVerification(
           title: 'Fim',
-          informations: '27/07/2025',
+          informations: '04/06/2025',
         ),
       ],
     );

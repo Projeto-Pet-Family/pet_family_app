@@ -31,7 +31,7 @@ class Hotel extends StatelessWidget {
                             size: 80,
                           ),
                           Text(
-                            'Hotel 1',
+                            'Pet Mania Hotel',
                             style: TextStyle(
                               fontSize: 50,
                               fontWeight: FontWeight.w200,

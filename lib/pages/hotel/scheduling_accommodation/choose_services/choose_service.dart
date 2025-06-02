@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/models/service_model.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_services/choose_service_template.dart';
+import 'package:pet_family_app/repository/service_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 
@@ -12,19 +14,66 @@ class ChooseService extends StatefulWidget {
 }
 
 class _ChooseServiceState extends State<ChooseService> {
-  final Map<String, double> services = {
-    'Passeio': 20.00,
-    'Banho & Tosa': 50.00,
-    'Spa': 150.00,
-    'Massagem': 200.00,
-    'Fisioterapia': 320.00,
-  };
+  final ServiceRepository _serviceRepository = ServiceRepository();
+  List<ServiceModel> _services = [];
+  final Set<int> _selectedServices = {};
+  bool _isLoading = true;
+  String _errorMessage = '';
 
-  final Set<String> selectedServices = {};
+  @override
+  void initState() {
+    super.initState();
+    _carregarServicos();
+  }
+
+  Future<void> _carregarServicos() async {
+    try {
+      final servicos = await _serviceRepository.lerServico();
+
+      // Filtra serviços com preço válido
+      final servicosValidos = servicos.where((s) => s.preco > 0).toList();
+
+      setState(() {
+        _services = servicosValidos;
+        _isLoading = false;
+        _errorMessage =
+            servicosValidos.isEmpty ? 'Nenhum serviço disponível' : '';
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erro ao carregar serviços. Tente novamente.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível carregar os serviços')),
+      );
+      print('Erro detalhado: $e');
+    }
+  }
 
   double get totalValue {
-    return selectedServices.fold(
-        0.0, (sum, service) => sum + (services[service] ?? 0));
+    return _selectedServices.fold(0.0, (sum, id) {
+      final service = _services.firstWhere(
+        (s) => s.idServico == id,
+        orElse: () => ServiceModel(
+          idServico: 0,
+          idHospedagem: 0,
+          descricao: '',
+          preco: 0,
+        ),
+      );
+      return sum + service.preco;
+    });
+  }
+
+  void _toggleServiceSelection(int serviceId) {
+    setState(() {
+      if (_selectedServices.contains(serviceId)) {
+        _selectedServices.remove(serviceId);
+      } else {
+        _selectedServices.add(serviceId);
+      }
+    });
   }
 
   @override
@@ -33,7 +82,7 @@ class _ChooseServiceState extends State<ChooseService> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(route: '/core-navigation',),
+            AppBarReturn(route: '/choose-data'),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -54,6 +103,10 @@ class _ChooseServiceState extends State<ChooseService> {
                   const SizedBox(height: 15),
                   Container(
                     padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -75,35 +128,54 @@ class _ChooseServiceState extends State<ChooseService> {
                     ),
                   ),
                   const SizedBox(height: 15),
-                  Column(
-                    children: services.keys.map((serviceName) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: ChooseServiceTemplate(
-                          name:
-                              '$serviceName - R\$${services[serviceName]!.toStringAsFixed(2)}',
-                          isSelected: selectedServices.contains(serviceName),
-                          onTap: () {
-                            setState(() {
-                              if (selectedServices.contains(serviceName)) {
-                                selectedServices.remove(serviceName);
-                              } else {
-                                selectedServices.add(serviceName);
-                              }
-                            });
-                          },
+
+                  // Exibe loading, erro ou lista de serviços
+                  if (_isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_errorMessage.isNotEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          _errorMessage,
+                          style: const TextStyle(fontSize: 18),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: _services.map((service) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 15),
+                          child: ChooseServiceTemplate(
+                            key: ValueKey(service.idServico),
+                            name:
+                                '${service.descricao} - R\$${service.preco.toStringAsFixed(2)}',
+                            isSelected:
+                                _selectedServices.contains(service.idServico),
+                            onTap: () =>
+                                _toggleServiceSelection(service.idServico),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
                   const SizedBox(height: 40),
-                  AppButton(
-                    onPressed: () {
-                      context.go('/final-verification');
-                    },
-                    label: 'Próximo',
-                    fontSize: 17,
-                  )
+                  if (_selectedServices.isNotEmpty)
+                    AppButton(
+                      onPressed: () {
+                        context.go('/final-verification', extra: {
+                          'selectedServices': _selectedServices.toList(),
+                          'services': _services
+                              .where((s) =>
+                                  _selectedServices.contains(s.idServico))
+                              .toList(),
+                          'totalValue': totalValue,
+                        });
+                      },
+                      label: 'Próximo',
+                      fontSize: 17,
+                    ),
                 ],
               ),
             ),

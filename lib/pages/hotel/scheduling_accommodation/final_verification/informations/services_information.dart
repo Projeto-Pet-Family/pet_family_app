@@ -15,14 +15,9 @@ class ServicesInformation extends StatelessWidget {
         ),
         SizedBox(height: 10),
         ItemVerification(
-          title: 'Spa',
+          title: 'Banho & tosa',
           subTitle: 'Tico Tico',
-          informations: 'R\$ 150,00',
-        ),
-        ItemVerification(
-          title: 'Passeio',
-          subTitle: 'Tico Tico, Nana',
-          informations: 'R\$ 20,00',
+          informations: 'R\$ 80,00',
         ),
       ],
     );
