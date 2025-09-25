@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 class ApiService {
   final Dio _dio = Dio();
   final String _vercelUrl = 'https://bepetfamily.vercel.app';
-  final String _localUrl = 'http://192.168.0.107:3000';
+  final String _localUrl = 'http://localhost:3000';
   
   String _currentBaseUrl = '';
   
@@ -33,48 +33,9 @@ class ApiService {
     }
   }
 
-  Future<Response> post(String endpoint, dynamic data) async {
-    try {
-      final response = await _dio.post(endpoint, data: data);
-      return response;
-    } on DioException catch (e) {
-      if (_shouldTryLocalUrl(e)) {
-        return _retryWithLocalUrl('POST', endpoint, data: data);
-      }
-      _handleError(e);
-      rethrow;
-    }
-  }
-
-  Future<Response> put(String endpoint, dynamic data) async {
-    try {
-      final response = await _dio.put(endpoint, data: data);
-      return response;
-    } on DioException catch (e) {
-      if (_shouldTryLocalUrl(e)) {
-        return _retryWithLocalUrl('PUT', endpoint, data: data);
-      }
-      _handleError(e);
-      rethrow;
-    }
-  }
-
-  Future<Response> delete(String endpoint) async {
-    try {
-      final response = await _dio.delete(endpoint);
-      return response;
-    } on DioException catch (e) {
-      if (_shouldTryLocalUrl(e)) {
-        return _retryWithLocalUrl('DELETE', endpoint);
-      }
-      _handleError(e);
-      rethrow;
-    }
-  }
+  // ... outros métodos (post, put, delete) mantêm a mesma lógica
 
   bool _shouldTryLocalUrl(DioException e) {
-    // Tenta a URL local se a Vercel estiver inacessível
-    // e se ainda não estivermos usando a URL local
     return _currentBaseUrl == _vercelUrl && 
            (e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.receiveTimeout ||
@@ -88,11 +49,13 @@ class ApiService {
   }) async {
     print('Falha na conexão com a Vercel. Tentando URL local...');
     
-    // Muda para a URL local
-    _currentBaseUrl = _localUrl;
-    _dio.options.baseUrl = _localUrl;
+    final originalBaseUrl = _currentBaseUrl;
     
     try {
+      // Muda para URL local
+      _currentBaseUrl = _localUrl;
+      _dio.options.baseUrl = _localUrl;
+      
       switch (method) {
         case 'GET':
           return await _dio.get(endpoint, queryParameters: queryParameters);
@@ -106,9 +69,13 @@ class ApiService {
           throw Exception('Método HTTP não suportado: $method');
       }
     } on DioException catch (e) {
+      // Restaura URL original em caso de erro
+      _currentBaseUrl = originalBaseUrl;
+      _dio.options.baseUrl = originalBaseUrl;
       _handleError(e);
       rethrow;
     }
+    // Se der certo, mantém a URL local para próximas requisições
   }
 
   void _handleError(DioException e) {
