@@ -9,6 +9,8 @@ class AppTextField extends StatelessWidget {
     this.hintText,
     this.keyboardType = TextInputType.text,
     this.inputFormatters = const [],
+    this.validator, // ✅ Adicione este parâmetro
+    this.obscureText = false, // ✅ Adicione também obscureText
   });
 
   final TextEditingController controller;
@@ -16,6 +18,8 @@ class AppTextField extends StatelessWidget {
   final String? hintText;
   final TextInputType keyboardType;
   final List<TextInputFormatter> inputFormatters;
+  final String? Function(String?)? validator; // ✅ Parâmetro validator
+  final bool obscureText; // ✅ Para campos de senha
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +82,8 @@ class AppTextField extends StatelessWidget {
           cursorColor: const Color(0xFF8692DE),
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          validator: validator, // ✅ Passe o validator para o TextFormField
+          obscureText: obscureText, // ✅ Para campos de senha
         ),
       ],
     );

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/navigation/bottom_navigation.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
-
 import 'package:pet_family_app/pages/forgot_password/pages/forgot_password.dart';
 import 'package:pet_family_app/pages/hotel/hotel.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_data/choose_data.dart';
@@ -24,17 +25,31 @@ import 'package:pet_family_app/pages/register/want_host_pet.dart';
 import 'package:pet_family_app/pages/register/who_many_pets.dart';
 
 void main() {
-  runApp(MaterialApp.router(
-    theme: ThemeData(
-      fontFamily: 'Lexend',
-      textTheme: TextTheme(
-        displayLarge: TextStyle(fontWeight: FontWeight.w300),
-        bodyLarge: TextStyle(fontWeight: FontWeight.normal),
-        titleMedium: TextStyle(fontWeight: FontWeight.w500),
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: MaterialApp.router(
+        theme: ThemeData(
+          fontFamily: 'Lexend',
+          textTheme: const TextTheme(
+            displayLarge: TextStyle(fontWeight: FontWeight.w300),
+            bodyLarge: TextStyle(fontWeight: FontWeight.normal),
+            titleMedium: TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ),
+        routerConfig: router,
       ),
-    ),
-    routerConfig: router,
-  ));
+    );
+  }
 }
 
 final router = GoRouter(
@@ -81,7 +96,9 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/hotel',
-      builder: (context, state) => Hotel(),
+      builder: (context, state) => Hotel(
+        hotelData: {},
+      ),
     ),
     GoRoute(
       path: '/choose-pet',

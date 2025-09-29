@@ -1,4 +1,4 @@
-import 'package:pet_family_app/api/api_service.dart';
+import 'package:pet_family_app/services/api_service.dart';
 import 'package:pet_family_app/models/service_model.dart';
 
 class ServiceRepository {

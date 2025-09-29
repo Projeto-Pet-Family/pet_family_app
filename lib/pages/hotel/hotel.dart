@@ -1,21 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:pet_family_app/pages/hotel/template/employee/employee_template.dart';
 import 'package:pet_family_app/pages/hotel/template/service_template.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/rating_stars.dart';
 
-class Hotel extends StatelessWidget {
-  const Hotel({super.key});
+class Hotel extends StatefulWidget {
+  final Map<String, dynamic> hotelData;
+
+  const Hotel({
+    super.key,
+    required this.hotelData,
+  });
+
+  @override
+  State<Hotel> createState() => _HotelState();
+}
+
+class _HotelState extends State<Hotel> {
+  List<dynamic> servicosData = [];
+  bool isLoading = true;
+  String errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchServicos();
+  }
+
+  Future<void> _fetchServicos() async {
+    try {
+      // Substitua pela URL real da sua API
+      final response = await http.get(
+        Uri.parse('https://sua-api.com/servicos/${widget.hotelData['idhospedagem']}'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          servicosData = json.decode(response.body);
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Erro ao carregar serviços: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Erro de conexão: $e';
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Extraindo os dados da API do hotel
+    final String nome = widget.hotelData['nome'] ?? 'Nome não disponível';
+    final String numero = widget.hotelData['numero']?.toString() ?? '';
+    final String complemento = widget.hotelData['complemento'] ?? '';
+    final String logradouro = widget.hotelData['logradouro'] ?? '';
+    final String bairro = widget.hotelData['bairro'] ?? '';
+    final String cidade = widget.hotelData['cidade'] ?? '';
+    final String estado = widget.hotelData['estado'] ?? '';
+
+    // Construindo o endereço completo
+    final enderecoCompleto = _buildEnderecoCompleto(
+      numero: numero,
+      complemento: complemento,
+      logradouro: logradouro,
+      bairro: bairro,
+      cidade: cidade,
+      estado: estado,
+    );
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(route: '/core-navigation',),
+            AppBarReturn(route: '/core-navigation'),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -31,7 +98,7 @@ class Hotel extends StatelessWidget {
                             size: 80,
                           ),
                           Text(
-                            'Pet Mania Hotel',
+                            nome,
                             style: TextStyle(
                               fontSize: 50,
                               fontWeight: FontWeight.w200,
@@ -69,7 +136,7 @@ class Hotel extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            'Rua dos Pinguins, 24, São Bernardo do Campo, São Paulo',
+                            enderecoCompleto,
                             style: TextStyle(
                               fontWeight: FontWeight.w100,
                               color: Colors.black,
@@ -133,22 +200,41 @@ class Hotel extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 20),
-                        ServiceTemplate(
-                          service: 'Banho & tosa',
-                          price: 'R\$ 50,00',
-                        ),
-                        ServiceTemplate(
-                          service: 'Spa',
-                          price: 'R\$ 150,00',
-                        ),
-                        ServiceTemplate(
-                          service: 'Massagem',
-                          price: 'R\$ 200,00',
-                        ),
-                        ServiceTemplate(
-                          service: 'Fisioterapia',
-                          price: 'R\$ 320,00',
-                        ),
+                        
+                        // Estado de carregamento ou erro
+                        if (isLoading)
+                          Center(
+                            child: CircularProgressIndicator(),
+                          )
+                        else if (errorMessage.isNotEmpty)
+                          Center(
+                            child: Text(
+                              errorMessage,
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                              ),
+                            ),
+                          )
+                        else if (servicosData.isNotEmpty)
+                          ...servicosData.map((servico) {
+                            final String descricao = servico['descricao'] ?? 'Serviço';
+                            final String preco = servico['preco'] ?? '0.00';
+                            
+                            return ServiceTemplate(
+                              service: descricao,
+                              price: _formatarPreco(preco),
+                            );
+                          }).toList()
+                        else
+                          Text(
+                            'Nenhum serviço disponível',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w100,
+                              color: Colors.grey,
+                              fontSize: 16,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -185,8 +271,7 @@ class Hotel extends StatelessWidget {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size.zero,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () {},
@@ -231,5 +316,36 @@ class Hotel extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Método auxiliar para construir o endereço completo
+  String _buildEnderecoCompleto({
+    required String numero,
+    required String complemento,
+    required String logradouro,
+    required String bairro,
+    required String cidade,
+    required String estado,
+  }) {
+    final enderecoParts = [
+      if (logradouro.isNotEmpty) logradouro,
+      if (numero.isNotEmpty) numero,
+      if (complemento.isNotEmpty) complemento,
+      if (bairro.isNotEmpty) bairro,
+      if (cidade.isNotEmpty) cidade,
+      if (estado.isNotEmpty) estado,
+    ];
+    
+    return enderecoParts.join(', ');
+  }
+
+  // Método para formatar o preço no padrão brasileiro
+  String _formatarPreco(String preco) {
+    try {
+      final valor = double.tryParse(preco) ?? 0.0;
+      return 'R\$${valor.toStringAsFixed(2).replaceAll('.', ',')}';
+    } catch (e) {
+      return 'R\$0,00';
+    }
   }
 }

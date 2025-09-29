@@ -2,13 +2,13 @@ import 'package:dio/dio.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String _vercelUrl = 'https://bepetfamily.vercel.app';
+  final String _renderUrl = 'https://bepetfamily.onrender.com';
   final String _localUrl = 'http://localhost:3000';
   
   String _currentBaseUrl = '';
   
   ApiService() {
-    _currentBaseUrl = _vercelUrl;
+    _currentBaseUrl = _renderUrl;
     _dio.options.baseUrl = _currentBaseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 5);
     _dio.options.receiveTimeout = const Duration(seconds: 3);
@@ -33,10 +33,50 @@ class ApiService {
     }
   }
 
-  // ... outros métodos (post, put, delete) mantêm a mesma lógica
+  // MÉTODO POST QUE ESTAVA FALTANDO
+  Future<Response> post(String endpoint, dynamic data) async {
+    try {
+      final response = await _dio.post(endpoint, data: data);
+      return response;
+    } on DioException catch (e) {
+      if (_shouldTryLocalUrl(e)) {
+        return _retryWithLocalUrl('POST', endpoint, data: data);
+      }
+      _handleError(e);
+      rethrow;
+    }
+  }
+
+  // MÉTODO PUT QUE ESTAVA FALTANDO
+  Future<Response> put(String endpoint, dynamic data) async {
+    try {
+      final response = await _dio.put(endpoint, data: data);
+      return response;
+    } on DioException catch (e) {
+      if (_shouldTryLocalUrl(e)) {
+        return _retryWithLocalUrl('PUT', endpoint, data: data);
+      }
+      _handleError(e);
+      rethrow;
+    }
+  }
+
+  // MÉTODO DELETE QUE ESTAVA FALTANDO
+  Future<Response> delete(String endpoint) async {
+    try {
+      final response = await _dio.delete(endpoint);
+      return response;
+    } on DioException catch (e) {
+      if (_shouldTryLocalUrl(e)) {
+        return _retryWithLocalUrl('DELETE', endpoint);
+      }
+      _handleError(e);
+      rethrow;
+    }
+  }
 
   bool _shouldTryLocalUrl(DioException e) {
-    return _currentBaseUrl == _vercelUrl && 
+    return _currentBaseUrl == _renderUrl && 
            (e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.receiveTimeout ||
             e.type == DioExceptionType.connectionError ||
@@ -47,7 +87,7 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     dynamic data
   }) async {
-    print('Falha na conexão com a Vercel. Tentando URL local...');
+    print('Falha na conexão com o Render. Tentando URL local...');
     
     final originalBaseUrl = _currentBaseUrl;
     
@@ -91,8 +131,8 @@ class ApiService {
 
   String get currentBaseUrl => _currentBaseUrl;
   
-  void resetToVercelUrl() {
-    _currentBaseUrl = _vercelUrl;
-    _dio.options.baseUrl = _vercelUrl;
+  void resetTorenderUrl() {
+    _currentBaseUrl = _renderUrl;
+    _dio.options.baseUrl = _renderUrl;
   }
 }
