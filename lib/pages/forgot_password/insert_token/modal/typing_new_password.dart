@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pet_family_app/pages/insert_token/modal/new_password_confirmed.dart';
+import 'package:pet_family_app/pages/forgot_password/insert_token/modal/new_password_confirmed.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 

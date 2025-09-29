@@ -10,7 +10,7 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_data/
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/choose_pet.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_services/choose_service.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/final_verification.dart';
-import 'package:pet_family_app/pages/insert_token/insert_token.dart';
+import 'package:pet_family_app/pages/forgot_password/insert_token/insert_token.dart';
 import 'package:pet_family_app/pages/login/login.dart';
 import 'package:pet_family_app/pages/payment/payment.dart';
 import 'package:pet_family_app/pages/payment/payment_process.dart';

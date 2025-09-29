@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pet_family_app/pages/insert_token/modal/typing_new_password.dart';
+import 'package:pet_family_app/pages/forgot_password/insert_token/modal/typing_new_password.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pinput/pinput.dart';
