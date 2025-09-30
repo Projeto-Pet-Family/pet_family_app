@@ -2,8 +2,77 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // ✅ Use a URL do Render
   static const String baseUrl = 'https://bepetfamily.onrender.com';
+
+  // ✅ VERIFICAR EMAIL (usando ativar-conta)
+  static Future<Map<String, dynamic>> verificarEmailNovo({
+    required String email,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/solicitar-recuperacao-senha'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      print('🔍 Verificar Email - Status: ${response.statusCode}');
+      print('🔍 Verificar Email - Body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      return {
+        'success': data['success'] ?? false,
+        'message': data['message'],
+      };
+    } catch (error) {
+      print('❌ Erro ao verificar email: $error');
+      return {
+        'success': false,
+        'message': 'Erro de conexão com o servidor',
+      };
+    }
+  }
+
+  // ✅ REDEFINIR SENHA (usando redefinir-senha)
+  static Future<Map<String, dynamic>> redefinirSenhaComEmail({
+    required String email,
+    required String novaSenha,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/redefinir-senha'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'novaSenha': novaSenha,
+        }),
+      );
+
+      print('🔍 Redefinir Senha - Status: ${response.statusCode}');
+      print('🔍 Redefinir Senha - Body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      return {
+        'success': data['success'] ?? false,
+        'message': data['message'],
+      };
+    } catch (error) {
+      print('❌ Erro ao redefinir senha: $error');
+      return {
+        'success': false,
+        'message': 'Erro de conexão com o servidor',
+      };
+    }
+  }
 
   // Login do usuário
   static Future<Map<String, dynamic>> login({
@@ -27,7 +96,7 @@ class AuthService {
       print('🔍 Response Body: ${response.body}');
 
       final data = jsonDecode(response.body);
-      
+
       if (response.statusCode == 200 && data['success'] == true) {
         return {
           'success': true,
@@ -49,13 +118,13 @@ class AuthService {
     }
   }
 
-  // Solicitar recuperação de senha
+  // Outros métodos mantidos para compatibilidade
   static Future<Map<String, dynamic>> solicitarRecuperacaoSenha({
     required String email,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/recuperar-senha'),
+        Uri.parse('$baseUrl/solicitar-recuperacao-senha'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -66,7 +135,7 @@ class AuthService {
       );
 
       final data = jsonDecode(response.body);
-      
+
       return {
         'success': data['success'] ?? false,
         'message': data['message'],
@@ -76,56 +145,6 @@ class AuthService {
         'success': false,
         'message': 'Erro de conexão com o servidor',
       };
-    }
-  }
-
-  // Redefinir senha
-  static Future<Map<String, dynamic>> redefinirSenha({
-    required String token,
-    required String novaSenha,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/redefinir-senha'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'token': token,
-          'novaSenha': novaSenha,
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-      
-      return {
-        'success': data['success'] ?? false,
-        'message': data['message'],
-      };
-    } catch (error) {
-      return {
-        'success': false,
-        'message': 'Erro de conexão com o servidor',
-      };
-    }
-  }
-
-  // Testar conexão com o servidor
-  static Future<bool> testarConexao() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/health'),
-        headers: {'Accept': 'application/json'},
-      );
-      
-      print('🧪 Teste Conexão - Status: ${response.statusCode}');
-      print('🧪 Teste Conexão - Body: ${response.body}');
-      
-      return response.statusCode == 200;
-    } catch (error) {
-      print('❌ Teste Conexão Falhou: $error');
-      return false;
     }
   }
 }

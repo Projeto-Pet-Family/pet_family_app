@@ -66,10 +66,10 @@ final router = GoRouter(
       path: '/forgot-password',
       builder: (context, state) => const ForgotPassword(),
     ),
-    GoRoute(
+    /*  GoRoute(
       path: '/insert-token',
       builder: (context, state) => const InsertToken(),
-    ),
+    ), */
     GoRoute(
       path: '/who-many-pets',
       builder: (context, state) => const WhoManyPets(),
