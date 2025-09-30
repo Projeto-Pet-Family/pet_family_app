@@ -2,23 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 
-class ModalEditPet extends StatefulWidget {
-  final Map<String, dynamic> petData;
-  final Function(Map<String, dynamic>)? onPetEdited;
-  final Function()? onPetDeleted;
+class ModalAddPet extends StatefulWidget {
+  final Function(Map<String, dynamic>)? onPetAdded;
 
-  const ModalEditPet({
-    super.key,
-    required this.petData,
-    this.onPetEdited,
-    this.onPetDeleted,
-  });
+  const ModalAddPet({super.key, this.onPetAdded});
 
   @override
-  State<ModalEditPet> createState() => _ModalEditPetState();
+  State<ModalAddPet> createState() => _ModalAddPetState();
 }
 
-class _ModalEditPetState extends State<ModalEditPet> {
+class _ModalAddPetState extends State<ModalAddPet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _especieController = TextEditingController();
@@ -28,19 +21,6 @@ class _ModalEditPetState extends State<ModalEditPet> {
 
   String _selectedSexo = 'Macho';
   String _selectedPorte = 'Pequeno';
-
-  @override
-  void initState() {
-    super.initState();
-    // Preenche os controladores com os dados atuais do pet
-    _nomeController.text = widget.petData['nome'] ?? '';
-    _especieController.text = widget.petData['especie'] ?? '';
-    _racaController.text = widget.petData['raca'] ?? '';
-    _idadeController.text = widget.petData['idade'] ?? '';
-    _pesoController.text = widget.petData['peso'] ?? '';
-    _selectedSexo = widget.petData['sexo'] ?? 'Macho';
-    _selectedPorte = widget.petData['porte'] ?? 'Pequeno';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +49,7 @@ class _ModalEditPetState extends State<ModalEditPet> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Editar Pet',
+            'Adicionar Pet',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -217,28 +197,6 @@ class _ModalEditPetState extends State<ModalEditPet> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                
-                // Botão de excluir
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: OutlinedButton(
-                    onPressed: _confirmarExclusao,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                    child: const Text(
-                      'Excluir Pet',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Botões de salvar e cancelar
                 Row(
                   children: [
                     Expanded(
@@ -262,7 +220,7 @@ class _ModalEditPetState extends State<ModalEditPet> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: AppButton(
-                        onPressed: _salvarEdicoes,
+                        onPressed: _adicionarPet,
                         label: 'Salvar',
                       ),
                     ),
@@ -277,9 +235,9 @@ class _ModalEditPetState extends State<ModalEditPet> {
     );
   }
 
-  void _salvarEdicoes() {
+  void _adicionarPet() {
     if (_formKey.currentState!.validate()) {
-      final petEditado = {
+      final novoPet = {
         'nome': _nomeController.text.trim(),
         'especie': _especieController.text.trim(),
         'raca': _racaController.text.trim(),
@@ -289,38 +247,10 @@ class _ModalEditPetState extends State<ModalEditPet> {
         'peso': _pesoController.text.trim(),
       };
 
+      // Fecha o modal e retorna os dados do pet
       Navigator.of(context).pop();
-      widget.onPetEdited?.call(petEditado);
+      widget.onPetAdded?.call(novoPet);
     }
-  }
-
-  void _confirmarExclusao() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir Pet'),
-        content: Text(
-          'Tem certeza que deseja excluir ${_nomeController.text}? Esta ação não pode ser desfeita.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Fecha o dialog
-              Navigator.of(context).pop(); // Fecha o modal
-              widget.onPetDeleted?.call();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

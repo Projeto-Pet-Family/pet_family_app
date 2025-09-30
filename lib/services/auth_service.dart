@@ -4,13 +4,12 @@ import 'package:http/http.dart' as http;
 class AuthService {
   static const String baseUrl = 'https://bepetfamily.onrender.com';
 
-  // ✅ VERIFICAR EMAIL (usando ativar-conta)
-  static Future<Map<String, dynamic>> verificarEmailNovo({
+  static Future<Map<String, dynamic>> verificarEmail({
     required String email,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/solicitar-recuperacao-senha'),
+        Uri.parse('$baseUrl/solicitar-recuperacao-senhaawsd'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

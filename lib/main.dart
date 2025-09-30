@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/providers/hotel_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/navigation/bottom_navigation.dart';
@@ -96,9 +97,13 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/hotel',
-      builder: (context, state) => Hotel(
-        hotelData: {},
-      ),
+      builder: (context, state) {
+        final hotelData = state.extra as Map<String, dynamic>;
+        return ChangeNotifierProvider(
+          create: (context) => HotelProvider(),
+          child: Hotel(hotelData: hotelData),
+        );
+      },
     ),
     GoRoute(
       path: '/choose-pet',
@@ -134,7 +139,9 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/edit-pet',
-      builder: (context, state) => EditPet(),
+      builder: (context, state) {
+        return const EditPet(); // ✅ Agora deve reconhecer
+      },
     ),
     GoRoute(
       path: '/edit-booking',

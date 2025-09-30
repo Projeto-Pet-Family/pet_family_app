@@ -11,14 +11,13 @@ class AuthProvider with ChangeNotifier {
   Map<String, dynamic>? get usuarioLogado => _usuarioLogado;
   bool get isLoggedIn => _usuarioLogado != null;
 
-  // ✅ MÉTODO VERIFICAR EMAIL (usando ativar-conta)
   Future<bool> verificarEmail(String email) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await AuthService.verificarEmailNovo(email: email);
+      final result = await AuthService.verificarEmail(email: email);
 
       _isLoading = false;
 

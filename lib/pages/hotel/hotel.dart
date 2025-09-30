@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:provider/provider.dart';
 import 'package:pet_family_app/pages/hotel/template/employee/employee_template.dart';
 import 'package:pet_family_app/pages/hotel/template/service_template.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/rating_stars.dart';
+import 'package:pet_family_app/providers/hotel_provider.dart';
 
 class Hotel extends StatefulWidget {
-  final Map<String, dynamic> hotelData;
+  final Map<String, dynamic>? hotelData;
 
   const Hotel({
     super.key,
@@ -21,312 +21,381 @@ class Hotel extends StatefulWidget {
 }
 
 class _HotelState extends State<Hotel> {
-  List<dynamic> servicosData = [];
-  bool isLoading = true;
-  String errorMessage = '';
-
   @override
-  void initState() {
-    super.initState();
-    _fetchServicos();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _initializeData();
   }
 
-  Future<void> _fetchServicos() async {
-    try {
-      // Substitua pela URL real da sua API
-      final response = await http.get(
-        Uri.parse('https://sua-api.com/servicos/${widget.hotelData['idhospedagem']}'),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          servicosData = json.decode(response.body);
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          errorMessage = 'Erro ao carregar serviços: ${response.statusCode}';
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Erro de conexão: $e';
-        isLoading = false;
-      });
+  void _initializeData() {
+    final hotelProvider = Provider.of<HotelProvider>(context, listen: false);
+    final hotelId = widget.hotelData?['idhospedagem'];
+    
+    if (hotelId != null) {
+      hotelProvider.fetchServicos(hotelId);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Extraindo os dados da API do hotel
-    final String nome = widget.hotelData['nome'] ?? 'Nome não disponível';
-    final String numero = widget.hotelData['numero']?.toString() ?? '';
-    final String complemento = widget.hotelData['complemento'] ?? '';
-    final String logradouro = widget.hotelData['logradouro'] ?? '';
-    final String bairro = widget.hotelData['bairro'] ?? '';
-    final String cidade = widget.hotelData['cidade'] ?? '';
-    final String estado = widget.hotelData['estado'] ?? '';
-
-    // Construindo o endereço completo
-    final enderecoCompleto = _buildEnderecoCompleto(
-      numero: numero,
-      complemento: complemento,
-      logradouro: logradouro,
-      bairro: bairro,
-      cidade: cidade,
-      estado: estado,
-    );
-
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            AppBarReturn(route: '/core-navigation'),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        children: [
-                          Icon(
-                            Icons.house,
-                            size: 80,
-                          ),
-                          Text(
-                            nome,
-                            style: TextStyle(
-                              fontSize: 50,
-                              fontWeight: FontWeight.w200,
-                              color: Colors.black,
-                            ),
-                          )
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            'Aberto',
-                            style: TextStyle(
-                              fontSize: 40,
-                              color: Color(0xFF60F700),
-                              fontWeight: FontWeight.w200,
-                            ),
-                          ),
-                          Text(
-                            '08:00 as 19:30',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Color(0xFF4A4A4A),
-                              fontWeight: FontWeight.w100,
-                            ),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            enderecoCompleto,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w100,
-                              color: Colors.black,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          'há 2.5km',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w100,
-                            color: Colors.black,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              '4.5',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w100,
-                                color: Colors.black,
-                                fontSize: 20,
-                              ),
-                            ),
-                            SizedBox(width: 5),
-                            RatingStars(
-                              colorStar: Colors.black,
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '2500 avaliações',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w100,
-                            color: Colors.black,
-                            fontSize: 20,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Divider(
-                            color: Color(0xFFCCCCCC),
-                            thickness: 1,
-                          ),
-                        ),
-                        Text(
-                          'Serviços',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w200,
-                            color: Colors.black,
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        
-                        // Estado de carregamento ou erro
-                        if (isLoading)
-                          Center(
-                            child: CircularProgressIndicator(),
-                          )
-                        else if (errorMessage.isNotEmpty)
-                          Center(
-                            child: Text(
-                              errorMessage,
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 16,
-                              ),
-                            ),
-                          )
-                        else if (servicosData.isNotEmpty)
-                          ...servicosData.map((servico) {
-                            final String descricao = servico['descricao'] ?? 'Serviço';
-                            final String preco = servico['preco'] ?? '0.00';
-                            
-                            return ServiceTemplate(
-                              service: descricao,
-                              price: _formatarPreco(preco),
-                            );
-                          }).toList()
-                        else
-                          Text(
-                            'Nenhum serviço disponível',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w100,
-                              color: Colors.grey,
-                              fontSize: 16,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Divider(
-                      thickness: 1,
-                      color: Color(0xFFCCCCCC),
-                    ),
-                  ),
-                  Text(
-                    '5 Funcionários',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w100,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        EmployeeTemplate(),
-                        EmployeeTemplate(),
-                        EmployeeTemplate(),
-                        EmployeeTemplate(),
-                        EmployeeTemplate(),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 40),
-                  Align(
-                    alignment: Alignment.center,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () {},
-                      child: IntrinsicWidth(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.chat,
-                              size: 20,
-                              color: Colors.black,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Enviar mensagem',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w200,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 50, 0, 40),
-                    child: AppButton(
-                      onPressed: () {
-                        context.go('/choose-pet');
-                      },
-                      label: 'Agendar aqui',
-                      fontSize: 25,
-                    ),
-                  )
-                ],
+    // Verifica se hotelData é nulo
+    if (widget.hotelData == null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/core-navigation'),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Erro ao carregar dados do hotel',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            )
-          ],
+              SizedBox(height: 8),
+              Text(
+                'Os dados do hotel não foram encontrados.',
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ChangeNotifierProvider(
+      create: (context) => HotelProvider(),
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              const AppBarReturn(route: '/core-navigation'),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Consumer<HotelProvider>(
+                  builder: (context, hotelProvider, child) {
+                    return _buildHotelContent(hotelProvider);
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildHotelContent(HotelProvider hotelProvider) {
+    final hotel = widget.hotelData!; // Agora sabemos que não é nulo
+    final enderecoCompleto = _buildEnderecoCompleto(hotel);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHotelHeader(hotel, enderecoCompleto),
+        _buildServicesSection(hotelProvider),
+        _buildDivider(),
+        _buildEmployeesSection(),
+        _buildActionButtons(),
+      ],
+    );
+  }
+
+  Widget _buildHotelHeader(Map<String, dynamic> hotel, String enderecoCompleto) {
+    final String nome = hotel['nome'] ?? 'Nome não disponível';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              children: [
+                const Icon(
+                  Icons.house,
+                  size: 80,
+                ),
+                Text(
+                  nome,
+                  style: const TextStyle(
+                    fontSize: 50,
+                    fontWeight: FontWeight.w200,
+                    color: Colors.black,
+                  ),
+                )
+              ],
+            ),
+            Column(
+              children: [
+                const Text(
+                  'Aberto',
+                  style: TextStyle(
+                    fontSize: 40,
+                    color: Color(0xFF60F700),
+                    fontWeight: FontWeight.w200,
+                  ),
+                ),
+                const Text(
+                  '08:00 as 19:30',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Color(0xFF4A4A4A),
+                    fontWeight: FontWeight.w100,
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  enderecoCompleto,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w100,
+                    color: Colors.black,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              const Text(
+                'há 2.5km',
+                style: TextStyle(
+                  fontWeight: FontWeight.w100,
+                  color: Colors.black,
+                  fontSize: 20,
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildRatingSection(),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Divider(
+            color: Color(0xFFCCCCCC),
+            thickness: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingSection() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              '4.5',
+              style: TextStyle(
+                fontWeight: FontWeight.w100,
+                color: Colors.black,
+                fontSize: 20,
+              ),
+            ),
+            SizedBox(width: 5),
+            RatingStars(
+              colorStar: Colors.black,
+            ),
+          ],
+        ),
+        Text(
+          '2500 avaliações',
+          style: TextStyle(
+            fontWeight: FontWeight.w100,
+            color: Colors.black,
+            fontSize: 20,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServicesSection(HotelProvider hotelProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Serviços',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w200,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        // Estado de carregamento ou erro
+        if (hotelProvider.isLoading)
+          const Center(
+            child: CircularProgressIndicator(),
+          )
+        else if (hotelProvider.errorMessage.isNotEmpty)
+          _buildErrorSection(hotelProvider)
+        else if (hotelProvider.servicos.isNotEmpty)
+          ...hotelProvider.servicos.map((servico) {
+            final String descricao = servico['descricao'] ?? 'Serviço';
+            final String preco = servico['preco'] ?? '0.00';
+            
+            return ServiceTemplate(
+              service: descricao,
+              price: _formatarPreco(preco),
+            );
+          }).toList()
+        else
+          const Text(
+            'Nenhum serviço disponível',
+            style: TextStyle(
+              fontWeight: FontWeight.w100,
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildErrorSection(HotelProvider hotelProvider) {
+    return Center(
+      child: Column(
+        children: [
+          Text(
+            hotelProvider.errorMessage,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: () {
+              final hotelId = widget.hotelData?['idhospedagem'];
+              if (hotelId != null) {
+                hotelProvider.fetchServicos(hotelId);
+              }
+            },
+            child: const Text('Tentar Novamente'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Divider(
+        thickness: 1,
+        color: Color(0xFFCCCCCC),
+      ),
+    );
+  }
+
+  Widget _buildEmployeesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Funcionários',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w100,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              EmployeeTemplate(),
+              EmployeeTemplate(),
+              EmployeeTemplate(),
+              EmployeeTemplate(),
+              EmployeeTemplate(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        const SizedBox(height: 40),
+        Align(
+          alignment: Alignment.center,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () {
+              // TODO: Implementar funcionalidade de mensagem
+            },
+            child: IntrinsicWidth(
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.chat,
+                    size: 20,
+                    color: Colors.black,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Enviar mensagem',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w200,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, 50, 0, 40),
+          child: AppButton(
+            onPressed: () {
+              context.go('/choose-pet');
+            },
+            label: 'Agendar aqui',
+            fontSize: 25,
+          ),
+        ),
+      ],
+    );
+  }
+
   // Método auxiliar para construir o endereço completo
-  String _buildEnderecoCompleto({
-    required String numero,
-    required String complemento,
-    required String logradouro,
-    required String bairro,
-    required String cidade,
-    required String estado,
-  }) {
+  String _buildEnderecoCompleto(Map<String, dynamic> hotel) {
+    final String numero = hotel['numero']?.toString() ?? '';
+    final String complemento = hotel['complemento'] ?? '';
+    final String logradouro = hotel['logradouro'] ?? '';
+    final String bairro = hotel['bairro'] ?? '';
+    final String cidade = hotel['cidade'] ?? '';
+    final String estado = hotel['estado'] ?? '';
+
     final enderecoParts = [
       if (logradouro.isNotEmpty) logradouro,
       if (numero.isNotEmpty) numero,
