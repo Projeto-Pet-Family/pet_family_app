@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
+import 'package:pet_family_app/providers/pet_provider.dart'; // ✅ Importe o PetProvider
 import 'package:pet_family_app/navigation/bottom_navigation.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
 import 'package:pet_family_app/pages/forgot_password/pages/forgot_password.dart';
@@ -18,6 +19,7 @@ import 'package:pet_family_app/pages/payment/payment_process.dart';
 import 'package:pet_family_app/pages/payment/payment_sucess.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_pet/edit_pet.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_profile/edit_profile.dart';
+import 'package:pet_family_app/pages/profile/profile.dart'; // ✅ Importe o Profile
 import 'package:pet_family_app/pages/register/confirm_datas.dart';
 import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
 import 'package:pet_family_app/pages/register/insert_your_address.dart';
@@ -37,6 +39,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PetProvider()), // ✅ ADICIONE ESTA LINHA
       ],
       child: MaterialApp.router(
         theme: ThemeData(
@@ -140,12 +143,17 @@ final router = GoRouter(
     GoRoute(
       path: '/edit-pet',
       builder: (context, state) {
-        return const EditPet(); // ✅ Agora deve reconhecer
+        return const EditPet();
       },
     ),
     GoRoute(
       path: '/edit-booking',
       builder: (context, state) => EditBooking(),
+    ),
+    // ✅ ADICIONE A ROTA DO PROFILE SE AINDA NÃO EXISTIR
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const Profile(),
     ),
   ],
 );

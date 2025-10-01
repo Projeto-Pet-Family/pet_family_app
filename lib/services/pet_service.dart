@@ -1,117 +1,80 @@
+// services/pet_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PetService {
   static const String baseUrl = 'https://bepetfamily.onrender.com';
 
-  // Buscar todos os pets de um usuário
-  static Future<List<dynamic>> buscarPetsPorUsuario(int usuarioId) async {
+  // ✅ Buscar pets do usuário
+  static Future<Map<String, dynamic>> getPetsByUsuario(int idUsuario) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/pet/usuario/$usuarioId'),
+        Uri.parse('$baseUrl/usuario/$idUsuario/pets'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       );
+
+      print('🔍 Buscar Pets - Status: ${response.statusCode}');
+      print('🔍 Buscar Pets - Body: ${response.body}');
+
+      final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          return data['data'];
-        } else {
-          throw Exception(data['message']);
-        }
-      } else {
-        throw Exception('Erro ao carregar pets: ${response.statusCode}');
-      }
-    } catch (error) {
-      throw Exception('Erro de conexão: $error');
-    }
-  }
-
-  // Adicionar novo pet
-  static Future<Map<String, dynamic>> adicionarPet(Map<String, dynamic> petData) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/pet'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(petData),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 201 && data['success'] == true) {
         return {
           'success': true,
-          'message': data['message'],
-          'pet': data['data'],
+          'pets': data['pets'] ?? [],
+          'message': data['message'] ?? 'Pets carregados com sucesso',
         };
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Erro ao adicionar pet',
+          'pets': [],
+          'message': data['message'] ?? 'Erro ao carregar pets',
         };
       }
     } catch (error) {
+      print('❌ Erro ao buscar pets: $error');
       return {
         'success': false,
-        'message': 'Erro de conexão: $error',
+        'pets': [],
+        'message': 'Erro de conexão com o servidor',
       };
     }
   }
 
-  // Atualizar pet
-  static Future<Map<String, dynamic>> atualizarPet(int petId, Map<String, dynamic> petData) async {
+  // ✅ Buscar pet por ID
+  static Future<Map<String, dynamic>> getPetById(int idPet) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/pet/$petId'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(petData),
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/pets/$idPet'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       );
 
-      final data = json.decode(response.body);
+      final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && data['success'] == true) {
+      if (response.statusCode == 200) {
         return {
           'success': true,
-          'message': data['message'],
-          'pet': data['data'],
+          'pet': data['pet'],
+          'message': data['message'] ?? 'Pet carregado com sucesso',
         };
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Erro ao atualizar pet',
+          'pet': null,
+          'message': data['message'] ?? 'Erro ao carregar pet',
         };
       }
     } catch (error) {
       return {
         'success': false,
-        'message': 'Erro de conexão: $error',
-      };
-    }
-  }
-
-  // Remover pet
-  static Future<Map<String, dynamic>> removerPet(int petId) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/pet/$petId'),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        return {
-          'success': true,
-          'message': data['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Erro ao remover pet',
-        };
-      }
-    } catch (error) {
-      return {
-        'success': false,
-        'message': 'Erro de conexão: $error',
+        'pet': null,
+        'message': 'Erro de conexão com o servidor',
       };
     }
   }

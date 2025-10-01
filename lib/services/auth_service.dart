@@ -9,7 +9,7 @@ class AuthService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/solicitar-recuperacao-senhaawsd'),
+        Uri.parse('$baseUrl/solicitar-recuperacao-senha'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

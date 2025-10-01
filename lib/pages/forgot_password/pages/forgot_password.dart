@@ -4,6 +4,7 @@ import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
+import 'package:go_router/go_router.dart';
 
 class ForgotPassword extends StatefulWidget {
   const ForgotPassword({super.key});
@@ -280,30 +281,18 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                   ? Center(child: CircularProgressIndicator())
                                   : AppButton(
                                       onPressed: () async {
-                                        if (_formSenhaKey.currentState!
-                                            .validate()) {
+                                        if (_formSenhaKey.currentState!.validate()) {
                                           final success = await authProvider
                                               .redefinirSenhaComEmail(
-                                            _emailUsuario!,
-                                            _novaSenhaController.text,
-                                          );
+                                                _emailUsuario!,
+                                                _novaSenhaController.text,
+                                              );
 
                                           if (success) {
-                                            _mostrarSucesso(
-                                                'Senha redefinida com sucesso!');
-
-                                            // Volta para o login após 3 segundos
-                                            Future.delayed(Duration(seconds: 3),
-                                                () {
-                                              Navigator.pushNamedAndRemoveUntil(
-                                                  context,
-                                                  '/login', // ✅ Altere para sua rota de login
-                                                  (route) => false);
-                                            });
+                                            GoRouter.of(context).go('/');
                                           } else {
                                             _mostrarErro(
-                                                authProvider.errorMessage ??
-                                                    'Erro ao redefinir senha');
+                                                authProvider.errorMessage ?? 'Erro ao redefinir senha');
                                           }
                                         }
                                       },
