@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pet_family_app/models/pet_model.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/pet_template.dart';
 import 'package:pet_family_app/repository/pet_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';

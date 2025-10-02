@@ -1,5 +1,5 @@
 import 'package:pet_family_app/services/api_service.dart';
-import 'package:pet_family_app/models/pet_model.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
 
 class PetRepository {
   final ApiService _api = ApiService();

@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:pet_family_app/providers/hotel_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
-import 'package:pet_family_app/providers/pet_provider.dart'; // ✅ Importe o PetProvider
+import 'package:pet_family_app/providers/pet/pet_provider.dart';
+import 'package:pet_family_app/services/pet/especie_service.dart';
+import 'package:pet_family_app/services/pet/raca_service.dart';
+import 'package:pet_family_app/services/pet/porte_service.dart';
+import 'package:pet_family_app/providers/pet/especie_provider.dart';
+import 'package:pet_family_app/providers/pet/raca_provider.dart';
+import 'package:pet_family_app/providers/pet/porte_provider.dart';
 import 'package:pet_family_app/navigation/bottom_navigation.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
 import 'package:pet_family_app/pages/forgot_password/pages/forgot_password.dart';
@@ -19,7 +26,7 @@ import 'package:pet_family_app/pages/payment/payment_process.dart';
 import 'package:pet_family_app/pages/payment/payment_sucess.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_pet/edit_pet.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_profile/edit_profile.dart';
-import 'package:pet_family_app/pages/profile/profile.dart'; // ✅ Importe o Profile
+import 'package:pet_family_app/pages/profile/profile.dart';
 import 'package:pet_family_app/pages/register/confirm_datas.dart';
 import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
 import 'package:pet_family_app/pages/register/insert_your_address.dart';
@@ -39,7 +46,24 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PetProvider()), // ✅ ADICIONE ESTA LINHA
+        ChangeNotifierProvider(create: (_) => PetProvider()),
+        
+        // ✅ ADICIONE ESTES NOVOS PROVIDERS
+        ChangeNotifierProvider(
+          create: (_) => EspecieProvider(
+            especieService: EspecieService(client: http.Client()),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => RacaProvider(
+            racaService: RacaService(client: http.Client()),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => PorteProvider(
+            porteService: PorteService(client: http.Client()),
+          ),
+        ),
       ],
       child: MaterialApp.router(
         theme: ThemeData(
@@ -70,10 +94,6 @@ final router = GoRouter(
       path: '/forgot-password',
       builder: (context, state) => const ForgotPassword(),
     ),
-    /*  GoRoute(
-      path: '/insert-token',
-      builder: (context, state) => const InsertToken(),
-    ), */
     GoRoute(
       path: '/who-many-pets',
       builder: (context, state) => const WhoManyPets(),
@@ -150,7 +170,6 @@ final router = GoRouter(
       path: '/edit-booking',
       builder: (context, state) => EditBooking(),
     ),
-    // ✅ ADICIONE A ROTA DO PROFILE SE AINDA NÃO EXISTIR
     GoRoute(
       path: '/profile',
       builder: (context, state) => const Profile(),

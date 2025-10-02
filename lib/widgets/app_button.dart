@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppButton extends StatelessWidget {
   const AppButton({
     super.key,
-    required this.onPressed,
+    this.onPressed, // Mude para nullable
     required this.label,
     this.buttonColor,
     this.textButtonColor,
@@ -14,7 +14,7 @@ class AppButton extends StatelessWidget {
     this.minWidth
   });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // Agora pode ser nulo
   final String label;
   final Color? buttonColor;
   final Color? textButtonColor;
@@ -34,7 +34,9 @@ class AppButton extends StatelessWidget {
       width: screenWidth * widthFactor,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: buttonColor ?? defaultColor,
+          backgroundColor: onPressed == null 
+              ? Colors.grey // Cor quando desabilitado
+              : buttonColor ?? defaultColor,
           foregroundColor: textButtonColor ?? Colors.white,
           padding: padding ?? const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(
