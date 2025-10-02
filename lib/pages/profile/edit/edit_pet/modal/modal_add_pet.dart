@@ -24,151 +24,86 @@ class _ModalAddPetState extends State<ModalAddPet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nomeController = TextEditingController();
 
-  // Controllers para os dropdowns
   Especie? _selectedEspecie;
   Raca? _selectedRaca;
   Porte? _selectedPorte;
   String _selectedSexo = 'M';
 
-  // Future para controlar o carregamento dos dados
-  late Future<List<dynamic>> _dadosFuture;
-  bool _isMounted = true;
+  bool _isLoading = true;
+  String? _errorMessage;
+  bool _dadosCarregados = false;
 
   @override
   void initState() {
     super.initState();
-    _dadosFuture = _carregarDados();
+    print('ModalAddPet: initState chamado');
+    _carregarDados();
   }
 
-  Future<List<dynamic>> _carregarDados() async {
-    if (!_isMounted) return [];
-
+  Future<void> _carregarDados() async {
+    print('ModalAddPet: _carregarDados iniciado');
+    
     try {
       final especieProvider = Provider.of<EspecieProvider>(context, listen: false);
       final racaProvider = Provider.of<RacaProvider>(context, listen: false);
       final porteProvider = Provider.of<PorteProvider>(context, listen: false);
 
-      // Carrega apenas se ainda não foram carregados
-      if (!especieProvider.hasLoaded) {
+      print('ModalAddPet: Providers obtidos');
+
+      // Verifica se já estão carregados para evitar chamadas desnecessárias
+      bool precisaCarregar = false;
+
+      if (!especieProvider.hasLoaded && !especieProvider.isLoading) {
+        print('ModalAddPet: Carregando espécies...');
+        precisaCarregar = true;
         await especieProvider.loadEspecies();
-      }
-      if (!racaProvider.hasLoaded) {
-        await racaProvider.loadRacas();
-      }
-      if (!porteProvider.hasLoaded) {
-        await porteProvider.loadPortes();
+        print('ModalAddPet: Espécies carregadas - ${especieProvider.especies.length} itens');
       }
 
-      if (!_isMounted) return [];
-      
-      return [true]; // Retorna sucesso
+      if (!racaProvider.hasLoaded && !racaProvider.isLoading) {
+        print('ModalAddPet: Carregando raças...');
+        precisaCarregar = true;
+        await racaProvider.loadRacas();
+        print('ModalAddPet: Raças carregadas - ${racaProvider.racas.length} itens');
+      }
+
+      if (!porteProvider.hasLoaded && !porteProvider.isLoading) {
+        print('ModalAddPet: Carregando portes...');
+        precisaCarregar = true;
+        await porteProvider.loadPortes();
+        print('ModalAddPet: Portes carregados - ${porteProvider.portes.length} itens');
+      }
+
+      if (mounted) {
+        print('ModalAddPet: Dados carregados com sucesso, atualizando estado...');
+        setState(() {
+          _isLoading = false;
+          _dadosCarregados = true;
+        });
+      }
+
     } catch (e) {
-      if (!_isMounted) return [];
-      return [false, e.toString()]; // Retorna erro
+      print('ModalAddPet: Erro ao carregar dados: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString();
+        });
+      }
     }
   }
 
   @override
   void dispose() {
-    _isMounted = false;
+    print('ModalAddPet: dispose chamado');
     _nomeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: _dadosFuture,
-      builder: (context, snapshot) {
-        // Mostra loading enquanto carrega
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildLoading();
-        }
-
-        // Mostra erro se ocorreu
-        if (snapshot.hasError || (snapshot.data != null && snapshot.data!.length > 1)) {
-          return _buildError(snapshot.error?.toString() ?? snapshot.data?[1] ?? 'Erro desconhecido');
-        }
-
-        // Conteúdo principal quando os dados estão carregados
-        return _buildContent();
-      },
-    );
-  }
-
-  Widget _buildLoading() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      height: 300,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text(
-              'Carregando dados...',
-              style: TextStyle(fontSize: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildError(String error) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      height: 300,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error, color: Colors.red, size: 48),
-            const SizedBox(height: 16),
-            const Text(
-              'Erro ao carregar dados',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                error.length > 100 ? '${error.substring(0, 100)}...' : error,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _dadosFuture = _carregarDados();
-                });
-              },
-              child: const Text('Tentar Novamente'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContent() {
+    print('ModalAddPet: build chamado - isLoading: $_isLoading, error: $_errorMessage');
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -203,130 +138,202 @@ class _ModalAddPetState extends State<ModalAddPet> {
               ),
             ),
             const SizedBox(height: 16),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  AppTextField(
-                    controller: _nomeController,
-                    labelText: 'Nome do Pet',
-                    hintText: 'Digite o nome do seu pet',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Por favor, digite o nome do pet';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
 
-                  // Dropdown para Espécie
-                  Consumer<EspecieProvider>(
-                    builder: (context, especieProvider, child) {
-                      if (especieProvider.isLoading && especieProvider.especies.isEmpty) {
-                        return _buildDropdownLoading('Espécie');
-                      }
-                      
-                      return AppDropDown<Especie>(
-                        value: _selectedEspecie,
-                        items: especieProvider.especies,
-                        label: 'Espécie',
-                        hint: 'Selecione uma espécie',
-                        isRequired: true,
-                        errorMessage: 'Selecione uma espécie',
-                        onChanged: (Especie? newEspecie) {
-                          setState(() {
-                            _selectedEspecie = newEspecie;
-                          });
-                        },
-                        itemText: (especie) => especie.descricao,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Dropdown para Raça (agora normal, sem filtragem)
-                  Consumer<RacaProvider>(
-                    builder: (context, racaProvider, child) {
-                      if (racaProvider.isLoading && racaProvider.racas.isEmpty) {
-                        return _buildDropdownLoading('Raça');
-                      }
-
-                      return AppDropDown<Raca>(
-                        value: _selectedRaca,
-                        items: racaProvider.racas,
-                        label: 'Raça',
-                        hint: 'Selecione uma raça',
-                        isRequired: true,
-                        errorMessage: 'Selecione uma raça',
-                        onChanged: (Raca? newRaca) {
-                          setState(() {
-                            _selectedRaca = newRaca;
-                          });
-                        },
-                        itemText: (raca) => raca.descricao,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Dropdown para Sexo
-                  AppDropDown<String>(
-                    value: _selectedSexo,
-                    items: const ['M', 'F'],
-                    label: 'Sexo',
-                    hint: 'Selecione o sexo',
-                    isRequired: true,
-                    errorMessage: 'Selecione o sexo',
-                    onChanged: (String? newSexo) {
-                      setState(() {
-                        _selectedSexo = newSexo!;
-                      });
-                    },
-                    itemText: (sexo) => sexo == 'M' ? 'Macho' : 'Fêmea',
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Dropdown para Porte
-                  Consumer<PorteProvider>(
-                    builder: (context, porteProvider, child) {
-                      if (porteProvider.isLoading && porteProvider.portes.isEmpty) {
-                        return _buildDropdownLoading('Porte');
-                      }
-
-                      return AppDropDown<Porte>(
-                        value: _selectedPorte,
-                        items: porteProvider.portes,
-                        label: 'Porte',
-                        hint: 'Selecione um porte',
-                        isRequired: true,
-                        errorMessage: 'Selecione um porte',
-                        onChanged: (Porte? newPorte) {
-                          setState(() {
-                            _selectedPorte = newPorte;
-                          });
-                        },
-                        itemText: (porte) => porte.descricao,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Botão para adicionar
-                  AppButton(
-                    onPressed: _adicionarPet,
-                    label: 'Adicionar Pet',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+            if (_isLoading) _buildLoading(),
+            if (_errorMessage != null) _buildError(_errorMessage!),
+            if (!_isLoading && _errorMessage == null) _buildContent(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    print('ModalAddPet: Mostrando loading...');
+    return Container(
+      height: 200,
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Carregando dados...',
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError(String error) {
+    return Container(
+      height: 200,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'Erro ao carregar dados',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                error.length > 100 ? '${error.substring(0, 100)}...' : error,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = null;
+                });
+                _carregarDados();
+              },
+              child: const Text('Tentar Novamente'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    print('ModalAddPet: Mostrando conteúdo...');
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          AppTextField(
+            controller: _nomeController,
+            labelText: 'Nome do Pet',
+            hintText: 'Digite o nome do seu pet',
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Por favor, digite o nome do pet';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Dropdown para Espécie
+          Consumer<EspecieProvider>(
+            builder: (context, especieProvider, child) {
+              print('ModalAddPet: Consumer Espécie - isLoading: ${especieProvider.isLoading}, count: ${especieProvider.especies.length}');
+              
+              if (especieProvider.isLoading && especieProvider.especies.isEmpty) {
+                return _buildDropdownLoading('Espécie');
+              }
+              
+              return AppDropDown<Especie>(
+                value: _selectedEspecie,
+                items: especieProvider.especies,
+                label: 'Espécie',
+                hint: 'Selecione uma espécie',
+                isRequired: true,
+                errorMessage: 'Selecione uma espécie',
+                onChanged: (Especie? newEspecie) {
+                  setState(() {
+                    _selectedEspecie = newEspecie;
+                  });
+                },
+                itemText: (especie) => especie.descricao,
+              );
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // Dropdown para Raça
+          Consumer<RacaProvider>(
+            builder: (context, racaProvider, child) {
+              print('ModalAddPet: Consumer Raça - isLoading: ${racaProvider.isLoading}, count: ${racaProvider.racas.length}');
+              
+              if (racaProvider.isLoading && racaProvider.racas.isEmpty) {
+                return _buildDropdownLoading('Raça');
+              }
+
+              return AppDropDown<Raca>(
+                value: _selectedRaca,
+                items: racaProvider.racas,
+                label: 'Raça',
+                hint: 'Selecione uma raça',
+                isRequired: true,
+                errorMessage: 'Selecione uma raça',
+                onChanged: (Raca? newRaca) {
+                  setState(() {
+                    _selectedRaca = newRaca;
+                  });
+                },
+                itemText: (raca) => raca.descricao,
+              );
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // Dropdown para Sexo
+          AppDropDown<String>(
+            value: _selectedSexo,
+            items: const ['M', 'F'],
+            label: 'Sexo',
+            hint: 'Selecione o sexo',
+            isRequired: true,
+            errorMessage: 'Selecione o sexo',
+            onChanged: (String? newSexo) {
+              setState(() {
+                _selectedSexo = newSexo!;
+              });
+            },
+            itemText: (sexo) => sexo == 'M' ? 'Macho' : 'Fêmea',
+          ),
+
+          const SizedBox(height: 16),
+
+          // Dropdown para Porte
+          Consumer<PorteProvider>(
+            builder: (context, porteProvider, child) {
+              print('ModalAddPet: Consumer Porte - isLoading: ${porteProvider.isLoading}, count: ${porteProvider.portes.length}');
+              
+              if (porteProvider.isLoading && porteProvider.portes.isEmpty) {
+                return _buildDropdownLoading('Porte');
+              }
+
+              return AppDropDown<Porte>(
+                value: _selectedPorte,
+                items: porteProvider.portes,
+                label: 'Porte',
+                hint: 'Selecione um porte',
+                isRequired: true,
+                errorMessage: 'Selecione um porte',
+                onChanged: (Porte? newPorte) {
+                  setState(() {
+                    _selectedPorte = newPorte;
+                  });
+                },
+                itemText: (porte) => porte.descricao,
+              );
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          // Botão para adicionar
+          AppButton(
+            onPressed: _adicionarPet,
+            label: 'Adicionar Pet',
+          ),
+        ],
       ),
     );
   }
@@ -393,7 +400,6 @@ class _ModalAddPetState extends State<ModalAddPet> {
         'idporte': _selectedPorte!.idPorte,
       };
 
-      // Fecha o modal e retorna os dados do pet
       Navigator.of(context).pop();
       widget.onPetAdded?.call(novoPet);
     }
