@@ -30,14 +30,24 @@ class _BookingState extends State<Booking> {
     'Cancelado'
   ];
 
-  // Mapeamento de status para IDs
-  final Map<String, int> _statusMap = {
-    'em aprovação': 1,
-    'aprovado': 2,
-    'em execução': 3,
-    'concluido': 4,
-    'Negado': 5,
-    'Cancelado': 6,
+  // Mapeamento de status para valores da API
+  final Map<String, String> _statusMap = {
+    'em aprovação': 'em_aprovacao',
+    'aprovado': 'aprovado',
+    'em execução': 'em_execucao',
+    'concluido': 'concluido',
+    'Negado': 'negado',
+    'Cancelado': 'cancelado',
+  };
+
+  // Mapeamento inverso para exibição
+  final Map<String, String> _statusDisplayMap = {
+    'em_aprovacao': 'Em aprovação',
+    'aprovado': 'Aprovado',
+    'em_execucao': 'Em execução',
+    'concluido': 'Concluído',
+    'negado': 'Negado',
+    'cancelado': 'Cancelado',
   };
 
   @override
@@ -68,9 +78,16 @@ class _BookingState extends State<Booking> {
       // Busca dados do cache
       final startDateMillis = prefs.getInt('selected_start_date');
       final endDateMillis = prefs.getInt('selected_end_date');
+      final selectedPetIds = prefs.getStringList('selected_pets') ?? [];
+      final selectedServiceIds = prefs.getStringList('selected_services') ?? [];
 
       if (startDateMillis == null || endDateMillis == null) {
         print('❌ Datas não encontradas no cache');
+        return;
+      }
+
+      if (selectedPetIds.isEmpty) {
+        print('❌ Nenhum pet selecionado no cache');
         return;
       }
 
@@ -81,23 +98,40 @@ class _BookingState extends State<Booking> {
         _isCreating = true;
       });
 
-      // Cria o contrato
-      final contrato = ContratoModel(
-        idHospedagem: 1, // ID fixo da hospedagem - ajuste conforme necessário
-        idUsuario: idUsuario,
-        idStatus: 1, // "em aprovação"
-        dataInicio: startDate,
-        dataFim: endDate,
-      );
+      // Formatar datas
+      final dataInicio =
+          '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final dataFim =
+          '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
 
-      final contratoCriadoResponse =
-          await _contratoRepository.criarContrato(contrato);
+      // Converter IDs
+      final petIds = selectedPetIds.map(int.parse).toList();
+      final servicosFormatados = selectedServiceIds.map((id) {
+        return {
+          'idservico': int.parse(id),
+          'quantidade': 1,
+        };
+      }).toList();
+
+      print('🚀 Criando contrato automático com dados do cache:');
+      print('🐾 Pets: $petIds');
+      print('📅 Data Início: $dataInicio');
+      print('📅 Data Fim: $dataFim');
+      print('🛎️ Serviços: $servicosFormatados');
+
+      // Criar o contrato usando o método correto
+      final response = await _contratoRepository.criarContrato(
+        idHospedagem: 1, // ID fixo da hospedagem
+        dataInicio: dataInicio,
+        dataFim: dataFim,
+        pets: petIds,
+        servicos: servicosFormatados,
+      );
 
       // Marca como criado no cache
       await prefs.setBool('contrato_criado', true);
 
-      print(
-          '✅ Contrato criado com sucesso: ${contratoCriadoResponse.idContrato}');
+      print('✅ Contrato criado com sucesso: $response');
 
       setState(() {
         _isCreating = false;
@@ -160,13 +194,13 @@ class _BookingState extends State<Booking> {
         _errorMessage = '';
       });
 
-      final idStatus = _statusMap[status];
-      if (idStatus == null) {
+      final statusApi = _statusMap[status];
+      if (statusApi == null) {
         throw Exception('Status inválido: $status');
       }
 
       final contratosFiltrados =
-          await _contratoRepository.buscarContratosPorStatus(idStatus);
+          await _contratoRepository.buscarContratosPorStatus(statusApi);
 
       setState(() {
         _contratos = contratosFiltrados;
@@ -185,29 +219,26 @@ class _BookingState extends State<Booking> {
   }
 
   String _formatarData(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  String _obterNomeStatus(int idStatus) {
-    return _statusMap.entries
-        .firstWhere((entry) => entry.value == idStatus,
-            orElse: () => MapEntry('Desconhecido', 0))
-        .key;
+  String _obterNomeStatus(String status) {
+    return _statusDisplayMap[status] ?? 'Desconhecido';
   }
 
-  Color _obterCorStatus(int idStatus) {
-    switch (idStatus) {
-      case 1: // em aprovação
+  Color _obterCorStatus(String status) {
+    switch (status) {
+      case 'em_aprovacao':
         return Colors.orange;
-      case 2: // aprovado
+      case 'aprovado':
         return Colors.green;
-      case 3: // em execução
+      case 'em_execucao':
         return Colors.blue;
-      case 4: // concluido
+      case 'concluido':
         return Colors.grey;
-      case 5: // negado
+      case 'negado':
         return Colors.red;
-      case 6: // cancelado
+      case 'cancelado':
         return Colors.red;
       default:
         return Colors.grey;
@@ -385,7 +416,6 @@ class _BookingState extends State<Booking> {
           return BookingTemplate(
             contrato: contrato,
             onTap: () {
-              // Ação quando clicar no contrato
               _mostrarDetalhesContrato(contrato);
             },
           );
@@ -399,19 +429,29 @@ class _BookingState extends State<Booking> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Detalhes do Agendamento'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDetailItem('ID', contrato.idContrato?.toString() ?? 'N/A'),
-            _buildDetailItem('Status', _obterNomeStatus(contrato.idStatus)),
-            _buildDetailItem('Check-in', _formatarData(contrato.dataInicio)),
-            _buildDetailItem('Check-out', _formatarData(contrato.dataFim)),
-            _buildDetailItem('Hospedagem', 'ID: ${contrato.idHospedagem}'),
-            if (contrato.dataCriacao != null)
-              _buildDetailItem(
-                  'Criado em', _formatarData(contrato.dataCriacao!)),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailItem('ID', contrato.idContrato?.toString() ?? 'N/A'),
+              _buildDetailItem('Status', _obterNomeStatus(contrato.status)),
+              _buildDetailItem('Check-in', _formatarData(contrato.dataInicio)),
+              if (contrato.dataFim != null)
+                _buildDetailItem('Check-out', _formatarData(contrato.dataFim!)),
+              _buildDetailItem('Hospedagem', 'ID: ${contrato.idHospedagem}'),
+              if (contrato.hospedagemNome != null)
+                _buildDetailItem('Nome da Hospedagem', contrato.hospedagemNome!),
+              if (contrato.dataCriacao != null)
+                _buildDetailItem('Criado em', _formatarData(contrato.dataCriacao!)),
+              if (contrato.pets != null && contrato.pets!.isNotEmpty)
+                _buildDetailItem('Pets', '${contrato.pets!.length} pet(s)'),
+              if (contrato.servicos != null && contrato.servicos!.isNotEmpty)
+                _buildDetailItem('Serviços', '${contrato.servicos!.length} serviço(s)'),
+              if (contrato.totalServicos != null)
+                _buildDetailItem('Valor Total', 'R\$${contrato.totalServicos!.toStringAsFixed(2)}'),
+            ],
+          ),
         ),
         actions: [
           TextButton(

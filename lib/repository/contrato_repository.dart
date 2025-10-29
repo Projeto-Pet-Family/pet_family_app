@@ -1,4 +1,6 @@
 // repository/contrato_repository.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/services/api_service.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
@@ -6,21 +8,57 @@ import 'package:pet_family_app/providers/auth_provider.dart';
 class ContratoRepository {
   final ApiService _api = ApiService();
 
-  // Criar novo contrato
-  Future<ContratoModel> criarContrato(ContratoModel contrato) async {
+  // Método ÚNICO para criar contrato - use este
+  Future<Map<String, dynamic>> criarContrato({
+    required int idHospedagem,
+    required String dataInicio,
+    required String dataFim,
+    required List<int> pets,
+    required List<Map<String, dynamic>> servicos,
+  }) async {
     try {
-      final response = await _api.post('/contrato', contrato.toJson());
-      return ContratoModel.fromJson(response.data);
+      // Obter o ID do usuário do cache
+      final idUsuario = await AuthProvider.getUserIdFromCache();
+
+      if (idUsuario == null) {
+        throw Exception('Usuário não autenticado. Faça login novamente.');
+      }
+
+      print('📤 Enviando contrato para API...');
+      print('🏨 ID Hospedagem: $idHospedagem');
+      print('👤 ID Usuário: $idUsuario');
+      print('📅 Data Início: $dataInicio');
+      print('📅 Data Fim: $dataFim');
+      print('🐾 Pets: $pets');
+      print('🛎️ Serviços: $servicos');
+
+      final Map<String, dynamic> contratoData = {
+        'idHospedagem': idHospedagem,
+        'idUsuario': idUsuario,
+        'status': 'em_aprovacao',
+        'dataInicio': dataInicio,
+        'dataFim': dataFim,
+        'pets': pets,
+        'servicos': servicos,
+      };
+
+      print('📦 Dados do contrato: $contratoData');
+
+      final response = await _api.post('/contrato', contratoData);
+
+      print('✅ Contrato criado com sucesso: ${response.data}');
+
+      return response.data;
     } catch (e) {
       print('❌ Erro ao criar contrato: $e');
       throw Exception('Erro ao criar contrato: $e');
     }
   }
 
-  // Buscar contratos por usuário
+  // Buscar contratos por usuário - ATUALIZADO para nova estrutura
   Future<List<ContratoModel>> buscarContratosPorUsuario(int idUsuario) async {
     try {
-      final response = await _api.get('/usuario/$idUsuario/contratos');
+      final response = await _api.get('/contrato/usuario/$idUsuario');
 
       if (response.data is List) {
         final List<dynamic> jsonList = response.data as List;
@@ -35,14 +73,14 @@ class ContratoRepository {
     }
   }
 
-  // Buscar contratos por status
-  Future<List<ContratoModel>> buscarContratosPorStatus(int idStatus) async {
+  // Buscar contratos por status - ATUALIZADO para nova estrutura
+  Future<List<ContratoModel>> buscarContratosPorStatus(String status) async {
     try {
       final idUsuario = await AuthProvider.getUserIdFromCache();
       if (idUsuario == null) throw Exception('Usuário não autenticado');
 
-      final response =
-          await _api.get('/contrato?idusuario=$idUsuario&idstatus=$idStatus');
+      final response = await _api
+          .get('/contrato/usuario?idUsuario=$idUsuario&status=$status');
 
       if (response.data is List) {
         final List<dynamic> jsonList = response.data as List;

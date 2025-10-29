@@ -111,7 +111,7 @@ class BookingTemplate extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${_formatarData(contrato.dataInicio)} - ${_formatarData(contrato.dataFim)}',
+                    '${_formatarData(contrato.dataInicio ?? DateTime.now())} - ${_formatarData(contrato.dataFim ?? DateTime.now())}',
                     style: const TextStyle(fontSize: 14),
                   ),
                 ),
