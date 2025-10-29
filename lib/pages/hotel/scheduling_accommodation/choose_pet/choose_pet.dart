@@ -5,7 +5,7 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/p
 import 'package:pet_family_app/repository/pet_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
-import 'package:pet_family_app/widgets/app_text_field.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChoosePet extends StatefulWidget {
   const ChoosePet({super.key});
@@ -25,6 +25,7 @@ class _ChoosePetState extends State<ChoosePet> {
   void initState() {
     super.initState();
     _carregarPets();
+    _carregarPetsSelecionadosDoCache();
   }
 
   Future<void> _carregarPets() async {
@@ -35,7 +36,6 @@ class _ChoosePetState extends State<ChoosePet> {
         _isLoading = false;
         _errorMessage = '';
       });
-
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -44,24 +44,125 @@ class _ChoosePetState extends State<ChoosePet> {
     }
   }
 
+  // Carrega os pets selecionados anteriormente do cache
+  Future<void> _carregarPetsSelecionadosDoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final selectedPetsString = prefs.getStringList('selected_pets') ?? [];
+
+      final selectedPets =
+          selectedPetsString.map((id) => int.parse(id)).toSet();
+
+      setState(() {
+        _selectedPets.addAll(selectedPets);
+      });
+
+      print('✅ Pets selecionados carregados do cache: $_selectedPets');
+    } catch (e) {
+      print('❌ Erro ao carregar pets do cache: $e');
+    }
+  }
+
+  // Salva os pets selecionados no cache
+  Future<void> _salvarPetsSelecionadosNoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final selectedPetsString =
+          _selectedPets.map((id) => id.toString()).toList();
+
+      await prefs.setStringList('selected_pets', selectedPetsString);
+
+      print('💾 Pets selecionados salvos no cache: $_selectedPets');
+    } catch (e) {
+      print('❌ Erro ao salvar pets no cache: $e');
+    }
+  }
+
+  // Salva informações detalhadas dos pets selecionados
+  Future<void> _salvarDetalhesPetsNoCache(
+      List<PetModel> petsSelecionados) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Salva os nomes dos pets selecionados
+      final petNames = petsSelecionados.map((pet) => pet.nome).toList();
+      await prefs.setStringList('selected_pet_names', petNames);
+
+      // Salva os IDs como string para facilitar o acesso
+      final petIds =
+          petsSelecionados.map((pet) => pet.idpet.toString()).toList();
+      await prefs.setStringList('selected_pet_ids', petIds);
+
+      // Salva informações individuais de cada pet
+      for (final pet in petsSelecionados) {
+        await prefs.setString('pet_${pet.idpet}_name', pet.nome);
+        if (pet.idespecie != null) {
+          await prefs.setInt('pet_${pet.idpet}_species', pet.idespecie!);
+        }
+        if (pet.idraca != null) {
+          await prefs.setInt('pet_${pet.idpet}_breed', pet.idraca!);
+        }
+      }
+
+      print('💾 Detalhes dos pets salvos no cache: $petNames');
+    } catch (e) {
+      print('❌ Erro ao salvar detalhes dos pets: $e');
+    }
+  }
+
   void _togglePetSelection(int petId) {
     setState(() {
       if (_selectedPets.contains(petId)) {
         _selectedPets.remove(petId);
+        print('➖ Pet $petId removido da seleção');
       } else {
         _selectedPets.add(petId);
+        print('➕ Pet $petId adicionado à seleção');
       }
     });
+
+    // Salva automaticamente no cache quando a seleção muda
+    _salvarPetsSelecionadosNoCache();
   }
 
   void _navigateToNext() {
     final selectedPetsList =
         _pets.where((pet) => _selectedPets.contains(pet.idpet)).toList();
 
+    // Salva detalhes dos pets selecionados antes de navegar
+    _salvarDetalhesPetsNoCache(selectedPetsList);
+
     context.go('/choose-data', extra: {
       'selectedPets': _selectedPets.toList(),
       'pets': selectedPetsList,
     });
+  }
+
+  // Método para limpar a seleção de pets do cache
+  Future<void> _limparPetsSelecionados() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('selected_pets');
+      await prefs.remove('selected_pet_names');
+      await prefs.remove('selected_pet_ids');
+
+      // Limpa informações individuais dos pets
+      for (final pet in _pets) {
+        if (pet.idpet != null) {
+          await prefs.remove('pet_${pet.idpet}_name');
+          await prefs.remove('pet_${pet.idpet}_species');
+          await prefs.remove('pet_${pet.idpet}_breed');
+        }
+      }
+
+      setState(() {
+        _selectedPets.clear();
+      });
+
+      print('🗑️ Seleção de pets limpa do cache');
+    } catch (e) {
+      print('❌ Erro ao limpar pets do cache: $e');
+    }
   }
 
   @override
@@ -92,6 +193,20 @@ class _ChoosePetState extends State<ChoosePet> {
                       color: Colors.grey,
                     ),
                   ),
+
+                  // Mostra quantos pets estão selecionados
+                  if (_selectedPets.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '${_selectedPets.length} pet(s) selecionado(s)',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 30),
 
                   // Exibe loading, erro ou lista de pets
@@ -103,7 +218,23 @@ class _ChoosePetState extends State<ChoosePet> {
                               ? _buildEmptyState()
                               : _buildPetsList(),
 
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 30),
+
+                  // Botão para limpar seleção
+                  if (_selectedPets.isNotEmpty)
+                    OutlinedButton(
+                      onPressed: _limparPetsSelecionados,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text('Limpar Seleção'),
+                    ),
+
+                  if (_selectedPets.isNotEmpty) const SizedBox(height: 16),
+
+                  // Botão próximo
                   if (_selectedPets.isNotEmpty)
                     AppButton(
                       onPressed: _navigateToNext,

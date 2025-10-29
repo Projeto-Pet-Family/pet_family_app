@@ -15,45 +15,49 @@ class PetRepository {
         throw Exception('Usuário não autenticado. Faça login novamente.');
       }
 
-      // Primeiro, vamos testar o endpoint /pets para ver todos os pets
-      print('🔍 Testando endpoint /pets...');
-      final response = await _api.get('/pet');
+      // Faz a requisição para a API
+      print('🔍 Buscando pets do usuário $idUsuario...');
+      final response = await _api.get('/usuario/$idUsuario/pets');
 
       print('🔍 Response completa: $response');
       print('🔍 Response data type: ${response.data.runtimeType}');
       print('🔍 Response data: ${response.data}');
 
-      if (response.data is List) {
-        final List<dynamic> jsonList = response.data as List;
-        print('🔍 Número de pets retornados: ${jsonList.length}');
+      // A API retorna um Map, não uma List
+      if (response.data is Map<String, dynamic>) {
+        final Map<String, dynamic> responseData = response.data;
 
-        // Converter cada item com tratamento de erro individual
-        final List<PetModel> pets = [];
+        // Verifica se a requisição foi bem-sucedida
+        if (responseData['success'] == true) {
+          // Acessa a lista de pets dentro da chave 'pets'
+          final List<dynamic> petsData = responseData['pets'];
+          print('🔍 Número de pets retornados: ${petsData.length}');
 
-        for (int i = 0; i < jsonList.length; i++) {
-          try {
-            print('🔍 Convertendo pet $i: ${jsonList[i]}');
-            final pet = PetModel.fromJson(jsonList[i]);
+          // Converter cada item com tratamento de erro individual
+          final List<PetModel> pets = [];
 
-            // Filtrar pelo usuário logado
-            if (pet.idusuario == idUsuario) {
+          for (int i = 0; i < petsData.length; i++) {
+            try {
+              print('🔍 Convertendo pet $i: ${petsData[i]}');
+              final pet = PetModel.fromJson(petsData[i]);
               pets.add(pet);
-              print('✅ Pet adicionado: ${pet.nome}');
-            } else {
-              print(
-                  '❌ Pet ignorado (idUsuario diferente): ${pet.nome} (${pet.idusuario} vs $idUsuario)');
+              print('✅ Pet adicionado: ${pet.nome} (ID: ${pet.idpet})');
+            } catch (e) {
+              print('❌ Erro ao converter pet $i: $e');
+              print('📦 Dados problemáticos: ${petsData[i]}');
+              // Continua com os próximos pets em vez de falhar completamente
             }
-          } catch (e) {
-            print('❌ Erro ao converter pet $i: $e');
-            print('📦 Dados problemáticos: ${jsonList[i]}');
-            // Continua com os próximos pets em vez de falhar completamente
           }
-        }
 
-        print('✅ Pets do usuário $idUsuario: ${pets.length} encontrados');
-        return pets;
+          print('✅ Pets do usuário $idUsuario: ${pets.length} encontrados');
+          return pets;
+        } else {
+          final errorMessage = responseData['message'] ?? 'Erro desconhecido';
+          print('❌ API retornou erro: $errorMessage');
+          throw Exception('Erro na API: $errorMessage');
+        }
       } else {
-        print('❌ Response.data não é uma lista: ${response.data}');
+        print('❌ Response.data não é um Map: ${response.data.runtimeType}');
         return [];
       }
     } catch (e) {

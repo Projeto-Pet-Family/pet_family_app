@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-class ChooseServiceTemplate extends StatelessWidget {
+class ChooseServiceTemplate extends StatefulWidget {
+  final String name;
+  final bool isSelected;
+  final VoidCallback onTap;
+
   const ChooseServiceTemplate({
     super.key,
     required this.name,
@@ -8,40 +12,74 @@ class ChooseServiceTemplate extends StatelessWidget {
     required this.onTap,
   });
 
-  final String name;
-  final bool isSelected;
-  final VoidCallback onTap;
+  @override
+  State<ChooseServiceTemplate> createState() => _ChooseServiceTemplateState();
+}
+
+class _ChooseServiceTemplateState extends State<ChooseServiceTemplate> {
+  bool _isTapped = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
+      onTapDown: (_) => setState(() => _isTapped = true),
+      onTapUp: (_) => setState(() => _isTapped = false),
+      onTapCancel: () => setState(() => _isTapped = false),
+      onTap: () {
+        setState(() => _isTapped = false);
+        widget.onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: Offset(0, 2),
-            ),
-          ],
-          color: isSelected ? Color(0xFF43569B) : Color(0xFFFBFBFF),
-          borderRadius: BorderRadius.circular(50),
           border: Border.all(
-            color: Color(0xFFCCCCCC),
+            color: widget.isSelected
+                ? Colors.green
+                : _isTapped
+                    ? Colors.green
+                    : Colors.grey,
+            width: widget.isSelected ? 2 : 1,
           ),
+          borderRadius: BorderRadius.circular(8),
+          color: widget.isSelected
+              ? Colors.green[50]
+              : _isTapped
+                  ? Colors.grey[100]
+                  : Colors.white,
+          boxShadow: _isTapped
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
-        padding: EdgeInsets.all(12),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            SizedBox(width: 10),
-            Text(
-              name,
-              style: TextStyle(
-                fontSize: 20,
-                color: isSelected ? Colors.white : Colors.black,
-                fontWeight: FontWeight.w200,
+            Expanded(
+              child: Text(
+                widget.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight:
+                      widget.isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: widget.isSelected ? Colors.green : Colors.black,
+                ),
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                widget.isSelected
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color: widget.isSelected ? Colors.green : Colors.grey,
+                key: ValueKey(widget.isSelected),
               ),
             ),
           ],

@@ -5,6 +5,7 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_servi
 import 'package:pet_family_app/repository/service_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChooseService extends StatefulWidget {
   const ChooseService({super.key});
@@ -24,6 +25,7 @@ class _ChooseServiceState extends State<ChooseService> {
   void initState() {
     super.initState();
     _carregarServicos();
+    _carregarServicosSelecionadosDoCache();
   }
 
   Future<void> _carregarServicos() async {
@@ -51,6 +53,109 @@ class _ChooseServiceState extends State<ChooseService> {
     }
   }
 
+  // Carrega os serviços selecionados do cache
+  Future<void> _carregarServicosSelecionadosDoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final selectedServicesString =
+          prefs.getStringList('selected_services') ?? [];
+
+      final selectedServices =
+          selectedServicesString.map((id) => int.parse(id)).toSet();
+
+      setState(() {
+        _selectedServices.addAll(selectedServices);
+      });
+
+      print('✅ Serviços selecionados carregados do cache: $_selectedServices');
+    } catch (e) {
+      print('❌ Erro ao carregar serviços do cache: $e');
+    }
+  }
+
+  // Salva os serviços selecionados no cache
+  Future<void> _salvarServicosSelecionadosNoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final selectedServicesString =
+          _selectedServices.map((id) => id.toString()).toList();
+
+      await prefs.setStringList('selected_services', selectedServicesString);
+
+      print('💾 Serviços selecionados salvos no cache: $_selectedServices');
+    } catch (e) {
+      print('❌ Erro ao salvar serviços no cache: $e');
+    }
+  }
+
+  // Salva detalhes dos serviços selecionados
+  Future<void> _salvarDetalhesServicosNoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Salva o valor total
+      await prefs.setDouble('selected_services_total', totalValue);
+
+      // Salva os nomes/descrições dos serviços selecionados
+      final selectedServiceNames = _services
+          .where((service) => _selectedServices.contains(service.idServico))
+          .map((service) => service.descricao)
+          .toList();
+
+      await prefs.setStringList('selected_service_names', selectedServiceNames);
+
+      // Salva os preços individuais
+      final selectedServicePrices = _services
+          .where((service) => _selectedServices.contains(service.idServico))
+          .map((service) => service.preco.toString())
+          .toList();
+
+      await prefs.setStringList(
+          'selected_service_prices', selectedServicePrices);
+
+      // Salva informações detalhadas de cada serviço
+      for (final service in _services) {
+        if (_selectedServices.contains(service.idServico)) {
+          await prefs.setString(
+              'service_${service.idServico}_desc', service.descricao);
+          await prefs.setDouble(
+              'service_${service.idServico}_price', service.preco);
+        }
+      }
+
+      print(
+          '💾 Detalhes dos serviços salvos no cache - Total: R\$${totalValue.toStringAsFixed(2)}');
+    } catch (e) {
+      print('❌ Erro ao salvar detalhes dos serviços: $e');
+    }
+  }
+
+  // Limpa os serviços selecionados do cache
+  Future<void> _limparServicosSelecionados() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.remove('selected_services');
+      await prefs.remove('selected_services_total');
+      await prefs.remove('selected_service_names');
+      await prefs.remove('selected_service_prices');
+
+      // Limpa informações individuais dos serviços
+      for (final service in _services) {
+        await prefs.remove('service_${service.idServico}_desc');
+        await prefs.remove('service_${service.idServico}_price');
+      }
+
+      setState(() {
+        _selectedServices.clear();
+      });
+
+      print('🗑️ Serviços selecionados limpos do cache');
+    } catch (e) {
+      print('❌ Erro ao limpar serviços do cache: $e');
+    }
+  }
+
   double get totalValue {
     return _selectedServices.fold(0.0, (sum, id) {
       final service = _services.firstWhere(
@@ -70,9 +175,27 @@ class _ChooseServiceState extends State<ChooseService> {
     setState(() {
       if (_selectedServices.contains(serviceId)) {
         _selectedServices.remove(serviceId);
+        print('➖ Serviço $serviceId removido da seleção');
       } else {
         _selectedServices.add(serviceId);
+        print('➕ Serviço $serviceId adicionado à seleção');
       }
+    });
+
+    // Salva automaticamente no cache quando a seleção muda
+    _salvarServicosSelecionadosNoCache();
+  }
+
+  void _navigateToNext() {
+    // Salva detalhes antes de navegar
+    _salvarDetalhesServicosNoCache();
+
+    context.go('/final-verification', extra: {
+      'selectedServices': _selectedServices.toList(),
+      'services': _services
+          .where((s) => _selectedServices.contains(s.idServico))
+          .toList(),
+      'totalValue': totalValue,
     });
   }
 
@@ -100,6 +223,51 @@ class _ChooseServiceState extends State<ChooseService> {
                       ),
                     ),
                   ),
+
+                  // Mostra resumo dos serviços selecionados
+                  if (_selectedServices.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Serviços selecionados:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '${_selectedServices.length} serviço(s)',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: _limparServicosSelecionados,
+                            icon: const Icon(Icons.clear, color: Colors.blue),
+                            tooltip: 'Limpar serviços',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 15),
                   Container(
                     padding: const EdgeInsets.all(15),
@@ -160,19 +328,26 @@ class _ChooseServiceState extends State<ChooseService> {
                       }).toList(),
                     ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 30),
+
+                  // Botão para limpar seleção
+                  if (_selectedServices.isNotEmpty)
+                    OutlinedButton(
+                      onPressed: _limparServicosSelecionados,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text('Limpar Serviços'),
+                    ),
+
+                  if (_selectedServices.isNotEmpty) const SizedBox(height: 16),
+
+                  // Botão próximo
                   if (_selectedServices.isNotEmpty)
                     AppButton(
-                      onPressed: () {
-                        context.go('/final-verification', extra: {
-                          'selectedServices': _selectedServices.toList(),
-                          'services': _services
-                              .where((s) =>
-                                  _selectedServices.contains(s.idServico))
-                              .toList(),
-                          'totalValue': totalValue,
-                        });
-                      },
+                      onPressed: _navigateToNext,
                       label: 'Próximo',
                       fontSize: 17,
                     ),

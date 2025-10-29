@@ -12,29 +12,30 @@ class ServiceModel {
   });
 
   factory ServiceModel.fromJson(Map<String, dynamic> json) {
-    // Função auxiliar para converter qualquer tipo para double
-    double parseDouble(dynamic value) {
-      if (value == null) return 0.0;
-      if (value is double) return value;
-      if (value is int) return value.toDouble();
-      if (value is String) {
-        return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
-      }
-      return 0.0;
-    }
+    print('🔍 Convertendo JSON: $json');
+
+    // Verifica as chaves exatas que a API está retornando
+    final idServico = json['idservico'] as int? ?? 0;
+    final descricao = json['descricao'] as String? ?? '';
+    final preco = (json['preco'] is String)
+        ? double.tryParse(json['preco']) ?? 0.0
+        : (json['preco'] as num?)?.toDouble() ?? 0.0;
+
+    print('✅ Serviço convertido: $idServico - $descricao - $preco');
 
     return ServiceModel(
-      idServico: json['idServico'] is int ? json['idServico'] : int.tryParse(json['idServico']?.toString() ?? '0') ?? 0,
-      idHospedagem: json['idHospedagem'] is int ? json['idHospedagem'] : int.tryParse(json['idHospedagem']?.toString() ?? '0') ?? 0,
-      descricao: json['descricao']?.toString() ?? '',
-      preco: parseDouble(json['preco']),
+      idServico: idServico,
+      idHospedagem:
+          json['idhospedagem'] as int? ?? 1, // Valor padrão se não vier
+      descricao: descricao,
+      preco: preco,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'idServico': idServico,
-      'idHospedagem': idHospedagem,
+      'idservico': idServico,
+      'idhospedagem': idHospedagem,
       'descricao': descricao,
       'preco': preco,
     };
