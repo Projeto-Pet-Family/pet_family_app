@@ -1,3 +1,4 @@
+// services/pet/raca_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../models/pet/raca_model.dart';
@@ -20,4 +21,9 @@ class RacaService {
     }
   }
 
+  // NOVO MÉTODO: Retorna apenas os nomes como lista de strings
+  Future<List<String>> getRacasNames() async {
+    final racas = await getRacas();
+    return racas.map((raca) => raca.descricao).toList();
+  }
 }

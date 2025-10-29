@@ -21,56 +21,34 @@ class Hotel extends StatefulWidget {
 }
 
 class _HotelState extends State<Hotel> {
+  late HotelProvider _hotelProvider;
+
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    _hotelProvider = HotelProvider();
     _initializeData();
   }
 
   void _initializeData() {
-    final hotelProvider = Provider.of<HotelProvider>(context, listen: false);
-    final hotelId = widget.hotelData?['idhospedagem'];
-    
-    if (hotelId != null) {
-      hotelProvider.fetchServicos(hotelId);
+    if (widget.hotelData != null) {
+      final hotelId = widget.hotelData?['idhospedagem'];
+      if (hotelId != null) {
+        print('🔄 Inicializando serviços para hotel ID: $hotelId');
+        _hotelProvider.fetchServicos(hotelId);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Verifica se hotelData é nulo
+    // Verificação robusta para hotelData nulo
     if (widget.hotelData == null) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/core-navigation'),
-          ),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red),
-              SizedBox(height: 16),
-              Text(
-                'Erro ao carregar dados do hotel',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Os dados do hotel não foram encontrados.',
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-            ],
-          ),
-        ),
-      );
+      return _buildErrorScreen();
     }
 
-    return ChangeNotifierProvider(
-      create: (context) => HotelProvider(),
+    return ChangeNotifierProvider.value(
+      value: _hotelProvider,
       child: Scaffold(
         body: SingleChildScrollView(
           child: Column(
@@ -91,8 +69,60 @@ class _HotelState extends State<Hotel> {
     );
   }
 
+  Widget _buildErrorScreen() {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/core-navigation'),
+        ),
+        title: const Text('Erro'),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 80,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Hotel não encontrado',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Não foi possível carregar os dados do hotel. '
+                'Por favor, tente novamente.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => context.go('/core-navigation'),
+                style: ElevatedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                ),
+                child: const Text('Voltar para Home'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHotelContent(HotelProvider hotelProvider) {
-    final hotel = widget.hotelData!; // Agora sabemos que não é nulo
+    final hotel = widget.hotelData!;
     final enderecoCompleto = _buildEnderecoCompleto(hotel);
 
     return Column(
@@ -107,7 +137,8 @@ class _HotelState extends State<Hotel> {
     );
   }
 
-  Widget _buildHotelHeader(Map<String, dynamic> hotel, String enderecoCompleto) {
+  Widget _buildHotelHeader(
+      Map<String, dynamic> hotel, String enderecoCompleto) {
     final String nome = hotel['nome'] ?? 'Nome não disponível';
 
     return Column(
@@ -237,8 +268,6 @@ class _HotelState extends State<Hotel> {
           ),
         ),
         const SizedBox(height: 20),
-        
-        // Estado de carregamento ou erro
         if (hotelProvider.isLoading)
           const Center(
             child: CircularProgressIndicator(),
@@ -249,7 +278,7 @@ class _HotelState extends State<Hotel> {
           ...hotelProvider.servicos.map((servico) {
             final String descricao = servico['descricao'] ?? 'Serviço';
             final String preco = servico['preco'] ?? '0.00';
-            
+
             return ServiceTemplate(
               service: descricao,
               price: _formatarPreco(preco),
@@ -387,7 +416,6 @@ class _HotelState extends State<Hotel> {
     );
   }
 
-  // Método auxiliar para construir o endereço completo
   String _buildEnderecoCompleto(Map<String, dynamic> hotel) {
     final String numero = hotel['numero']?.toString() ?? '';
     final String complemento = hotel['complemento'] ?? '';
@@ -404,11 +432,10 @@ class _HotelState extends State<Hotel> {
       if (cidade.isNotEmpty) cidade,
       if (estado.isNotEmpty) estado,
     ];
-    
+
     return enderecoParts.join(', ');
   }
 
-  // Método para formatar o preço no padrão brasileiro
   String _formatarPreco(String preco) {
     try {
       final valor = double.tryParse(preco) ?? 0.0;

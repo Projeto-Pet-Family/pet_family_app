@@ -30,6 +30,11 @@ class _SearchState extends State<Search> {
         _isLoading = false;
         _errorMessage = '';
       });
+
+      print('🏨 Total de hospedagens carregadas: ${hospedagens.length}');
+      for (var hospedagem in hospedagens) {
+        print('🏨 - ${hospedagem.nome} (ID: ${hospedagem.idHospedagem})');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -73,6 +78,7 @@ class _SearchState extends State<Search> {
                         itemCount: _hospedagens.length,
                         itemBuilder: (context, index) {
                           final hospedagem = _hospedagens[index];
+
                           return HotelTemplate(
                             name: hospedagem.nome,
                             street: hospedagem.logradouro,

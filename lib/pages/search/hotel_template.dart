@@ -34,6 +34,22 @@ class HotelTemplate extends StatefulWidget {
 }
 
 class _HotelTemplateState extends State<HotelTemplate> {
+  // Método para criar o Map com todos os dados do hotel
+  Map<String, dynamic> _getHotelData() {
+    return {
+      'idhospedagem': widget.idHotel,
+      'nome': widget.name,
+      'logradouro': widget.street,
+      'numero': widget.number,
+      'complemento': widget.complement,
+      'bairro': widget.neighborhood,
+      'cidade': widget.city,
+      'estado': widget.state,
+      'sigla': widget.uf,
+      'cep': widget.zipCode,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -125,7 +141,13 @@ class _HotelTemplateState extends State<HotelTemplate> {
             ),
             AppButton(
               onPressed: () {
-                context.go('/hotel');
+                // ✅ CORREÇÃO: Passar os dados do hotel no extra
+                final hotelData = _getHotelData();
+
+                print('🎯 Navegando para hotel: ${widget.name}');
+                print('🎯 Dados enviados: $hotelData');
+
+                context.go('/hotel', extra: hotelData);
               },
               label: 'Hospedar aqui',
               buttonColor: Color(0xFF159800),

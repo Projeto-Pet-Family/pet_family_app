@@ -19,7 +19,6 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_data/
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/choose_pet.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_services/choose_service.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/final_verification.dart';
-import 'package:pet_family_app/pages/forgot_password/insert_token/insert_token.dart';
 import 'package:pet_family_app/pages/login/login.dart';
 import 'package:pet_family_app/pages/payment/payment.dart';
 import 'package:pet_family_app/pages/payment/payment_process.dart';
@@ -32,7 +31,6 @@ import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
 import 'package:pet_family_app/pages/register/insert_your_address.dart';
 import 'package:pet_family_app/pages/register/insert_your_datas.dart';
 import 'package:pet_family_app/pages/register/want_host_pet.dart';
-import 'package:pet_family_app/pages/register/who_many_pets.dart';
 
 void main() {
   runApp(const MyApp());
@@ -47,7 +45,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PetProvider()),
-        
+
         // ✅ ADICIONE ESTES NOVOS PROVIDERS
         ChangeNotifierProvider(
           create: (_) => EspecieProvider(
@@ -95,10 +93,6 @@ final router = GoRouter(
       builder: (context, state) => const ForgotPassword(),
     ),
     GoRoute(
-      path: '/who-many-pets',
-      builder: (context, state) => const WhoManyPets(),
-    ),
-    GoRoute(
       path: '/insert-datas-pet',
       builder: (context, state) => const InsertDatasPet(),
     ),
@@ -121,11 +115,17 @@ final router = GoRouter(
     GoRoute(
       path: '/hotel',
       builder: (context, state) {
-        final hotelData = state.extra as Map<String, dynamic>;
-        return ChangeNotifierProvider(
-          create: (context) => HotelProvider(),
-          child: Hotel(hotelData: hotelData),
-        );
+        final hotelData = state.extra as Map<String, dynamic>?;
+
+        print('=== HOTEL ROUTE ===');
+        print('Hotel data received: ${hotelData != null}');
+        if (hotelData != null) {
+          print('Hotel ID: ${hotelData['idhospedagem']}');
+          print('Hotel Name: ${hotelData['nome']}');
+        }
+
+        // ✅ CORREÇÃO: Não use ChangeNotifierProvider aqui
+        return Hotel(hotelData: hotelData);
       },
     ),
     GoRoute(

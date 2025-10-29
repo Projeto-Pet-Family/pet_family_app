@@ -160,7 +160,7 @@ class _LoginState extends State<Login> {
                   // Link cadastro
                   GestureDetector(
                     onTap: () {
-                      context.go('/who-many-pets');
+                      context.go('/insert-datas-pet');
                     },
                     child: Text.rich(
                       TextSpan(

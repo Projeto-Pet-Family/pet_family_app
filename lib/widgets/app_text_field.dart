@@ -9,8 +9,9 @@ class AppTextField extends StatelessWidget {
     this.hintText,
     this.keyboardType = TextInputType.text,
     this.inputFormatters = const [],
-    this.validator, // ✅ Adicione este parâmetro
-    this.obscureText = false, // ✅ Adicione também obscureText
+    this.validator,
+    this.obscureText = false,
+    this.onChanged, // ✅ Adicionei o onChanged aqui
   });
 
   final TextEditingController controller;
@@ -18,8 +19,9 @@ class AppTextField extends StatelessWidget {
   final String? hintText;
   final TextInputType keyboardType;
   final List<TextInputFormatter> inputFormatters;
-  final String? Function(String?)? validator; // ✅ Parâmetro validator
-  final bool obscureText; // ✅ Para campos de senha
+  final String? Function(String?)? validator;
+  final bool obscureText;
+  final void Function(String)? onChanged; // ✅ Parâmetro onChanged
 
   @override
   Widget build(BuildContext context) {
@@ -82,8 +84,9 @@ class AppTextField extends StatelessWidget {
           cursorColor: const Color(0xFF8692DE),
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          validator: validator, // ✅ Passe o validator para o TextFormField
-          obscureText: obscureText, // ✅ Para campos de senha
+          validator: validator,
+          obscureText: obscureText,
+          onChanged: onChanged, // ✅ Passe o onChanged para o TextFormField
         ),
       ],
     );

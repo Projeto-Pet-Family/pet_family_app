@@ -5,6 +5,7 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/p
 import 'package:pet_family_app/repository/pet_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
+import 'package:pet_family_app/widgets/app_text_field.dart';
 
 class ChoosePet extends StatefulWidget {
   const ChoosePet({super.key});
@@ -34,14 +35,12 @@ class _ChoosePetState extends State<ChoosePet> {
         _isLoading = false;
         _errorMessage = '';
       });
+
     } catch (e) {
       setState(() {
         _isLoading = false;
         _errorMessage = 'Erro ao carregar pets: $e';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar pets: $e')),
-      );
     }
   }
 
@@ -52,6 +51,16 @@ class _ChoosePetState extends State<ChoosePet> {
       } else {
         _selectedPets.add(petId);
       }
+    });
+  }
+
+  void _navigateToNext() {
+    final selectedPetsList =
+        _pets.where((pet) => _selectedPets.contains(pet.idpet)).toList();
+
+    context.go('/choose-data', extra: {
+      'selectedPets': _selectedPets.toList(),
+      'pets': selectedPetsList,
     });
   }
 
@@ -75,38 +84,29 @@ class _ChoosePetState extends State<ChoosePet> {
                       color: Colors.black,
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Selecione os pets que ficarão hospedados',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
                   const SizedBox(height: 30),
-                  
+
                   // Exibe loading, erro ou lista de pets
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _errorMessage.isNotEmpty
-                          ? Center(child: Text(_errorMessage))
+                          ? _buildErrorMessage()
                           : _pets.isEmpty
-                              ? const Text('Nenhum pet cadastrado')
-                              : Column(
-                                  children: _pets.map((pet) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      child: PetTemplate(
-                                        key: ValueKey(pet.idPet),
-                                        name: pet.nome,
-                                        isSelected: _selectedPets.contains(pet.idPet),
-                                        onTap: () => _togglePetSelection(pet.idPet),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                  
+                              ? _buildEmptyState()
+                              : _buildPetsList(),
+
                   const SizedBox(height: 60),
                   if (_selectedPets.isNotEmpty)
                     AppButton(
-                      onPressed: () {
-                        context.go('/choose-data', extra: {
-                          'selectedPets': _selectedPets.toList(),
-                          'pets': _pets.where((pet) => _selectedPets.contains(pet.idPet)).toList(),
-                        });
-                      },
+                      onPressed: _navigateToNext,
                       label: 'Próximo',
                       fontSize: 18,
                     ),
@@ -116,6 +116,79 @@ class _ChoosePetState extends State<ChoosePet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildErrorMessage() {
+    return Column(
+      children: [
+        Icon(
+          Icons.error_outline,
+          size: 50,
+          color: Colors.red[300],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          _errorMessage,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.red[700],
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: _carregarPets,
+          child: const Text('Tentar Novamente'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Column(
+      children: [
+        Icon(
+          Icons.pets,
+          size: 80,
+          color: Colors.grey[400],
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Nenhum pet cadastrado',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Você precisa cadastrar pelo menos um pet\npara agendar hospedagens',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
+  Widget _buildPetsList() {
+    return Column(
+      children: _pets.map((pet) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: PetTemplate(
+            key: ValueKey(pet.idpet),
+            name: pet.nome,
+            isSelected: _selectedPets.contains(pet.idpet),
+            onTap: () => _togglePetSelection(pet.idpet!),
+          ),
+        );
+      }).toList(),
     );
   }
 }
