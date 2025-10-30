@@ -28,7 +28,7 @@ class UserService {
         // Tratamento de erros específicos
         final errorResponse = json.decode(response.body);
         final errorMessage = errorResponse['message'] ?? 'Erro desconhecido';
-        
+
         switch (response.statusCode) {
           case 400:
             throw Exception('Dados inválidos: $errorMessage');
@@ -67,6 +67,49 @@ class UserService {
       }
     } catch (e) {
       throw Exception('Erro de conexão: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>> atualizarPerfil({
+    required int idUsuario,
+    required Map<String, dynamic> dadosAtualizados,
+  }) async {
+    try {
+      print('🌐 Enviando dados para API...');
+      print('🌐 ID Usuário: $idUsuario');
+      print('🌐 Dados: $dadosAtualizados');
+
+      final response = await http.put(
+        Uri.parse(
+            '$baseUrl/usuarios/$idUsuario'), // Ajuste a URL conforme sua API
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(dadosAtualizados),
+      );
+
+      print('🌐 Status Code: ${response.statusCode}');
+      print('🌐 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'usuario': data, // A API deve retornar os dados atualizados
+          'message': 'Perfil atualizado com sucesso!',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Erro ao atualizar perfil: ${response.statusCode}',
+        };
+      }
+    } catch (error) {
+      print('❌ Erro na chamada API: $error');
+      return {
+        'success': false,
+        'message': 'Erro de conexão: $error',
+      };
     }
   }
 }

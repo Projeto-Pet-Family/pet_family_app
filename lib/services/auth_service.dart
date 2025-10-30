@@ -146,4 +146,51 @@ class AuthService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> atualizarPerfil({
+    required int idUsuario,
+    required Map<String, dynamic> dadosAtualizados,
+  }) async {
+    try {
+      print('🌐 Enviando atualização para API...');
+      print('🌐 URL: $baseUrl/usuarios/$idUsuario');
+      print('🌐 Dados: $dadosAtualizados');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/usuarios/$idUsuario'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(dadosAtualizados),
+      );
+
+      print('🌐 Status Code: ${response.statusCode}');
+      print('🌐 Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'usuario': data, // A API deve retornar os dados atualizados
+          'message': 'Perfil atualizado com sucesso!',
+        };
+      } else if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'message': 'Usuário não encontrado',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Erro ao atualizar perfil: ${response.statusCode}',
+        };
+      }
+    } catch (error) {
+      print('❌ Erro na chamada API: $error');
+      return {
+        'success': false,
+        'message': 'Erro de conexão: $error',
+      };
+    }
+  }
 }

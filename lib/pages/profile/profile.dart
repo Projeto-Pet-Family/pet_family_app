@@ -12,139 +12,251 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
+  bool _carregando = false;
+
+  Future<void> _recarregarPerfil() async {
+    setState(() {
+      _carregando = true;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.recarregarUsuario();
+
+    setState(() {
+      _carregando = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final usuario = authProvider.usuarioLogado;
-
-    if (usuario == null) {
-      return Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    final nome = usuario['nome'] ?? 'Usuário';
-    final email = usuario['email'] ?? '';
-
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Center(
-            child: Column(
-              children: [
-                SizedBox(height: 50),
-                Row(
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.grey[300],
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          final usuario = authProvider.usuarioLogado;
+
+          if (usuario == null || _carregando) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text('Carregando perfil...'),
+                ],
+              ),
+            );
+          }
+
+          final nome = usuario['nome'] ?? 'Usuário';
+          final email = usuario['email'] ?? '';
+          final telefone = usuario['telefone'] ?? '';
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: 50),
+
+                  // Header com refresh
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.refresh),
+                        onPressed: _recarregarPerfil,
+                        tooltip: 'Atualizar perfil',
                       ),
-                      child: Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.grey[600],
+                      Spacer(),
+                      Text(
+                        'Meu Perfil',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      Spacer(),
+                      SizedBox(width: 48), // Para balancear o layout
+                    ],
+                  ),
+
+                  SizedBox(height: 30),
+
+                  // Informações do usuário
+                  Container(
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nome,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        // Avatar
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFC0C9FF),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            email,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w300,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          child: Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.white,
                           ),
-                          SizedBox(height: 12),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFC0C9FF),
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                            onPressed: () {
-                              context.go('/edit-profile');
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.edit,
-                                  size: 18,
-                                  color: Color(0xFF000000),
+                        ),
+                        SizedBox(width: 16),
+
+                        // Dados
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nome,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
-                                SizedBox(width: 5),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                email,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              if (telefone != null && telefone.isNotEmpty) ...[
+                                SizedBox(height: 4),
                                 Text(
-                                  'Editar perfil',
+                                  telefone,
                                   style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w400,
                                     fontSize: 14,
+                                    color: Colors.grey[600],
                                   ),
-                                )
+                                ),
                               ],
-                            ),
-                          )
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-                SizedBox(height: 50),
-                
-                // ✅ APENAS OS BOTÕES DE OPÇÕES PERMANECEM
-                ButtonOptionProfileTemplate(
-                  icon: Icons.person,
-                  title: 'Seu perfil',
-                  description: 'Veja todos os detalhes do seu perfil',
-                  onTap: () {
-                    context.go('/edit-profile');
-                  },
-                ),
-                SizedBox(height: 8),
-                ButtonOptionProfileTemplate(
-                  icon: Icons.pets,
-                  title: 'Seu(s) pet(s)',
-                  description: 'Veja todos os seus pets',
-                  onTap: () {
-                    context.go('/edit-pet');
-                  },
-                ),
-                SizedBox(height: 8),
-                ButtonOptionProfileTemplate(
-                  icon: Icons.security,
-                  title: 'Segurança',
-                  description: 'Altere sua senha e configurações de segurança',
-                  onTap: () {
-                    // context.go('/security');
-                  },
-                ),
-              ],
+                            ],
+                          ),
+                        ),
+
+                        // Botão editar
+                        IconButton(
+                          icon: Icon(Icons.edit, color: Color(0xFFC0C9FF)),
+                          onPressed: () {
+                            context.go('/edit-profile');
+                          },
+                          tooltip: 'Editar perfil',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 40),
+
+                  // Opções
+                  _buildOpcoesPerfil(context, authProvider),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildOpcoesPerfil(BuildContext context, AuthProvider authProvider) {
+    return Column(
+      children: [
+        ButtonOptionProfileTemplate(
+          icon: Icons.person_outline,
+          title: 'Editar Perfil',
+          description: 'Altere seus dados pessoais',
+          onTap: () {
+            context.go('/edit-profile');
+          },
+        ),
+        SizedBox(height: 12),
+        ButtonOptionProfileTemplate(
+          icon: Icons.pets,
+          title: 'Meus Pets',
+          description: 'Gerencie seus animais de estimação',
+          onTap: () {
+            context.go('/edit-pet');
+          },
+        ),
+        SizedBox(height: 12),
+        ButtonOptionProfileTemplate(
+          icon: Icons.security,
+          title: 'Segurança',
+          description: 'Altere senha e configurações',
+          onTap: () {
+            // context.go('/security');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Funcionalidade em desenvolvimento')),
+            );
+          },
+        ),
+        SizedBox(height: 12),
+        ButtonOptionProfileTemplate(
+          icon: Icons.help_outline,
+          title: 'Ajuda & Suporte',
+          description: 'Tire suas dúvidas',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Central de ajuda em desenvolvimento')),
+            );
+          },
+        ),
+        SizedBox(height: 12),
+        ButtonOptionProfileTemplate(
+          icon: Icons.exit_to_app,
+          title: 'Sair',
+          description: 'Encerrar sessão',
+          onTap: () {
+            _mostrarDialogoSair(context, authProvider);
+          },
+        ),
+      ],
+    );
+  }
+
+  void _mostrarDialogoSair(BuildContext context, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.logout, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Sair da Conta'),
+            ],
+          ),
+          content: Text(
+              'Tem certeza que deseja sair? Você precisará fazer login novamente.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await authProvider.logout();
+                if (context.mounted) {
+                  context.go('/login');
+                }
+              },
+              child: Text('Sair', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 }
