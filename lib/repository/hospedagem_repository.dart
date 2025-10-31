@@ -6,17 +6,29 @@ class HospedagemRepository {
 
   Future<List<HospedagemModel>> lerHospedagem() async {
     try {
-      final response = await _api.get('/hospedagens'); 
+      final response = await _api.get('/hospedagens');
+
+      // DEBUG para ver a estrutura dos dados
+      print('📦 Dados brutos da API: ${response.data}');
 
       if (response.data is List) {
-        return (response.data as List)
+        final List<HospedagemModel> hospedagens = (response.data as List)
             .map((json) => HospedagemModel.fromJson(json))
             .toList();
+
+        // Debug final
+        print('✅ Hospedagens mapeadas:');
+        for (var h in hospedagens) {
+          print('   - ${h.nome} (ID: ${h.idHospedagem})');
+        }
+
+        return hospedagens;
       } else {
+        // Se não for lista, cria uma lista com um único item
         return [HospedagemModel.fromJson(response.data)];
       }
     } catch (e) {
-      print('Erro no repositório: $e');
+      print('❌ Erro no repositório: $e');
       throw Exception('Erro ao carregar hospedagens: $e');
     }
   }
@@ -26,25 +38,28 @@ class HospedagemRepository {
       final response = await _api.post('/hospedagens', hospedagem.toJson());
       return HospedagemModel.fromJson(response.data);
     } catch (e) {
-      print('Erro ao criar hospedagem: $e');
+      print('❌ Erro ao criar hospedagem: $e');
       throw Exception('Erro ao criar hospedagem: $e');
     }
   }
 
   Future<void> atualizarHospedagem(HospedagemModel hospedagem) async {
     try {
-      await _api.put('/hospedagen/${hospedagem.idHospedagem}', hospedagem.toJson());
+      // ✅ CORREÇÃO: URL corrigida (hospedagem no singular)
+      await _api.put(
+          '/hospedagem/${hospedagem.idHospedagem}', hospedagem.toJson());
     } catch (e) {
-      print('Erro ao atualizar hospedagem: $e');
+      print('❌ Erro ao atualizar hospedagem: $e');
       throw Exception('Erro ao atualizar hospedagem: $e');
     }
   }
 
   Future<void> deletarHospedagem(int id) async {
     try {
-      await _api.delete('/hospedagen/$id');
+      // ✅ CORREÇÃO: URL corrigida (hospedagem no singular)
+      await _api.delete('/hospedagem/$id');
     } catch (e) {
-      print('Erro ao deletar hospedagem: $e');
+      print('❌ Erro ao deletar hospedagem: $e');
       throw Exception('Erro ao deletar hospedagem: $e');
     }
   }

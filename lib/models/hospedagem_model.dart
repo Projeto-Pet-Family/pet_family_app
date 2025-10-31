@@ -2,7 +2,7 @@ class HospedagemModel {
   final int idHospedagem;
   final String nome;
   final int idEndereco;
-  final int numero;
+  final String numero;
   final String complemento;
   final String cep;
   final String logradouro;
@@ -26,11 +26,30 @@ class HospedagemModel {
   });
 
   factory HospedagemModel.fromJson(Map<String, dynamic> json) {
+    // DEBUG DETALHADO
+    print('🔍 JSON recebido no fromJson:');
+    print(
+        '   idhospedagem: ${json['idhospedagem']} (tipo: ${json['idhospedagem']?.runtimeType})');
+
+    // ✅ CORREÇÃO: Garantir que o ID seja mapeado corretamente
+    final dynamic idRaw = json['idhospedagem'];
+    final int idHospedagem;
+
+    if (idRaw is int) {
+      idHospedagem = idRaw;
+    } else if (idRaw is String) {
+      idHospedagem = int.tryParse(idRaw) ?? 0;
+    } else {
+      idHospedagem = 0;
+    }
+
+    print('   ID mapeado: $idHospedagem');
+
     return HospedagemModel(
-      idHospedagem: json['IdHospedagem'] ?? 0,
+      idHospedagem: idHospedagem,
       nome: json['nome'] ?? '',
-      idEndereco: json['IdEndereco'] ?? 0,
-      numero: json['numero'] ?? 0,
+      idEndereco: json['idendereco'] ?? 0,
+      numero: json['numero']?.toString() ?? '',
       complemento: json['complemento'] ?? '',
       cep: json['CEP'] ?? '',
       logradouro: json['logradouro'] ?? '',
@@ -41,11 +60,12 @@ class HospedagemModel {
     );
   }
 
+  // ✅ ADICIONE ESTE MÉTODO toJson()
   Map<String, dynamic> toJson() {
     return {
-      'IdHospedagem': idHospedagem,
+      'idhospedagem': idHospedagem,
       'nome': nome,
-      'IdEndereco': idEndereco,
+      'idendereco': idEndereco,
       'numero': numero,
       'complemento': complemento,
       'CEP': cep,

@@ -6,7 +6,7 @@ import 'package:pet_family_app/widgets/app_button.dart';
 class HotelTemplate extends StatefulWidget {
   final String name;
   final String street;
-  final int number;
+  final String number; // ✅ MUDEI de int para String
   final String neighborhood;
   final String city;
   final String state;
@@ -19,7 +19,7 @@ class HotelTemplate extends StatefulWidget {
     super.key,
     required this.name,
     required this.street,
-    required this.number,
+    required this.number, // ✅ Agora é String
     required this.neighborhood,
     required this.city,
     required this.state,
@@ -34,7 +34,6 @@ class HotelTemplate extends StatefulWidget {
 }
 
 class _HotelTemplateState extends State<HotelTemplate> {
-  // Método para criar o Map com todos os dados do hotel
   Map<String, dynamic> _getHotelData() {
     return {
       'idhospedagem': widget.idHotel,
@@ -52,6 +51,12 @@ class _HotelTemplateState extends State<HotelTemplate> {
 
   @override
   Widget build(BuildContext context) {
+    // DEBUG para verificar os dados
+    print('🏨 HotelTemplate construído:');
+    print('   Nome: ${widget.name}');
+    print('   ID: ${widget.idHotel}');
+    print('   Número: ${widget.number} (tipo: ${widget.number.runtimeType})');
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Container(
@@ -141,11 +146,11 @@ class _HotelTemplateState extends State<HotelTemplate> {
             ),
             AppButton(
               onPressed: () {
-                // ✅ CORREÇÃO: Passar os dados do hotel no extra
                 final hotelData = _getHotelData();
 
                 print('🎯 Navegando para hotel: ${widget.name}');
-                print('🎯 Dados enviados: $hotelData');
+                print('🎯 ID enviado: ${widget.idHotel}');
+                print('🎯 Dados completos enviados: $hotelData');
 
                 context.go('/hotel', extra: hotelData);
               },

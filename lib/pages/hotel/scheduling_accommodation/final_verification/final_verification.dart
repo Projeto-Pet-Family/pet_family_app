@@ -213,7 +213,7 @@ class _FinalVerificationState extends State<FinalVerification> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.go('/booking'); // Navegar para tela de agendamentos
+                context.go('/core-navigation'); // Navegar para tela de agendamentos
               },
               child: const Text('Ver Meus Agendamentos'),
             ),
@@ -486,7 +486,7 @@ class _FinalVerificationState extends State<FinalVerification> {
                         const SizedBox(height: 16),
                         OutlinedButton(
                           onPressed: () {
-                            context.go('/choose-service');
+                            context.go('/core-navigation');
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.grey,

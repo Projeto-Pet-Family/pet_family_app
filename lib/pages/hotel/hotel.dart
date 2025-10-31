@@ -36,13 +36,25 @@ class _HotelState extends State<Hotel> {
       if (hotelId != null) {
         print('🔄 Inicializando serviços para hotel ID: $hotelId');
         _hotelProvider.fetchServicos(hotelId);
+      } else {
+        print('⚠️  ID da hospedagem não encontrado nos dados do hotel');
       }
+    } else {
+      print('⚠️  Dados do hotel são nulos');
+    }
+  }
+
+  @override
+  void didUpdateWidget(Hotel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarregar serviços se os dados do hotel mudaram
+    if (widget.hotelData != oldWidget.hotelData) {
+      _initializeData();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Verificação robusta para hotelData nulo
     if (widget.hotelData == null) {
       return _buildErrorScreen();
     }
@@ -268,29 +280,60 @@ class _HotelState extends State<Hotel> {
           ),
         ),
         const SizedBox(height: 20),
+
+        // Estado de carregamento
         if (hotelProvider.isLoading)
-          const Center(
-            child: CircularProgressIndicator(),
+          const Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(
+              child: Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 10),
+                  Text(
+                    'Carregando serviços...',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w100,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           )
+
+        // Estado de erro
         else if (hotelProvider.errorMessage.isNotEmpty)
           _buildErrorSection(hotelProvider)
-        else if (hotelProvider.servicos.isNotEmpty)
-          ...hotelProvider.servicos.map((servico) {
-            final String descricao = servico['descricao'] ?? 'Serviço';
-            final String preco = servico['preco'] ?? '0.00';
 
-            return ServiceTemplate(
-              service: descricao,
-              price: _formatarPreco(preco),
-            );
-          }).toList()
+        // Estado com serviços carregados
+        else if (hotelProvider.servicos.isNotEmpty)
+          Column(
+            children: hotelProvider.servicos.map((servico) {
+              final String descricao = servico['descricao'] ?? 'Serviço';
+              final String preco = servico['preco']?.toString() ?? '0.00';
+              final String nome = servico['nome'] ?? descricao;
+
+              return ServiceTemplate(
+                service: nome,
+                price: _formatarPreco(preco),
+              );
+            }).toList(),
+          )
+
+        // Estado sem serviços
         else
-          const Text(
-            'Nenhum serviço disponível',
-            style: TextStyle(
-              fontWeight: FontWeight.w100,
-              color: Colors.grey,
-              fontSize: 16,
+          const Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(
+              child: Text(
+                'Nenhum serviço disponível',
+                style: TextStyle(
+                  fontWeight: FontWeight.w100,
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
       ],
@@ -298,28 +341,41 @@ class _HotelState extends State<Hotel> {
   }
 
   Widget _buildErrorSection(HotelProvider hotelProvider) {
-    return Center(
-      child: Column(
-        children: [
-          Text(
-            hotelProvider.errorMessage,
-            style: const TextStyle(
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 50,
               color: Colors.red,
-              fontSize: 16,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () {
-              final hotelId = widget.hotelData?['idhospedagem'];
-              if (hotelId != null) {
-                hotelProvider.fetchServicos(hotelId);
-              }
-            },
-            child: const Text('Tentar Novamente'),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              hotelProvider.errorMessage,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: () {
+                final hotelId = widget.hotelData?['idhospedagem'];
+                if (hotelId != null) {
+                  hotelProvider.fetchServicos(hotelId);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Tentar Novamente'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -377,6 +433,7 @@ class _HotelState extends State<Hotel> {
             ),
             onPressed: () {
               // TODO: Implementar funcionalidade de mensagem
+              _showMessageDialog();
             },
             child: IntrinsicWidth(
               child: const Row(
@@ -406,7 +463,7 @@ class _HotelState extends State<Hotel> {
           padding: const EdgeInsets.fromLTRB(0, 50, 0, 40),
           child: AppButton(
             onPressed: () {
-              context.go('/choose-pet');
+              _navigateToSchedule();
             },
             label: 'Agendar aqui',
             fontSize: 25,
@@ -442,6 +499,61 @@ class _HotelState extends State<Hotel> {
       return 'R\$${valor.toStringAsFixed(2).replaceAll('.', ',')}';
     } catch (e) {
       return 'R\$0,00';
+    }
+  }
+
+  void _showMessageDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enviar Mensagem'),
+          content: const Text(
+            'Funcionalidade de mensagem em desenvolvimento. '
+            'Em breve você poderá enviar mensagens diretamente para o hotel.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _navigateToSchedule() {
+    final hotelId = widget.hotelData?['idhospedagem'];
+    final hotelNome = widget.hotelData?['nome'] ?? 'Hotel';
+
+    if (hotelId != null) {
+      print('🏨 Navegando para agendamento - Hotel ID: $hotelId');
+      context.go('/choose-pet', extra: {
+        'hotelId': hotelId,
+        'hotelNome': hotelNome,
+      });
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Erro'),
+            content: const Text(
+                'Não foi possível identificar o hotel para agendamento.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 }
