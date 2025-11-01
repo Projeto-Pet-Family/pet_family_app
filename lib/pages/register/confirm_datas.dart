@@ -7,6 +7,7 @@ import 'package:pet_family_app/widgets/app_button.dart';
 import './templates/pet_data_template.dart';
 import './templates/your_data_template.dart';
 import '../../services/user_service.dart';
+import '../../services/pet/pet_service.dart';
 import '../../models/user_model.dart';
 import '../../models/pet/pet_model.dart';
 
@@ -26,12 +27,39 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
     });
 
     try {
-      // Carrega dados do cache e constrói o objeto de usuário
+      // Carrega dados do cache e constrói os objetos
       final user = await _buildUserData();
+      final pet = await _buildPetData();
 
-      // Faz o POST para a API usando UserService
+      // 1. Faz o POST do usuário
       final userService = UserService(client: http.Client());
-      await userService.registerUser(user);
+      final createdUser = await userService.registerUser(user);
+
+      // 2. Se o pet tem dados válidos, registra o pet
+      if (_hasPetData(pet)) {
+        try {
+          // Cria o serviço para cadastrar pet
+          final petService = PetService(client: http.Client());
+
+          // Atualiza o pet com o ID do usuário criado
+          final petWithUserId = pet.copyWith(idusuario: createdUser.id);
+
+          // Converte para Map e remove campos nulos
+          final petData = petWithUserId.toJson();
+          petData.removeWhere((key, value) => value == null);
+
+          // Registra o pet
+          await petService.registerPet(petData);
+
+          print('✅ Pet cadastrado com sucesso!');
+        } catch (e) {
+          print('⚠️ Erro ao cadastrar pet, mas usuário foi criado: $e');
+          _showWarningDialog(
+              'Usuário criado com sucesso, mas houve um erro ao cadastrar o pet. Você pode adicionar o pet posteriormente. Erro: $e');
+        }
+      } else {
+        print('ℹ️ Nenhum pet para cadastrar');
+      }
 
       // Se chegou aqui, o cadastro foi bem-sucedido
       _showSuccessDialog();
@@ -77,14 +105,26 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
     final prefs = await SharedPreferences.getInstance();
 
     return PetModel(
-      idusuario: null,
-      idporte: null,
-      idespecie: null,
-      idraca: null,
+      idusuario: null, // Será preenchido após criar o usuário
+      idporte: prefs.getInt('pet_id_porte'),
+      idespecie: prefs.getInt('pet_id_especie'),
+      idraca: prefs.getInt('pet_id_raca'),
       nome: prefs.getString('pet_name') ?? '',
-      sexo: prefs.getString('pet_sex') ?? '',
+      sexo: prefs.getString('pet_sex') ?? '', // 'm' ou 'f'
       nascimento: null,
+      observacoes: prefs.getString('pet_observation'),
     );
+  }
+
+  bool _hasPetData(PetModel pet) {
+    return pet.nome?.isNotEmpty == true &&
+        pet.nome != '' &&
+        pet.idespecie != null &&
+        pet.idespecie! > 0 &&
+        pet.idraca != null &&
+        pet.idraca! > 0 &&
+        pet.idporte != null &&
+        pet.idporte! > 0;
   }
 
   void _showSuccessDialog() {
@@ -95,6 +135,27 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
         return AlertDialog(
           title: const Text('Cadastro Confirmado!'),
           content: const Text('Seus dados foram salvos com sucesso.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _clearCacheAndNavigate();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showWarningDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Aviso'),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () {
@@ -153,6 +214,11 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
     await prefs.remove('pet_race');
     await prefs.remove('pet_sex');
     await prefs.remove('pet_observation');
+
+    // Limpa os IDs do pet
+    await prefs.remove('pet_id_especie');
+    await prefs.remove('pet_id_raca');
+    await prefs.remove('pet_id_porte');
 
     // Navega para a tela inicial
     if (mounted) {

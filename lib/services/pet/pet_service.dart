@@ -2,40 +2,19 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PetService {
+  final http.Client client;
+
+  PetService({required this.client});
+
   static const String baseUrl = 'https://bepetfamily.onrender.com';
 
-  // Buscar pets por usuário
-  static Future<List<dynamic>> buscarPetsPorUsuario(int usuarioId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/usuario/$usuarioId/pets'),
-      );
-
-      print('🔍 Buscar Pets - Status: ${response.statusCode}');
-      print('🔍 Buscar Pets - Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          return data['pets'] ?? [];
-        } else {
-          throw Exception(data['message'] ?? 'Erro ao buscar pets');
-        }
-      } else {
-        throw Exception('Erro ao carregar pets: ${response.statusCode}');
-      }
-    } catch (error) {
-      print('❌ Erro ao buscar pets: $error');
-      throw Exception('Erro de conexão: $error');
-    }
-  }
-
   // Adicionar novo pet
-  static Future<Map<String, dynamic>> adicionarPet(Map<String, dynamic> petData) async {
+  Future<Map<String, dynamic>> adicionarPet(
+      Map<String, dynamic> petData) async {
     try {
       print('🔄 Tentando adicionar pet: $petData');
-      
-      final response = await http.post(
+
+      final response = await client.post(
         Uri.parse('$baseUrl/pet'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(petData),
@@ -67,12 +46,47 @@ class PetService {
     }
   }
 
+  // Método registerPet (alias para adicionarPet)
+  Future<void> registerPet(Map<String, dynamic> petData) async {
+    final result = await adicionarPet(petData);
+    if (!result['success']) {
+      throw Exception(result['message']);
+    }
+  }
+
+  // Buscar pets por usuário
+  Future<List<dynamic>> buscarPetsPorUsuario(int usuarioId) async {
+    try {
+      final response = await client.get(
+        Uri.parse('$baseUrl/usuario/$usuarioId/pets'),
+      );
+
+      print('🔍 Buscar Pets - Status: ${response.statusCode}');
+      print('🔍 Buscar Pets - Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return data['pets'] ?? [];
+        } else {
+          throw Exception(data['message'] ?? 'Erro ao buscar pets');
+        }
+      } else {
+        throw Exception('Erro ao carregar pets: ${response.statusCode}');
+      }
+    } catch (error) {
+      print('❌ Erro ao buscar pets: $error');
+      throw Exception('Erro de conexão: $error');
+    }
+  }
+
   // Atualizar pet
-  static Future<Map<String, dynamic>> atualizarPet(int petId, Map<String, dynamic> petData) async {
+  Future<Map<String, dynamic>> atualizarPet(
+      int petId, Map<String, dynamic> petData) async {
     try {
       print('🔄 Tentando atualizar pet $petId: $petData');
-      
-      final response = await http.put(
+
+      final response = await client.put(
         Uri.parse('$baseUrl/pet/$petId'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(petData),
@@ -105,11 +119,11 @@ class PetService {
   }
 
   // Remover pet
-  static Future<Map<String, dynamic>> removerPet(int petId) async {
+  Future<Map<String, dynamic>> removerPet(int petId) async {
     try {
       print('🔄 Tentando remover pet $petId');
-      
-      final response = await http.delete(
+
+      final response = await client.delete(
         Uri.parse('$baseUrl/pet/$petId'),
       );
 
@@ -138,10 +152,10 @@ class PetService {
     }
   }
 
-  // Buscar pet por ID (método adicional)
-  static Future<Map<String, dynamic>> buscarPetPorId(int petId) async {
+  // Buscar pet por ID
+  Future<Map<String, dynamic>> buscarPetPorId(int petId) async {
     try {
-      final response = await http.get(
+      final response = await client.get(
         Uri.parse('$baseUrl/pet/$petId'),
       );
 
@@ -163,28 +177,6 @@ class PetService {
       }
     } catch (error) {
       print('❌ Erro ao buscar pet por ID: $error');
-      throw Exception('Erro de conexão: $error');
-    }
-  }
-
-  // Buscar todos os pets (método adicional)
-  static Future<List<dynamic>> buscarTodosPets() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/pet'),
-      );
-
-      print('🔍 Buscar Todos Pets - Status: ${response.statusCode}');
-      print('🔍 Buscar Todos Pets - Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data is List ? data : [];
-      } else {
-        throw Exception('Erro ao carregar todos os pets: ${response.statusCode}');
-      }
-    } catch (error) {
-      print('❌ Erro ao buscar todos os pets: $error');
       throw Exception('Erro de conexão: $error');
     }
   }
