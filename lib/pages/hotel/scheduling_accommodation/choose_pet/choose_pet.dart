@@ -85,7 +85,7 @@ class _ChoosePetState extends State<ChoosePet> {
       final prefs = await SharedPreferences.getInstance();
 
       // Salva os nomes dos pets selecionados
-      final petNames = petsSelecionados.map((pet) => pet.nome).toList();
+      final petNames = petsSelecionados.map((pet) => pet.nome ?? '').toList();
       await prefs.setStringList('selected_pet_names', petNames);
 
       // Salva os IDs como string para facilitar o acesso
@@ -95,7 +95,7 @@ class _ChoosePetState extends State<ChoosePet> {
 
       // Salva informações individuais de cada pet
       for (final pet in petsSelecionados) {
-        await prefs.setString('pet_${pet.idpet}_name', pet.nome);
+        await prefs.setString('pet_${pet.idpet}_name', pet.nome ?? '');
         if (pet.idespecie != null) {
           await prefs.setInt('pet_${pet.idpet}_species', pet.idespecie!);
         }
@@ -314,7 +314,7 @@ class _ChoosePetState extends State<ChoosePet> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: PetTemplate(
             key: ValueKey(pet.idpet),
-            name: pet.nome,
+            name: pet.nome ?? '',
             isSelected: _selectedPets.contains(pet.idpet),
             onTap: () => _togglePetSelection(pet.idpet!),
           ),

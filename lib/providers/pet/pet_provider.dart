@@ -1,10 +1,14 @@
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../../services/pet/pet_service.dart';
 
 class PetProvider with ChangeNotifier {
   List<dynamic> _pets = [];
   bool _isLoading = false;
   String _errorMessage = '';
+
+  // Crie uma instância do PetService
+  final PetService _petService = PetService(client: http.Client());
 
   List<dynamic> get pets => _pets;
   bool get isLoading => _isLoading;
@@ -13,13 +17,14 @@ class PetProvider with ChangeNotifier {
   // Buscar pets por usuário
   Future<void> buscarPetsPorUsuario(int usuarioId) async {
     if (_isLoading) return; // Evita múltiplas chamadas simultâneas
-    
+
     _isLoading = true;
     _errorMessage = '';
     notifyListeners();
 
     try {
-      final petsData = await PetService.buscarPetsPorUsuario(usuarioId);
+      // Use a instância _petService em vez do acesso estático
+      final petsData = await _petService.buscarPetsPorUsuario(usuarioId);
       _pets = petsData;
       _errorMessage = '';
     } catch (error) {
@@ -38,10 +43,10 @@ class PetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await PetService.adicionarPet(petData);
-      
+      // Use a instância _petService
+      final result = await _petService.adicionarPet(petData);
+
       if (result['success'] == true) {
-        // Aguarda um pouco antes de recarregar para dar tempo da UI atualizar
         await Future.delayed(const Duration(milliseconds: 500));
         await buscarPetsPorUsuario(petData['idusuario']);
         return true;
@@ -66,10 +71,10 @@ class PetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await PetService.atualizarPet(petId, petData);
-      
+      // Use a instância _petService
+      final result = await _petService.atualizarPet(petId, petData);
+
       if (result['success'] == true) {
-        // Aguarda um pouco antes de recarregar
         await Future.delayed(const Duration(milliseconds: 500));
         final usuarioId = petData['idusuario'];
         if (usuarioId != null) {
@@ -97,10 +102,10 @@ class PetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await PetService.removerPet(petId);
-      
+      // Use a instância _petService
+      final result = await _petService.removerPet(petId);
+
       if (result['success'] == true) {
-        // Remove o pet da lista local
         _pets.removeWhere((pet) => pet['idpet'] == petId);
         _isLoading = false;
         notifyListeners();

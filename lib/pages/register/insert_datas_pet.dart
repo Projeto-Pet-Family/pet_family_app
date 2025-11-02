@@ -55,7 +55,7 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
   static const String _porteKey = 'pet_porte';
   static const String _sexKey = 'pet_sex';
   static const String _observationKey = 'pet_observation';
-  
+
   // Chaves para os IDs
   static const String _idEspecieKey = 'pet_id_especie';
   static const String _idRacaKey = 'pet_id_raca';
@@ -70,7 +70,6 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
     _loadPortesFromAPI(); // Carrega todos os portes da API
   }
 
-  // Carregar espécies da API
   Future<void> _loadSpeciesFromAPI() async {
     setState(() {
       _isLoadingSpecies = true;
@@ -85,12 +84,20 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
         especiesCompletas = especies;
         speciesAnimalsList = especies.map((e) => e.descricao).toList();
       });
+
+      // DEBUG: Verificar estrutura completa
+      print('📥 Espécies carregadas da API:');
+      for (var especie in especies) {
+        print('   - ${especie.descricao} (ID: ${especie.idEspecie})');
+        // Verificar se a propriedade existe
+        print('     idEspecie existe: ${especie.idEspecie != null}');
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Erro ao carregar espécies: $e';
-        // Lista fallback caso a API falhe
         speciesAnimalsList = ['Cachorro', 'Gato', 'Pássaro', 'Peixe'];
       });
+      print('❌ Erro ao carregar espécies: $e');
     } finally {
       setState(() {
         _isLoadingSpecies = false;
@@ -98,7 +105,7 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
     }
   }
 
-  // Carregar raças da API
+// No _loadRacasFromAPI, adicione:
   Future<void> _loadRacasFromAPI() async {
     setState(() {
       _isLoadingRacas = true;
@@ -110,13 +117,17 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
 
       setState(() {
         racasCompletas = racas;
-        raceAnimalList = racas.isNotEmpty 
-          ? racas.map((r) => r.descricao).toList() 
-          : ['Sem raça definida'];
+        raceAnimalList = racas.map((r) => r.descricao).toList();
       });
+
+      print('📥 Raças carregadas da API: ${racas.length} itens');
+      for (var raca in racas) {
+        print('   - ${raca.descricao} (ID: ${raca.idRaca})');
+      }
     } catch (e) {
+      print('❌ Erro ao carregar raças: $e');
       setState(() {
-        raceAnimalList = ['Sem raça definida']; // Fallback
+        raceAnimalList = ['Sem raça definida'];
       });
     } finally {
       setState(() {
@@ -125,7 +136,6 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
     }
   }
 
-  // Carregar portes da API
   Future<void> _loadPortesFromAPI() async {
     setState(() {
       _isLoadingPortes = true;
@@ -137,14 +147,20 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
 
       setState(() {
         portesCompletos = portes;
-        porteAnimalList = portes.isNotEmpty 
-          ? portes.map((p) => p.descricao).toList() 
-          : ['Pequeno', 'Médio', 'Grande'];
+        porteAnimalList = portes.map((p) => p.descricao).toList();
       });
+
+      // DEBUG: Verificar estrutura
+      print('📥 Portes carregados da API:');
+      for (var porte in portes) {
+        print('   - ${porte.descricao} (ID: ${porte.idPorte})');
+        print('     idPorte existe: ${porte.idPorte != null}');
+      }
     } catch (e) {
       setState(() {
-        porteAnimalList = ['Pequeno', 'Médio', 'Grande']; // Fallback
+        porteAnimalList = ['Pequeno', 'Médio', 'Grande'];
       });
+      print('❌ Erro ao carregar portes: $e');
     } finally {
       setState(() {
         _isLoadingPortes = false;
@@ -152,34 +168,60 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
     }
   }
 
-  // Obter ID da espécie selecionada
-  int? _getIdEspecie(String? especieNome) {
-    if (especieNome == null) return null;
-    final especie = especiesCompletas.firstWhere(
-      (e) => e.descricao == especieNome,
-      orElse: () => null,
-    );
-    return especie?.id;
-  }
-
-  // Obter ID da raça selecionada
+// Obter ID da raça selecionada - AGORA CORRETO
   int? _getIdRaca(String? racaNome) {
     if (racaNome == null) return null;
-    final raca = racasCompletas.firstWhere(
-      (r) => r.nome == racaNome,
-      orElse: () => null,
-    );
-    return raca?.id;
+
+    try {
+      for (final raca in racasCompletas) {
+        if (raca.descricao == racaNome) {
+          print('🔍 Encontrada raça "$racaNome": ID ${raca.idRaca}');
+          return raca.idRaca;
+        }
+      }
+      print('❌ Raça "$racaNome" não encontrada');
+      return null;
+    } catch (e) {
+      print('❌ Erro ao buscar raça "$racaNome": $e');
+      return null;
+    }
   }
 
-  // Obter ID do porte selecionado
+  int? _getIdEspecie(String? especieNome) {
+    if (especieNome == null || especiesCompletas.isEmpty) return null;
+
+    try {
+      for (final especie in especiesCompletas) {
+        if (especie.descricao == especieNome && especie.idEspecie != null) {
+          print(
+              '🔍 Encontrada espécie "$especieNome": ID ${especie.idEspecie}');
+          return especie.idEspecie;
+        }
+      }
+      print('❌ Espécie "$especieNome" não encontrada ou ID é null');
+      return null;
+    } catch (e) {
+      print('❌ Erro ao buscar espécie "$especieNome": $e');
+      return null;
+    }
+  }
+
   int? _getIdPorte(String? porteNome) {
-    if (porteNome == null) return null;
-    final porte = portesCompletos.firstWhere(
-      (p) => p.descricao == porteNome,
-      orElse: () => null,
-    );
-    return porte?.id;
+    if (porteNome == null || portesCompletos.isEmpty) return null;
+
+    try {
+      for (final porte in portesCompletos) {
+        if (porte.descricao == porteNome && porte.idPorte != null) {
+          print('🔍 Encontrado porte "$porteNome": ID ${porte.idPorte}');
+          return porte.idPorte;
+        }
+      }
+      print('❌ Porte "$porteNome" não encontrado ou ID é null');
+      return null;
+    } catch (e) {
+      print('❌ Erro ao buscar porte "$porteNome": $e');
+      return null;
+    }
   }
 
   // Converter sexo para 'm' ou 'f'
@@ -190,6 +232,7 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
   }
 
   // Salvar dados do formulário no cache
+  // Salvar dados do formulário no cache
   Future<void> _savePetData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -199,13 +242,34 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
     await prefs.setString(_porteKey, _porteAnimalType ?? '');
     await prefs.setString(_sexKey, _sexAnimalValue ?? ''); // Salva 'm' ou 'f'
     await prefs.setString(_observationKey, observationAnimalController.text);
-    
-    // Salvar os IDs
-    await prefs.setInt(_idEspecieKey, _idEspecie ?? 0);
-    await prefs.setInt(_idRacaKey, _idRaca ?? 0);
-    await prefs.setInt(_idPorteKey, _idPorte ?? 0);
+
+    // DEBUG: Mostrar os IDs antes de salvar
+    print('💾 Salvando IDs no SharedPreferences:');
+    print('   🐶 ID Espécie: $_idEspecie');
+    print('   🐕 ID Raça: $_idRaca');
+    print('   📏 ID Porte: $_idPorte');
+
+    // Salvar os IDs - só salva se não forem null
+    if (_idEspecie != null) {
+      await prefs.setInt(_idEspecieKey, _idEspecie!);
+    } else {
+      await prefs.remove(_idEspecieKey); // Remove se for null
+    }
+
+    if (_idRaca != null) {
+      await prefs.setInt(_idRacaKey, _idRaca!);
+    } else {
+      await prefs.remove(_idRacaKey); // Remove se for null
+    }
+
+    if (_idPorte != null) {
+      await prefs.setInt(_idPorteKey, _idPorte!);
+    } else {
+      await prefs.remove(_idPorteKey); // Remove se for null
+    }
   }
 
+  // Carregar dados do formulário do cache
   // Carregar dados do formulário do cache
   Future<void> _loadPetData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -228,15 +292,28 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
       // Carrega o valor salvo do sexo
       final savedSexValue = prefs.getString(_sexKey);
       _sexAnimalValue = savedSexValue;
-      _sexAnimalType = savedSexValue == 'm' ? 'Macho' : 
-                      savedSexValue == 'f' ? 'Fêmea' : null;
+      _sexAnimalType = savedSexValue == 'm'
+          ? 'Macho'
+          : savedSexValue == 'f'
+              ? 'Fêmea'
+              : null;
 
       observationAnimalController.text = prefs.getString(_observationKey) ?? '';
-      
-      // Carregar os IDs
-      _idEspecie = prefs.getInt(_idEspecieKey);
-      _idRaca = prefs.getInt(_idRacaKey);
-      _idPorte = prefs.getInt(_idPorteKey);
+
+      // Carregar os IDs - só carrega se existirem e não forem 0
+      final idEspecie = prefs.getInt(_idEspecieKey);
+      final idRaca = prefs.getInt(_idRacaKey);
+      final idPorte = prefs.getInt(_idPorteKey);
+
+      _idEspecie = (idEspecie != null && idEspecie > 0) ? idEspecie : null;
+      _idRaca = (idRaca != null && idRaca > 0) ? idRaca : null;
+      _idPorte = (idPorte != null && idPorte > 0) ? idPorte : null;
+
+      // DEBUG: Mostrar os IDs carregados
+      print('📥 IDs carregados do SharedPreferences:');
+      print('   🐶 ID Espécie: $_idEspecie');
+      print('   🐕 ID Raça: $_idRaca');
+      print('   📏 ID Porte: $_idPorte');
     });
   }
 
@@ -332,7 +409,8 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
                             _speciesAnimalsType = newValue;
                             _idEspecie = _getIdEspecie(newValue);
                           });
-                          _savePetData();
+                          print(
+                              '🎯 Espécie selecionada: $newValue -> ID: $_idEspecie');
                         },
                         isRequired: true,
                         errorMessage: 'Por favor, selecione a espécie do pet',
@@ -351,6 +429,8 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
                             _raceAnimalType = newValue;
                             _idRaca = _getIdRaca(newValue);
                           });
+                          print(
+                              '🎯 Raça selecionada: $newValue -> ID: $_idRaca');
                           _savePetData();
                         },
                         isRequired: true,
@@ -370,6 +450,8 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
                             _porteAnimalType = newValue;
                             _idPorte = _getIdPorte(newValue);
                           });
+                          print(
+                              '🎯 Porte selecionado: $newValue -> ID: $_idPorte');
                           _savePetData();
                         },
                         isRequired: true,
@@ -422,11 +504,13 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
 
                           // Debug: mostrar os dados que serão salvos
                           print('Nome: ${nameController.text}');
-                          print('Espécie: $_speciesAnimalsType (ID: $_idEspecie)');
+                          print(
+                              'Espécie: $_speciesAnimalsType (ID: $_idEspecie)');
                           print('Raça: $_raceAnimalType (ID: $_idRaca)');
                           print('Porte: $_porteAnimalType (ID: $_idPorte)');
                           print('Sexo (valor): $_sexAnimalValue');
-                          print('Observações: ${observationAnimalController.text}');
+                          print(
+                              'Observações: ${observationAnimalController.text}');
 
                           context.go('/insert-your-datas');
                         }

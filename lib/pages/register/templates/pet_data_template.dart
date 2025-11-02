@@ -10,7 +10,11 @@ class PetDataTemplate extends StatefulWidget {
 }
 
 class _PetDataTemplateState extends State<PetDataTemplate> {
-  Map<String, dynamic> _petData = {};
+  String _name = 'Não informado';
+  String _species = 'Não informado';
+  String _race = 'Não informado';
+  String _sex = 'Não informado';
+  String _observation = 'Não informado';
 
   @override
   void initState() {
@@ -22,13 +26,11 @@ class _PetDataTemplateState extends State<PetDataTemplate> {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      _petData = {
-        'name': prefs.getString('pet_name') ?? 'Não informado',
-        'species': prefs.getString('pet_species') ?? 'Não informado',
-        'race': prefs.getString('pet_race') ?? 'Não informado',
-        'sex': _getSexDisplay(prefs.getString('pet_sex')),
-        'observation': prefs.getString('pet_observation') ?? 'Não informado',
-      };
+      _name = prefs.getString('pet_name') ?? 'Não informado';
+      _species = prefs.getString('pet_species') ?? 'Não informado';
+      _race = prefs.getString('pet_race') ?? 'Não informado';
+      _sex = _getSexDisplay(prefs.getString('pet_sex'));
+      _observation = prefs.getString('pet_observation') ?? 'Não informado';
     });
   }
 
@@ -52,31 +54,17 @@ class _PetDataTemplateState extends State<PetDataTemplate> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nome do Pet
-          _buildDataRow('Nome', _petData['name']),
+          _buildDataRow('Nome', _name),
           const SizedBox(height: 12),
-          
-          // Espécie
-          _buildDataRow('Espécie', _petData['species']),
+          _buildDataRow('Espécie', _species),
           const SizedBox(height: 12),
-          
-          // Raça
-          _buildDataRow('Raça', _petData['race']),
+          _buildDataRow('Raça', _race),
           const SizedBox(height: 12),
-          
-          // Sexo
-          _buildDataRow('Sexo', _petData['sex']),
-          const SizedBox(height: 12),
-          
-          // Observações (só mostra se tiver valor)
-          if (_petData['observation'] != 'Não informado' && _petData['observation'].isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDataRow('Observações', _petData['observation']),
-                const SizedBox(height: 12),
-              ],
-            ),
+          _buildDataRow('Sexo', _sex),
+          if (_observation != 'Não informado' && _observation.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildDataRow('Observações', _observation),
+          ],
         ],
       ),
     );

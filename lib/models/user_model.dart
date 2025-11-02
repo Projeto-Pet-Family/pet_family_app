@@ -1,5 +1,6 @@
 // models/user_model.dart
 class UserModel {
+  final String idusuario;
   final String nome;
   final String cpf;
   final String email;
@@ -12,6 +13,7 @@ class UserModel {
   final AddressModel endereco;
 
   UserModel({
+    required this.idusuario,
     required this.nome,
     required this.cpf,
     required this.email,
@@ -41,6 +43,7 @@ class UserModel {
 
   // Método factory para criar a partir do cache
   factory UserModel.fromCache({
+    required String idusuario,
     required String nome,
     required String cpf,
     required String email,
@@ -49,6 +52,7 @@ class UserModel {
     required AddressModel endereco,
   }) {
     return UserModel(
+      idusuario: idusuario,
       nome: nome,
       cpf: cpf,
       email: email,

@@ -8,7 +8,7 @@ class PetService {
 
   static const String baseUrl = 'https://bepetfamily.onrender.com';
 
-  // Adicionar novo pet
+  // REMOVA "static" de todos os métodos
   Future<Map<String, dynamic>> adicionarPet(
       Map<String, dynamic> petData) async {
     try {
@@ -178,6 +178,77 @@ class PetService {
     } catch (error) {
       print('❌ Erro ao buscar pet por ID: $error');
       throw Exception('Erro de conexão: $error');
+    }
+  }
+
+  Future<Map<String, dynamic>> criarPetDireto(
+      Map<String, dynamic> petData) async {
+    try {
+      print('🔄 Tentando criar pet DIRETO: $petData');
+
+      // Remove campos nulos ou vazios
+      final dadosLimpos = Map<String, dynamic>.from(petData);
+      dadosLimpos.removeWhere((key, value) => value == null || value == '');
+
+      print('📦 Dados limpos para envio: $dadosLimpos');
+
+      final response = await client.post(
+        Uri.parse('$baseUrl/pet'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(dadosLimpos),
+      );
+
+      print('🔍 Criar Pet Direto - Status: ${response.statusCode}');
+      print('🔍 Criar Pet Direto - Body: ${response.body}');
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Pet criado com sucesso!',
+          'data': data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Erro ao criar pet',
+        };
+      }
+    } catch (error) {
+      print('❌ Erro ao criar pet direto: $error');
+      return {
+        'success': false,
+        'message': 'Erro de conexão: $error',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>?> buscarRacaPorId(int idRaca) async {
+    try {
+      final response = await client.get(
+        Uri.parse('$baseUrl/raca/$idRaca'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      print('🔍 Buscar Raça - Status: ${response.statusCode}');
+      print('🔍 Buscar Raça - Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        // Ajuste conforme o formato que sua API retorna
+        if (data['success'] == true && data['raca'] != null) {
+          return data['raca'];
+        } else {
+          return null;
+        }
+      } else {
+        throw Exception('Erro ao buscar raça: ${response.statusCode}');
+      }
+    } catch (error) {
+      print('❌ Erro ao buscar raça: $error');
+      return null;
     }
   }
 }
