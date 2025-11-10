@@ -1,4 +1,3 @@
-// widgets/your_data_template.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,7 +21,7 @@ class _YourDataTemplateState extends State<YourDataTemplate> {
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     setState(() {
       _userData = {
         'name': prefs.getString('user_name') ?? 'Não informado',
@@ -35,13 +34,13 @@ class _YourDataTemplateState extends State<YourDataTemplate> {
 
   Future<void> _loadAddressData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     setState(() {
       _addressData = {
         'cep': prefs.getString('user_cep') ?? 'Não informado',
         'street': prefs.getString('user_street') ?? 'Não informado',
         'number': prefs.getString('user_number') ?? 'Não informado',
-        'complement': prefs.getString('user_complement') ?? '',
+        'complement': prefs.getString('user_complement'),
         'neighborhood': prefs.getString('user_neighborhood') ?? 'Não informado',
         'city': prefs.getString('user_city') ?? 'Não informado',
         'state': prefs.getString('user_state') ?? 'Não informado',
@@ -73,7 +72,7 @@ class _YourDataTemplateState extends State<YourDataTemplate> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           _buildDataRow('Nome completo', _userData['name']),
           const SizedBox(height: 12),
           _buildDataRow('CPF', _userData['cpf']),
@@ -81,11 +80,11 @@ class _YourDataTemplateState extends State<YourDataTemplate> {
           _buildDataRow('Telefone', _userData['phone']),
           const SizedBox(height: 12),
           _buildDataRow('E-mail', _userData['email']),
-          
+
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 16),
-          
+
           // Endereço
           const Text(
             'Endereço',
@@ -96,23 +95,24 @@ class _YourDataTemplateState extends State<YourDataTemplate> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           _buildDataRow('CEP', _addressData['cep']),
           const SizedBox(height: 12),
           _buildDataRow('Rua', _addressData['street']),
           const SizedBox(height: 12),
           _buildDataRow('Número', _addressData['number']),
           const SizedBox(height: 12),
-          
+
           // Complemento (só mostra se tiver valor)
-          if (_addressData['complement'].isNotEmpty)
+          if (_addressData['complement'] != null &&
+              _addressData['complement'].isNotEmpty)
             Column(
               children: [
-                _buildDataRow('Complemento', _addressData['complement']),
+                _buildDataRow('Complemento', _addressData['complement']!),
                 const SizedBox(height: 12),
               ],
             ),
-          
+
           _buildDataRow('Bairro', _addressData['neighborhood']),
           const SizedBox(height: 12),
           _buildDataRow('Cidade', _addressData['city']),

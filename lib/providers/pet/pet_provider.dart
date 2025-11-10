@@ -14,8 +14,8 @@ class PetProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
 
-  // Buscar pets por usuário
-  Future<void> buscarPetsPorUsuario(int usuarioId) async {
+  // Buscar pets por usuário - ajustado para String
+  Future<void> buscarPetsPorUsuario(String usuarioId) async {
     if (_isLoading) return; // Evita múltiplas chamadas simultâneas
 
     _isLoading = true;
@@ -23,13 +23,13 @@ class PetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use a instância _petService em vez do acesso estático
       final petsData = await _petService.buscarPetsPorUsuario(usuarioId);
       _pets = petsData;
       _errorMessage = '';
     } catch (error) {
       _errorMessage = error.toString();
       _pets = [];
+      print('❌ Erro ao buscar pets: $error');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -43,15 +43,17 @@ class PetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use a instância _petService
       final result = await _petService.adicionarPet(petData);
 
       if (result['success'] == true) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        await buscarPetsPorUsuario(petData['idusuario']);
+        // Recarrega a lista de pets após adicionar
+        final usuarioId = petData['idusuario'];
+        if (usuarioId != null) {
+          await buscarPetsPorUsuario(usuarioId.toString());
+        }
         return true;
       } else {
-        _errorMessage = result['message'];
+        _errorMessage = result['message'] ?? 'Erro ao adicionar pet';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -71,18 +73,17 @@ class PetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use a instância _petService
       final result = await _petService.atualizarPet(petId, petData);
 
       if (result['success'] == true) {
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Recarrega a lista de pets após atualizar
         final usuarioId = petData['idusuario'];
         if (usuarioId != null) {
-          await buscarPetsPorUsuario(usuarioId);
+          await buscarPetsPorUsuario(usuarioId.toString());
         }
         return true;
       } else {
-        _errorMessage = result['message'];
+        _errorMessage = result['message'] ?? 'Erro ao atualizar pet';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -96,22 +97,24 @@ class PetProvider with ChangeNotifier {
   }
 
   // Remover pet
-  Future<bool> removerPet(int petId) async {
+  Future<bool> removerPet(int petId, String usuarioId) async {
     _isLoading = true;
     _errorMessage = '';
     notifyListeners();
 
     try {
-      // Use a instância _petService
       final result = await _petService.removerPet(petId);
 
       if (result['success'] == true) {
+        // Remove localmente e recarrega a lista
         _pets.removeWhere((pet) => pet['idpet'] == petId);
-        _isLoading = false;
-        notifyListeners();
+
+        // Recarrega a lista completa para garantir sincronização
+        await buscarPetsPorUsuario(usuarioId);
+
         return true;
       } else {
-        _errorMessage = result['message'];
+        _errorMessage = result['message'] ?? 'Erro ao remover pet';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -124,8 +127,63 @@ class PetProvider with ChangeNotifier {
     }
   }
 
+  // Buscar pet por ID
+  Future<Map<String, dynamic>?> buscarPetPorId(int petId) async {
+    try {
+      final result = await _petService.buscarPetPorId(petId);
+
+      if (result['success'] == true) {
+        return result['pet'];
+      } else {
+        _errorMessage = 'Pet não encontrado';
+        return null;
+      }
+    } catch (error) {
+      _errorMessage = error.toString();
+      return null;
+    }
+  }
+
+  // Buscar raça por ID
+  Future<Map<String, dynamic>?> buscarRacaPorId(int idRaca) async {
+    try {
+      return await _petService.buscarRacaPorId(idRaca);
+    } catch (error) {
+      _errorMessage = error.toString();
+      return null;
+    }
+  }
+
+  // Limpar erro
   void clearError() {
     _errorMessage = '';
     notifyListeners();
+  }
+
+  // Limpar lista de pets
+  void clearPets() {
+    _pets = [];
+    notifyListeners();
+  }
+
+  // Buscar pet localmente por ID
+  Map<String, dynamic>? getPetPorId(int petId) {
+    try {
+      return _pets.firstWhere(
+        (pet) => pet['idpet'] == petId,
+        orElse: () => null,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Atualizar pet localmente (para otimização)
+  void atualizarPetLocalmente(int petId, Map<String, dynamic> novosDados) {
+    final index = _pets.indexWhere((pet) => pet['idpet'] == petId);
+    if (index != -1) {
+      _pets[index] = {..._pets[index], ...novosDados};
+      notifyListeners();
+    }
   }
 }

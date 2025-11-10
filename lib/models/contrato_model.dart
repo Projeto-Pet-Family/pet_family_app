@@ -3,7 +3,7 @@ class ContratoModel {
   final int? idContrato;
   final int idHospedagem;
   final int idUsuario;
-  final String status; // Agora é String
+  final String status;
   final DateTime dataInicio;
   final DateTime? dataFim;
   final DateTime? dataCriacao;

@@ -1,6 +1,7 @@
-// booking/template/booking_template.dart
 import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
+import './pet_icon_bookin_template.dart';
 
 class BookingTemplate extends StatelessWidget {
   final ContratoModel contrato;
@@ -47,8 +48,41 @@ class BookingTemplate extends StatelessWidget {
     }
   }
 
+  // Método para obter a lista de pets como widgets
+  List<Widget> _buildPetIcons() {
+    if (contrato.pets == null || contrato.pets!.isEmpty) {
+      return [
+        const PetIconBookingTemplate(
+          petName: 'Nenhum pet',
+        ),
+      ];
+    }
+
+    return contrato.pets!.map((pet) {
+      String petName = 'Pet';
+
+      // Verifica o tipo do objeto pet e extrai o nome
+      if (pet is Map<String, dynamic>) {
+        petName = pet['nome'] as String? ?? 'Pet';
+      } else if (pet is PetModel) {
+        petName = pet.nome ?? 'Pet';
+      } else if (pet is String) {
+        petName = pet;
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: PetIconBookingTemplate(
+          petName: petName,
+        ),
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final petIcons = _buildPetIcons();
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -58,7 +92,7 @@ class BookingTemplate extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey[300]!),
           borderRadius: BorderRadius.circular(12),
-          color: Colors.white,
+          color: const Color(0xff8692DE),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -68,81 +102,75 @@ class BookingTemplate extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Header com ID e Status
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Agendamento #${contrato.idContrato ?? "N/A"}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+            // Status badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: _obterCorStatus(contrato.idStatus).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: _obterCorStatus(contrato.idStatus)),
+              ),
+              child: Text(
+                _obterNomeStatus(contrato.idStatus),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _obterCorStatus(contrato.idStatus),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _obterCorStatus(contrato.idStatus).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: _obterCorStatus(contrato.idStatus)),
-                  ),
-                  child: Text(
-                    _obterNomeStatus(contrato.idStatus),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _obterCorStatus(contrato.idStatus),
-                    ),
-                  ),
-                ),
-              ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Ícone da casa
+            const Icon(
+              Icons.house,
+              size: 80,
+              color: Colors.white,
+            ),
+
+            // Nome da hospedagem
+            Text(
+              contrato.hospedagemNome ?? 'Hospedagem',
+              style: const TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+              ),
             ),
 
             const SizedBox(height: 12),
 
             // Período
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${_formatarData(contrato.dataInicio ?? DateTime.now())} - ${_formatarData(contrato.dataFim ?? DateTime.now())}',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
+            Text(
+              '${_formatarData(contrato.dataInicio)} - ${_formatarData(contrato.dataFim ?? contrato.dataInicio)}',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xffD9D9D9),
+                fontWeight: FontWeight.w200,
+              ),
+              textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
-            // Hospedagem
-            Row(
-              children: [
-                Icon(Icons.home, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(
-                  'Hospedagem #${contrato.idHospedagem}',
-                  style: const TextStyle(fontSize: 14),
+            if (petIcons.isNotEmpty) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-
-            if (contrato.dataCriacao != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Criado em ${_formatarData(contrato.dataCriacao!)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ],
+                child: Wrap(
+                  spacing: 20,
+                  runSpacing: 16,
+                  alignment: WrapAlignment.center,
+                  children: petIcons,
+                ),
               ),
             ],
           ],

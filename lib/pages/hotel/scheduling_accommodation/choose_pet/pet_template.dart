@@ -1,6 +1,13 @@
+// No arquivo pet_template.dart
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class PetTemplate extends StatelessWidget {
+  final String name;
+  final bool isSelected;
+  final VoidCallback onTap;
+
   const PetTemplate({
     super.key,
     required this.name,
@@ -8,47 +15,41 @@ class PetTemplate extends StatelessWidget {
     required this.onTap,
   });
 
-  final String name;
-  final bool isSelected;
-  final VoidCallback onTap;
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-          color: isSelected ? const Color(0xFF43569B) : const Color(0xFFFBFBFF),
-          borderRadius: BorderRadius.circular(50),
           border: Border.all(
-            color: const Color(0xFFCCCCCC),
+            color: isSelected ? Colors.blue : Color(0xFFCCCCCC),
+            width: 1,
           ),
+          borderRadius: BorderRadius.circular(50),
+          color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.white,
         ),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Icon(
               Icons.pets,
               color: isSelected ? Colors.white : Colors.black,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Text(
               name,
               style: TextStyle(
-                fontSize: 20,
-                color: isSelected ? Colors.white : Colors.black,
-                fontWeight: FontWeight.w200,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.blue : Colors.black,
               ),
             ),
+            const Spacer(),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: Colors.blue,
+              ),
           ],
         ),
       ),

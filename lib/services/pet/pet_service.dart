@@ -8,20 +8,25 @@ class PetService {
 
   static const String baseUrl = 'https://bepetfamily.onrender.com';
 
-  // REMOVA "static" de todos os métodos
-  Future<Map<String, dynamic>> adicionarPet(
-      Map<String, dynamic> petData) async {
+  // Método principal para criar pet
+  Future<Map<String, dynamic>> criarPet(Map<String, dynamic> petData) async {
     try {
-      print('🔄 Tentando adicionar pet: $petData');
+      print('🔄 Tentando criar pet: $petData');
+
+      // Remove campos nulos ou vazios
+      final dadosLimpos = Map<String, dynamic>.from(petData);
+      dadosLimpos.removeWhere((key, value) => value == null || value == '');
+
+      print('📦 Dados limpos para envio: $dadosLimpos');
 
       final response = await client.post(
         Uri.parse('$baseUrl/pet'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(petData),
+        body: json.encode(dadosLimpos),
       );
 
-      print('🔍 Adicionar Pet - Status: ${response.statusCode}');
-      print('🔍 Adicionar Pet - Body: ${response.body}');
+      print('🔍 Criar Pet - Status: ${response.statusCode}');
+      print('🔍 Criar Pet - Body: ${response.body}');
 
       final data = json.decode(response.body);
 
@@ -34,11 +39,11 @@ class PetService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Erro ao adicionar pet',
+          'message': data['message'] ?? 'Erro ao criar pet',
         };
       }
     } catch (error) {
-      print('❌ Erro ao adicionar pet: $error');
+      print('❌ Erro ao criar pet: $error');
       return {
         'success': false,
         'message': 'Erro de conexão: $error',
@@ -46,16 +51,22 @@ class PetService {
     }
   }
 
-  // Método registerPet (alias para adicionarPet)
+  // Alias para criarPet (mantido para compatibilidade)
+  Future<Map<String, dynamic>> adicionarPet(
+      Map<String, dynamic> petData) async {
+    return await criarPet(petData);
+  }
+
+  // Método registerPet (alias para criarPet)
   Future<void> registerPet(Map<String, dynamic> petData) async {
-    final result = await adicionarPet(petData);
+    final result = await criarPet(petData);
     if (!result['success']) {
       throw Exception(result['message']);
     }
   }
 
   // Buscar pets por usuário
-  Future<List<dynamic>> buscarPetsPorUsuario(int usuarioId) async {
+  Future<List<dynamic>> buscarPetsPorUsuario(String usuarioId) async {
     try {
       final response = await client.get(
         Uri.parse('$baseUrl/usuario/$usuarioId/pets'),
@@ -181,49 +192,7 @@ class PetService {
     }
   }
 
-  Future<Map<String, dynamic>> criarPetDireto(
-      Map<String, dynamic> petData) async {
-    try {
-      print('🔄 Tentando criar pet DIRETO: $petData');
-
-      // Remove campos nulos ou vazios
-      final dadosLimpos = Map<String, dynamic>.from(petData);
-      dadosLimpos.removeWhere((key, value) => value == null || value == '');
-
-      print('📦 Dados limpos para envio: $dadosLimpos');
-
-      final response = await client.post(
-        Uri.parse('$baseUrl/pet'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(dadosLimpos),
-      );
-
-      print('🔍 Criar Pet Direto - Status: ${response.statusCode}');
-      print('🔍 Criar Pet Direto - Body: ${response.body}');
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 201) {
-        return {
-          'success': true,
-          'message': data['message'] ?? 'Pet criado com sucesso!',
-          'data': data['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Erro ao criar pet',
-        };
-      }
-    } catch (error) {
-      print('❌ Erro ao criar pet direto: $error');
-      return {
-        'success': false,
-        'message': 'Erro de conexão: $error',
-      };
-    }
-  }
-
+  // Buscar raça por ID
   Future<Map<String, dynamic>?> buscarRacaPorId(int idRaca) async {
     try {
       final response = await client.get(
@@ -237,7 +206,6 @@ class PetService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // Ajuste conforme o formato que sua API retorna
         if (data['success'] == true && data['raca'] != null) {
           return data['raca'];
         } else {
@@ -250,5 +218,11 @@ class PetService {
       print('❌ Erro ao buscar raça: $error');
       return null;
     }
+  }
+
+  // Método específico para criar pet durante o cadastro do usuário
+  Future<Map<String, dynamic>> criarPetDuranteCadastro(
+      Map<String, dynamic> petData) async {
+    return await criarPet(petData);
   }
 }

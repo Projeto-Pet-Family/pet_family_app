@@ -21,7 +21,7 @@ class _PetShowMoreTemplateState extends State<PetShowMoreTemplate> {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
-            PetIconBookinTemplate(),
+            PetIconBookingTemplate(petName: 'Tico Tico'),
             ServiceForPetTemplate(),
             ServiceForPetTemplate(),
           ],

@@ -1,36 +1,57 @@
 import 'package:flutter/material.dart';
 
-class PetIconBookinTemplate extends StatefulWidget {
-  const PetIconBookinTemplate({super.key});
+class PetIconBookingTemplate extends StatefulWidget {
+  final String petName;
+
+  const PetIconBookingTemplate({
+    super.key,
+    required this.petName,
+  });
 
   @override
-  State<PetIconBookinTemplate> createState() => _PetIconBookinTemplateState();
+  State<PetIconBookingTemplate> createState() => _PetIconBookingTemplateState();
 }
 
-class _PetIconBookinTemplateState extends State<PetIconBookinTemplate> {
+class _PetIconBookingTemplateState extends State<PetIconBookingTemplate> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(50),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(11),
+          child: const Padding(
+            padding: EdgeInsets.all(11),
             child: Icon(
               Icons.pets,
               size: 25,
+              color: Color(0xff8692DE),
             ),
           ),
         ),
-        Text(
-          'Tico Tico',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w200,
-            color: Colors.white,
+        const SizedBox(height: 4),
+        Container(
+          constraints: const BoxConstraints(maxWidth: 80),
+          child: Text(
+            widget.petName, // Corrigido: usando widget.petName
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w300,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

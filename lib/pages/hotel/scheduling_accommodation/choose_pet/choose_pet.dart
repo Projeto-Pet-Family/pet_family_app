@@ -110,7 +110,13 @@ class _ChoosePetState extends State<ChoosePet> {
     }
   }
 
-  void _togglePetSelection(int petId) {
+  void _togglePetSelection(int? petId) {
+    // Se o petId for null, não faz nada
+    if (petId == null) {
+      print('⚠️ Tentativa de selecionar pet com ID null');
+      return;
+    }
+
     setState(() {
       if (_selectedPets.contains(petId)) {
         _selectedPets.remove(petId);

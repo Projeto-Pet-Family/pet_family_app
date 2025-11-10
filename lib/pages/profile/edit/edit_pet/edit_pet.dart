@@ -37,7 +37,7 @@ class _EditPetState extends State<EditPet> {
     final usuarioId = authProvider.usuarioLogado?['idusuario'];
 
     if (usuarioId != null) {
-      petProvider.buscarPetsPorUsuario(usuarioId);
+      petProvider.buscarPetsPorUsuario(usuarioId.toString());
     }
   }
 
@@ -66,6 +66,8 @@ class _EditPetState extends State<EditPet> {
   void _editarPet(int index, Map<String, dynamic> petEditado) async {
     final petProvider = Provider.of<PetProvider>(context, listen: false);
     final pet = petProvider.pets[index];
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final usuarioId = authProvider.usuarioLogado?['idusuario'];
 
     final sucesso = await petProvider.atualizarPet(pet['idpet'], petEditado);
 
@@ -88,24 +90,29 @@ class _EditPetState extends State<EditPet> {
 
   void _removerPet(int index) async {
     final petProvider = Provider.of<PetProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final pet = petProvider.pets[index];
+    final usuarioId = authProvider.usuarioLogado?['idusuario'];
 
-    final sucesso = await petProvider.removerPet(pet['idpet']);
+    if (usuarioId != null) {
+      final sucesso =
+          await petProvider.removerPet(pet['idpet'], usuarioId.toString());
 
-    if (sucesso) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${pet['nome']} removido com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao remover pet: ${petProvider.errorMessage}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (sucesso) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${pet['nome']} removido com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao remover pet: ${petProvider.errorMessage}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -116,7 +123,6 @@ class _EditPetState extends State<EditPet> {
         children: [
           const AppBarReturn(route: '/core-navigation'),
           Expanded(
-            // MOVER O EXPANDED PARA AQUI
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Consumer2<PetProvider, AuthProvider>(
@@ -173,7 +179,7 @@ class _EditPetState extends State<EditPet> {
                                       ),
                                     ],
                                     child: ModalAddPet(
-                                      idUsuario: usuarioId as int,
+                                      idUsuario: usuarioId,
                                       onPetAdded: _adicionarNovoPet,
                                     ),
                                   ),
@@ -255,7 +261,6 @@ class _EditPetState extends State<EditPet> {
                         )
                       else
                         Expanded(
-                          // EXPANDED APENAS AQUI, DENTRO DE UM CONTEXTO COM ALTURA DEFINIDA
                           child: ListView.builder(
                             itemCount: petProvider.pets.length,
                             itemBuilder: (context, index) {

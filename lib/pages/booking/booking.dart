@@ -26,8 +26,8 @@ class _BookingState extends State<Booking> {
     'aprovado',
     'em execução',
     'concluido',
-    'Negado',
-    'Cancelado'
+    'negado',
+    'cancelado'
   ];
 
   // Mapeamento de status para valores da API
@@ -280,19 +280,6 @@ class _BookingState extends State<Booking> {
 
               const SizedBox(height: 30),
 
-              // Filtro por status
-              AppDropDown<String>(
-                value: _optionSelected,
-                items: listOptions,
-                label: 'Filtrar por status',
-                hint: 'Todos os agendamentos',
-                onChanged: (newValue) {
-                  setState(() => _optionSelected = newValue);
-                  _filtrarContratosPorStatus(newValue);
-                },
-                isRequired: false,
-              ),
-
               const SizedBox(height: 20),
 
               // Indicadores de carregamento
@@ -404,13 +391,6 @@ class _BookingState extends State<Booking> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_contratos.length} agendamento(s) encontrado(s)',
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
-        ),
         const SizedBox(height: 16),
         ..._contratos.map((contrato) {
           return BookingTemplate(

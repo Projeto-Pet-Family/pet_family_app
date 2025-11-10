@@ -63,7 +63,7 @@ class PetModel {
   // Método fromJson (se necessário)
   factory PetModel.fromJson(Map<String, dynamic> json) {
     return PetModel(
-      idpet: json['id'],
+      idpet: json['idpet'],
       idusuario: json['idusuario'],
       idporte: json['idporte'],
       idespecie: json['idespecie'],
