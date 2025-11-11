@@ -11,7 +11,10 @@ class AppButton extends StatelessWidget {
     this.textStyle,
     this.padding,
     this.widthFactor = 0.9,
-    this.minWidth
+    this.minWidth,
+    this.borderRadiusValue,
+    this.icon, // Novo parâmetro para o ícone
+    this.borderSide, // Novo parâmetro para a borda
   });
 
   final VoidCallback? onPressed; // Agora pode ser nulo
@@ -23,6 +26,9 @@ class AppButton extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double widthFactor;
   final double? minWidth;
+  final double? borderRadiusValue;
+  final Widget? icon; // Ícone opcional no final
+  final BorderSide? borderSide; // Borda opcional
 
   static const Color defaultColor = Color(0xFF8692DE);
 
@@ -34,23 +40,32 @@ class AppButton extends StatelessWidget {
       width: screenWidth * widthFactor,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: onPressed == null 
+          backgroundColor: onPressed == null
               ? Colors.grey // Cor quando desabilitado
               : buttonColor ?? defaultColor,
           foregroundColor: textButtonColor ?? Colors.white,
-          padding: padding ?? const EdgeInsets.symmetric(vertical: 12),
+          padding: padding ??
+              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(50),
+            borderRadius: BorderRadius.circular(borderRadiusValue ?? 50),
+            side: borderSide ?? BorderSide.none, // Padrão sem borda
           ),
+          elevation: 0, // Remove sombra padrão do ElevatedButton
         ),
         onPressed: onPressed,
-        child: Text(
-          label,
-          style: textStyle ??
-              TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w600,
-              ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: textStyle ??
+                  TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            if (icon != null) icon!,
+          ],
         ),
       ),
     );

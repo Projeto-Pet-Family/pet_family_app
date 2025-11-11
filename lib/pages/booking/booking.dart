@@ -329,7 +329,10 @@ class _BookingState extends State<Booking> {
                           setState(() => _errorMessage = '');
                           _carregarContratos();
                         },
-                        icon: const Icon(Icons.refresh, color: Colors.red),
+                        icon: const Icon(
+                          Icons.refresh,
+                          color: Colors.red,
+                        ),
                       ),
                     ],
                   ),
@@ -421,15 +424,19 @@ class _BookingState extends State<Booking> {
                 _buildDetailItem('Check-out', _formatarData(contrato.dataFim!)),
               _buildDetailItem('Hospedagem', 'ID: ${contrato.idHospedagem}'),
               if (contrato.hospedagemNome != null)
-                _buildDetailItem('Nome da Hospedagem', contrato.hospedagemNome!),
+                _buildDetailItem(
+                    'Nome da Hospedagem', contrato.hospedagemNome!),
               if (contrato.dataCriacao != null)
-                _buildDetailItem('Criado em', _formatarData(contrato.dataCriacao!)),
+                _buildDetailItem(
+                    'Criado em', _formatarData(contrato.dataCriacao!)),
               if (contrato.pets != null && contrato.pets!.isNotEmpty)
                 _buildDetailItem('Pets', '${contrato.pets!.length} pet(s)'),
               if (contrato.servicos != null && contrato.servicos!.isNotEmpty)
-                _buildDetailItem('Serviços', '${contrato.servicos!.length} serviço(s)'),
+                _buildDetailItem(
+                    'Serviços', '${contrato.servicos!.length} serviço(s)'),
               if (contrato.totalServicos != null)
-                _buildDetailItem('Valor Total', 'R\$${contrato.totalServicos!.toStringAsFixed(2)}'),
+                _buildDetailItem('Valor Total',
+                    'R\$${contrato.totalServicos!.toStringAsFixed(2)}'),
             ],
           ),
         ),
