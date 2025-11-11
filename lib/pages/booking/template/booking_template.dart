@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/pages/booking/modal/show_more/show_more_modal.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import './pet_icon_bookin_template.dart';
 
 class BookingTemplate extends StatelessWidget {
   final ContratoModel contrato;
   final VoidCallback onTap;
+  final VoidCallback onEditar;
+  final VoidCallback onCancelar;
 
   const BookingTemplate({
     super.key,
     required this.contrato,
     required this.onTap,
+    required this.onEditar,
+    required this.onCancelar,
   });
 
   String _formatarData(DateTime date) {
@@ -80,6 +85,16 @@ class BookingTemplate extends StatelessWidget {
     }).toList();
   }
 
+  // Função para abrir o modal de detalhes
+  void _abrirModalDetalhes(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ShowMoreModalTemplate(contrato: contrato),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final petIcons = _buildPetIcons();
@@ -88,10 +103,13 @@ class BookingTemplate extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(10),
+              topRight: Radius.circular(10),
+            ),
             color: const Color(0xff8692DE),
             boxShadow: [
               BoxShadow(
@@ -178,30 +196,33 @@ class BookingTemplate extends StatelessWidget {
         ),
         AppButton(
           label: 'Ver Mais',
-          onPressed: () {},
-          buttonColor: Color(0xffEDEDED),
-          textButtonColor: Color(0xff000000),
-          borderRadiusValue: 5,
+          onPressed: () => _abrirModalDetalhes(context),
+          buttonColor: const Color(0xffEDEDED),
+          textButtonColor: const Color(0xff000000),
+          borderRadiusValue: 0,
           icon: const Icon(Icons.arrow_forward),
-          borderSide: BorderSide(color: Color(0xffCFCCCC)),
+          borderSide: const BorderSide(color: Color(0xffCFCCCC)),
         ),
         AppButton(
           label: 'Editar',
-          onPressed: () {}, 
-          buttonColor: Color(0xffEDEDED),
-          textButtonColor: Color(0xff000000),
-          borderRadiusValue: 5,
+          onPressed: onEditar,
+          buttonColor: const Color(0xffEDEDED),
+          textButtonColor: const Color(0xff000000),
+          borderRadiusValue: 0,
           icon: const Icon(Icons.edit),
-          borderSide: BorderSide(color: Color(0xffCFCCCC)),
+          borderSide: const BorderSide(color: Color(0xffCFCCCC)),
         ),
         AppButton(
           label: 'Cancelar',
-          onPressed: () {},
-          buttonColor: Color(0xffEDEDED),
-          textButtonColor: Color(0xff000000),
-          borderRadiusValue: 5,
+          onPressed: onCancelar,
+          buttonColor: const Color(0xffEDEDED),
+          textButtonColor: const Color(0xff000000),
           icon: const Icon(Icons.close),
-          borderSide: BorderSide(color: Color(0xffCFCCCC)),
+          borderSide: const BorderSide(color: Color(0xffCFCCCC)),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(10),
+            bottomRight: Radius.circular(10),
+          ),
         ),
       ],
     );

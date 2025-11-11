@@ -401,6 +401,8 @@ class _BookingState extends State<Booking> {
             onTap: () {
               _mostrarDetalhesContrato(contrato);
             },
+            onEditar: () {},
+            onCancelar: () {},
           );
         }).toList(),
       ],

@@ -22,20 +22,13 @@ class _PetIconBookingTemplateState extends State<PetIconBookingTemplate> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(50),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: const Padding(
             padding: EdgeInsets.all(11),
             child: Icon(
               Icons.pets,
               size: 25,
-              color: Color(0xff8692DE),
+              color: Color(0xff1C1B1F),
             ),
           ),
         ),
@@ -43,7 +36,7 @@ class _PetIconBookingTemplateState extends State<PetIconBookingTemplate> {
         Container(
           constraints: const BoxConstraints(maxWidth: 80),
           child: Text(
-            widget.petName, // Corrigido: usando widget.petName
+            widget.petName,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w300,

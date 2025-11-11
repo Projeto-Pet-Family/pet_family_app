@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppButton extends StatelessWidget {
   const AppButton({
     super.key,
-    this.onPressed, // Mude para nullable
+    this.onPressed,
     required this.label,
     this.buttonColor,
     this.textButtonColor,
@@ -13,8 +13,9 @@ class AppButton extends StatelessWidget {
     this.widthFactor = 0.9,
     this.minWidth,
     this.borderRadiusValue,
-    this.icon, // Novo parâmetro para o ícone
-    this.borderSide, // Novo parâmetro para a borda
+    this.borderRadius,
+    this.icon,
+    this.borderSide,
   });
 
   final VoidCallback? onPressed; // Agora pode ser nulo
@@ -26,7 +27,8 @@ class AppButton extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double widthFactor;
   final double? minWidth;
-  final double? borderRadiusValue;
+  final double? borderRadiusValue; // Mantido para compatibilidade
+  final BorderRadius? borderRadius; // Novo parâmetro para controle detalhado
   final Widget? icon; // Ícone opcional no final
   final BorderSide? borderSide; // Borda opcional
 
@@ -35,6 +37,12 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    // Lógica para determinar o borderRadius final
+    final BorderRadius finalBorderRadius = borderRadius ??
+        (borderRadiusValue != null
+            ? BorderRadius.circular(borderRadiusValue!)
+            : BorderRadius.circular(50));
 
     return SizedBox(
       width: screenWidth * widthFactor,
@@ -47,14 +55,17 @@ class AppButton extends StatelessWidget {
           padding: padding ??
               const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadiusValue ?? 50),
+            borderRadius: finalBorderRadius,
             side: borderSide ?? BorderSide.none, // Padrão sem borda
           ),
           elevation: 0, // Remove sombra padrão do ElevatedButton
         ),
         onPressed: onPressed,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: icon != null
+              ? MainAxisAlignment
+                  .spaceBetween // SpaceBetween apenas se tiver ícone
+              : MainAxisAlignment.center, // Centro se não tiver ícone
           children: [
             Text(
               label,

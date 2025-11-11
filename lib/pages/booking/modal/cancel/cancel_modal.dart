@@ -101,9 +101,9 @@ class _CancelModalState extends State<CancelModal> {
               runSpacing: 8.0,
               alignment: WrapAlignment.spaceBetween,
               children: [
-                PetShowMoreTemplate(),
-                PetShowMoreTemplate(),
-                PetShowMoreTemplate(),
+                PetShowMoreTemplate(petName: '',),
+                PetShowMoreTemplate(petName: '',),
+                PetShowMoreTemplate(petName: '',),
               ],
             ),
             SizedBox(height: 30),

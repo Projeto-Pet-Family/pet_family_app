@@ -100,9 +100,9 @@ class _BookingCanceledState extends State<BookingCanceled> {
               runSpacing: 8.0,
               alignment: WrapAlignment.spaceBetween,
               children: [
-                PetShowMoreTemplate(),
-                PetShowMoreTemplate(),
-                PetShowMoreTemplate(),
+                PetShowMoreTemplate(petName: '',),
+                PetShowMoreTemplate(petName: '',),
+                PetShowMoreTemplate(petName: '',),
               ],
             ),
             SizedBox(height: 30),
