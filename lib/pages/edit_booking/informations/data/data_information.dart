@@ -26,6 +26,61 @@ class _DataInformationState extends State<DataInformation> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
+  Future<void> _selecionarData(BuildContext context, bool isDataInicio) async {
+    final DateTime dataAtual = isDataInicio
+        ? widget.contrato.dataInicio
+        : widget.contrato.dataFim ?? widget.contrato.dataInicio;
+
+    final DateTime primeiraData =
+        isDataInicio ? DateTime.now() : widget.contrato.dataInicio;
+
+    // Cria um novo contexto para o date picker
+    final BuildContext dialogContext = context;
+
+    final DateTime? dataSelecionada = await showDialog<DateTime>(
+      context: context,
+      builder: (BuildContext context) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: DatePickerDialog(
+            initialDate: dataAtual,
+            firstDate: primeiraData,
+            lastDate: DateTime(DateTime.now().year + 2),
+          ),
+        );
+      },
+    );
+
+    if (dataSelecionada != null) {
+      ContratoModel contratoAtualizado;
+
+      if (isDataInicio) {
+        contratoAtualizado = widget.contrato.copyWith(
+          dataInicio: dataSelecionada,
+          dataFim: widget.contrato.dataFim != null &&
+                  widget.contrato.dataFim!.isBefore(dataSelecionada)
+              ? dataSelecionada
+              : widget.contrato.dataFim,
+        );
+      } else {
+        contratoAtualizado = widget.contrato.copyWith(
+          dataFim: dataSelecionada,
+        );
+      }
+
+      if (widget.onContratoAtualizado != null) {
+        widget.onContratoAtualizado!(contratoAtualizado);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -34,8 +89,13 @@ class _DataInformationState extends State<DataInformation> {
         const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerLeft,
-          child: DataTemplate(
-            data: _formatarDataCompleta(widget.contrato.dataInicio),
+          child: InkWell(
+            onTap: () => _selecionarData(context, true),
+            borderRadius: BorderRadius.circular(8),
+            child: DataTemplate(
+              data: _formatarDataCompleta(widget.contrato.dataInicio),
+              isClickable: true,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -43,10 +103,15 @@ class _DataInformationState extends State<DataInformation> {
         const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerLeft,
-          child: DataTemplate(
-            data: widget.contrato.dataFim != null
-                ? _formatarDataCompleta(widget.contrato.dataFim!)
-                : 'Não definida',
+          child: InkWell(
+            onTap: () => _selecionarData(context, false),
+            borderRadius: BorderRadius.circular(8),
+            child: DataTemplate(
+              data: widget.contrato.dataFim != null
+                  ? _formatarDataCompleta(widget.contrato.dataFim!)
+                  : 'Não definida',
+              isClickable: true,
+            ),
           ),
         ),
         const SizedBox(height: 8),

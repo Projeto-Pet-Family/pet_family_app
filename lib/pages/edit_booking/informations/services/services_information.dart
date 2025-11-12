@@ -79,6 +79,77 @@ class _ServicesInformationState extends State<ServicesInformation> {
     return total;
   }
 
+  void _removerServico(int index) {
+    if (widget.contrato.servicos == null ||
+        index >= widget.contrato.servicos!.length) {
+      return;
+    }
+
+    final List<dynamic> novosServicos = List.from(widget.contrato.servicos!);
+    novosServicos.removeAt(index);
+
+    final contratoAtualizado = widget.contrato.copyWith(
+      servicos: novosServicos.isEmpty ? null : novosServicos,
+    );
+
+    if (widget.onContratoAtualizado != null) {
+      widget.onContratoAtualizado!(contratoAtualizado);
+    }
+  }
+
+  void _confirmarRemocaoServico(int index) {
+    String nomeServico = 'Serviço';
+
+    if (index < widget.contrato.servicos!.length) {
+      final servico = widget.contrato.servicos![index];
+      if (servico is Map<String, dynamic>) {
+        nomeServico = servico['descricao'] as String? ?? 'Serviço';
+      } else if (servico is ServiceModel) {
+        nomeServico = servico.descricao;
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            "Remover Serviço",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Tem certeza que deseja remover o serviço \"$nomeServico\"?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Cancelar",
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _removerServico(index);
+              },
+              child: const Text(
+                "Remover",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool temServicos = widget.contrato.servicos != null &&
@@ -90,7 +161,10 @@ class _ServicesInformationState extends State<ServicesInformation> {
         const TitleInformationTemplate(description: 'Serviço(s)'),
         const SizedBox(height: 12),
         if (temServicos) ...[
-          ...widget.contrato.servicos!.map((servico) {
+          ...widget.contrato.servicos!.asMap().entries.map((entry) {
+            final int index = entry.key;
+            final dynamic servico = entry.value;
+
             String descricao = 'Serviço';
             double preco = 0.0;
             int quantidade = 1;
@@ -110,6 +184,7 @@ class _ServicesInformationState extends State<ServicesInformation> {
                 ServicesTemplate(
                   price: preco,
                   service: descricao,
+                  onRemover: () => _confirmarRemocaoServico(index),
                 ),
                 const SizedBox(height: 8),
               ],

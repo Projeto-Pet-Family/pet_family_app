@@ -98,16 +98,11 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  // Função para abrir a tela de edição
   void _abrirTelaEdicao(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditBooking(
-          contrato: contrato,
-          onContratoEditado: onContratoEditado,
-        ),
-      ),
+    EditBooking.show(
+      context: context,
+      contrato: contrato,
+      onContratoEditado: onContratoEditado,
     );
   }
 

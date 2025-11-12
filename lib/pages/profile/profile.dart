@@ -188,29 +188,6 @@ class _ProfileState extends State<Profile> {
         ),
         SizedBox(height: 12),
         ButtonOptionProfileTemplate(
-          icon: Icons.security,
-          title: 'Segurança',
-          description: 'Altere senha e configurações',
-          onTap: () {
-            // context.go('/security');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Funcionalidade em desenvolvimento')),
-            );
-          },
-        ),
-        SizedBox(height: 12),
-        ButtonOptionProfileTemplate(
-          icon: Icons.help_outline,
-          title: 'Ajuda & Suporte',
-          description: 'Tire suas dúvidas',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Central de ajuda em desenvolvimento')),
-            );
-          },
-        ),
-        SizedBox(height: 12),
-        ButtonOptionProfileTemplate(
           icon: Icons.exit_to_app,
           title: 'Sair',
           description: 'Encerrar sessão',
