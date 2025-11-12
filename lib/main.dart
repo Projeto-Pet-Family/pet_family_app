@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
@@ -168,7 +169,21 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/edit-booking',
-      builder: (context, state) => EditBooking(),
+      builder: (context, state) {
+        // Recupera o contrato passado como extra
+        final contrato = state.extra as ContratoModel?;
+
+        if (contrato == null) {
+          // Se não houver contrato, volta para a tela anterior ou mostra erro
+          return Scaffold(
+            body: Center(
+              child: Text('Erro: Contrato não encontrado'),
+            ),
+          );
+        }
+
+        return EditBooking(contrato: contrato);
+      },
     ),
     GoRoute(
       path: '/profile',

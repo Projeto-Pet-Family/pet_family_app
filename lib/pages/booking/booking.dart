@@ -280,8 +280,6 @@ class _BookingState extends State<Booking> {
 
               const SizedBox(height: 30),
 
-              const SizedBox(height: 20),
-
               // Indicadores de carregamento
               if (_isCreating) ...[
                 const LinearProgressIndicator(),
