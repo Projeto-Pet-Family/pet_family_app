@@ -8,6 +8,7 @@ class PetModel {
   final String? sexo;
   final DateTime? nascimento;
   final String? observacoes;
+  final String? especie;
 
   PetModel({
     this.idpet,
@@ -19,11 +20,11 @@ class PetModel {
     this.sexo,
     this.nascimento,
     this.observacoes,
+    this.especie,
   });
 
-  // Método copyWith
   PetModel copyWith({
-    int? id,
+    int? idpet,
     int? idusuario,
     int? idporte,
     int? idespecie,
@@ -32,9 +33,10 @@ class PetModel {
     String? sexo,
     DateTime? nascimento,
     String? observacoes,
+    String? especie,
   }) {
     return PetModel(
-      idpet: id ?? this.idpet,
+      idpet: idpet ?? this.idpet,
       idusuario: idusuario ?? this.idusuario,
       idporte: idporte ?? this.idporte,
       idespecie: idespecie ?? this.idespecie,
@@ -43,12 +45,13 @@ class PetModel {
       sexo: sexo ?? this.sexo,
       nascimento: nascimento ?? this.nascimento,
       observacoes: observacoes ?? this.observacoes,
+      especie: especie ?? this.especie,
     );
   }
 
-  // Método toJson
   Map<String, dynamic> toJson() {
     return {
+      'idpet': idpet,
       'idusuario': idusuario,
       'idporte': idporte,
       'idespecie': idespecie,
@@ -57,10 +60,10 @@ class PetModel {
       'sexo': sexo,
       'nascimento': nascimento?.toIso8601String(),
       'observacoes': observacoes,
+      'especie': especie,
     };
   }
 
-  // Método fromJson (se necessário)
   factory PetModel.fromJson(Map<String, dynamic> json) {
     return PetModel(
       idpet: json['idpet'],
@@ -74,6 +77,7 @@ class PetModel {
           ? DateTime.parse(json['nascimento'])
           : null,
       observacoes: json['observacoes'],
+      especie: json['especie'],
     );
   }
 }

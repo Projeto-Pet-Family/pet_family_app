@@ -140,15 +140,6 @@ class _ProfileState extends State<Profile> {
                             ],
                           ),
                         ),
-
-                        // Botão editar
-                        IconButton(
-                          icon: Icon(Icons.edit, color: Color(0xFFC0C9FF)),
-                          onPressed: () {
-                            context.go('/edit-profile');
-                          },
-                          tooltip: 'Editar perfil',
-                        ),
                       ],
                     ),
                   ),

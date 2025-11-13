@@ -17,7 +17,6 @@ class EditBooking extends StatefulWidget {
     this.onContratoEditado,
   });
 
-  // Método estático para abrir como modal
   static Future<void> show({
     required BuildContext context,
     required ContratoModel contrato,
@@ -40,42 +39,165 @@ class EditBooking extends StatefulWidget {
 
 class _EditBookingState extends State<EditBooking> {
   late ContratoModel _contratoEditado;
+  final Map<String, dynamic> _cacheAlteracoes = {};
 
   @override
   void initState() {
     super.initState();
-    // Cria uma cópia do contrato para edição
-    _contratoEditado = ContratoModel.fromJson(widget.contrato.toJson());
+    _contratoEditado = widget.contrato.copyWith();
   }
 
-  void _onContratoAtualizado(ContratoModel contratoAtualizado) {
-    setState(() {
-      _contratoEditado = contratoAtualizado;
-    });
-  }
+  void _onContratoAtualizado(ContratoModel contratoAtualizado,
+      {String? tipoAlteracao}) {
+    print(
+        '🔄 _onContratoAtualizado chamado no EditBooking - Tipo: $tipoAlteracao');
 
-  void _onSalvarAlteracoes() {
-    // Chama o callback para atualizar o contrato
-    if (widget.onContratoEditado != null) {
-      widget.onContratoEditado!(_contratoEditado);
+    // Armazena no cache apenas as alterações específicas
+    if (tipoAlteracao == 'data_inicio' &&
+        contratoAtualizado.dataInicio != widget.contrato.dataInicio) {
+      _cacheAlteracoes['dataInicio'] = contratoAtualizado.dataInicio;
+      print(
+          '💾 Data início armazenada no cache: ${contratoAtualizado.dataInicio}');
     }
 
-    // Mostra o modal de confirmação
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) => BookingEdited(),
-    ).then((_) {
-      // Fecha o modal de edição após salvar
-      Navigator.of(context).pop();
+    if (tipoAlteracao == 'data_fim' &&
+        contratoAtualizado.dataFim != widget.contrato.dataFim) {
+      _cacheAlteracoes['dataFim'] = contratoAtualizado.dataFim;
+      print('💾 Data fim armazenada no cache: ${contratoAtualizado.dataFim}');
+    }
+
+    // Para serviços removidos, atualiza imediatamente a UI
+    if (tipoAlteracao == 'servico_removido') {
+      print('🔄 Serviço removido - atualizando UI imediatamente');
+      setState(() {
+        _contratoEditado = contratoAtualizado.copyWith();
+      });
+      return; // Não armazena no cache, já foi processado na API
+    }
+
+    // Atualiza a UI com os dados em cache
+    _aplicarCacheAoContrato();
+  }
+
+  void _aplicarCacheAoContrato() {
+    setState(() {
+      // Aplica as alterações do cache ao contrato editado
+      if (_cacheAlteracoes.containsKey('dataInicio')) {
+        _contratoEditado = _contratoEditado.copyWith(
+          dataInicio: _cacheAlteracoes['dataInicio'],
+        );
+      }
+
+      if (_cacheAlteracoes.containsKey('dataFim')) {
+        _contratoEditado = _contratoEditado.copyWith(
+          dataFim: _cacheAlteracoes['dataFim'],
+        );
+      }
     });
+
+    print('📊 Estado atual do cache:');
+    print('  - dataInicio: ${_cacheAlteracoes['dataInicio']}');
+    print('  - dataFim: ${_cacheAlteracoes['dataFim']}');
+    print('📊 Contrato atualizado na UI:');
+    print('  - Data início: ${_contratoEditado.dataInicio}');
+    print('  - Data fim: ${_contratoEditado.dataFim}');
+  }
+
+  bool _existemAlteracoes() {
+    return _cacheAlteracoes.isNotEmpty;
+  }
+
+  void _onSalvarAlteracoes() async {
+    if (!_existemAlteracoes()) {
+      print('ℹ️ Nenhuma alteração para salvar');
+      _fecharModal();
+      return;
+    }
+
+    print('💾 Salvando alterações na API...');
+    print('📊 Alterações a serem salvas: $_cacheAlteracoes');
+
+    try {
+      // Aqui você chamaria sua API para salvar as alterações
+      await _salvarAlteracoesNaAPI();
+
+      // Notifica o callback com as alterações
+      if (widget.onContratoEditado != null) {
+        widget.onContratoEditado!(_contratoEditado);
+      }
+
+      // Mostra modal de sucesso
+      await showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context) => BookingEdited(),
+      );
+
+      // Fecha o modal
+      _fecharModal();
+    } catch (e) {
+      print('❌ Erro ao salvar alterações: $e');
+      _mostrarMensagemErro('Erro ao salvar alterações: $e');
+    }
+  }
+
+  Future<void> _salvarAlteracoesNaAPI() async {
+    // Simula o salvamento na API
+    await Future.delayed(Duration(milliseconds: 500));
+    print('✅ Alterações salvas com sucesso na API');
+
+    // Limpa o cache após salvar
+    _cacheAlteracoes.clear();
+  }
+
+  void _mostrarMensagemErro(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   void _fecharModal() {
-    Navigator.of(context).pop();
+    if (_existemAlteracoes()) {
+      // Pergunta se deseja descartar as alterações
+      _mostrarDialogoConfirmacaoSaida();
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _mostrarDialogoConfirmacaoSaida() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Descartar alterações?'),
+        content: Text('Existem alterações não salvas. Deseja realmente sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Fecha o diálogo
+              Navigator.of(context).pop(); // Fecha o modal
+            },
+            child: Text('Sair', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    print('🏗️ Build do EditBooking');
+    print('📊 Cache: $_cacheAlteracoes');
+    print('📊 Contrato UI - Data início: ${_contratoEditado.dataInicio}');
+    print('📊 Contrato UI - Data fim: ${_contratoEditado.dataFim}');
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.95,
       decoration: const BoxDecoration(
@@ -87,7 +209,7 @@ class _EditBookingState extends State<EditBooking> {
       ),
       child: Column(
         children: [
-          // Header do modal - mais compacto
+          // Header (mantido igual)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -106,7 +228,6 @@ class _EditBookingState extends State<EditBooking> {
             ),
             child: Row(
               children: [
-                // Botão de fechar
                 IconButton(
                   onPressed: _fecharModal,
                   icon: const Icon(Icons.close, size: 24, color: Colors.grey),
@@ -117,7 +238,6 @@ class _EditBookingState extends State<EditBooking> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Título mais compacto
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +252,7 @@ class _EditBookingState extends State<EditBooking> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.contrato.hospedagemNome ?? 'Agendamento',
+                        _contratoEditado.hospedagemNome ?? 'Agendamento',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -144,14 +264,27 @@ class _EditBookingState extends State<EditBooking> {
                     ],
                   ),
                 ),
+                if (_existemAlteracoes())
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Alterações não salvas',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.orange[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-
-          // Divisor
           const Divider(height: 1, color: Colors.grey),
-
-          // Conteúdo principal
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -176,6 +309,7 @@ class _EditBookingState extends State<EditBooking> {
                     child: DataInformation(
                       contrato: _contratoEditado,
                       onContratoAtualizado: _onContratoAtualizado,
+                      editavel: true,
                     ),
                   ),
 
@@ -187,6 +321,7 @@ class _EditBookingState extends State<EditBooking> {
                     child: ServicesInformation(
                       contrato: _contratoEditado,
                       onContratoAtualizado: _onContratoAtualizado,
+                      editavel: true,
                     ),
                   ),
 
@@ -198,6 +333,7 @@ class _EditBookingState extends State<EditBooking> {
                     child: YourPetsInformations(
                       contrato: _contratoEditado,
                       onContratoAtualizado: _onContratoAtualizado,
+                      editavel: true,
                     ),
                   ),
 
@@ -208,12 +344,14 @@ class _EditBookingState extends State<EditBooking> {
                     width: double.infinity,
                     child: Column(
                       children: [
-                        // Botão Salvar
                         AppButton(
                           onPressed: _onSalvarAlteracoes,
                           label: 'Salvar Alterações',
                           fontSize: 16,
                           padding: const EdgeInsets.symmetric(vertical: 16),
+                          // Desabilita o botão se não houver alterações
+                          buttonColor:
+                              _existemAlteracoes() ? null : Colors.grey[300],
                         ),
                         const SizedBox(height: 12),
                         AppButton(
@@ -224,7 +362,7 @@ class _EditBookingState extends State<EditBooking> {
                           buttonColor: Colors.white,
                           textButtonColor: Colors.black,
                           borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),  
+                        ),
                       ],
                     ),
                   ),

@@ -1,87 +1,79 @@
+// remove_pet.dart
 import 'package:flutter/material.dart';
-import 'package:pet_family_app/pages/edit_booking/modal/remove_pet/confirmed_remove_pet.dart';
-import 'package:pet_family_app/widgets/app_button.dart';
 
-class RemovePet extends StatefulWidget {
-  const RemovePet({super.key});
+class RemovePet extends StatelessWidget {
+  final String petName;
+  final VoidCallback? onConfirmarRemocao;
 
-  @override
-  State<RemovePet> createState() => _RemovePetState();
-}
+  const RemovePet({
+    super.key,
+    this.petName = 'este pet',
+    this.onConfirmarRemocao,
+  });
 
-class _RemovePetState extends State<RemovePet> {
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Icon(Icons.close),
+          const Icon(
+            Icons.pets,
+            size: 50,
+            color: Colors.red,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              'Deseja remover pet do agendamento?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.w200,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Color(0xFF8692DE),
-              borderRadius: BorderRadius.circular(50),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Icon(
-                Icons.pets,
-                size: 60,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          Text(
-            'Nana',
+          const SizedBox(height: 16),
+          const Text(
+            'Remover Pet',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w200,
-              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 8),
+          Text(
+            'Tem certeza que deseja remover $petName da hospedagem?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 24),
           Row(
             children: [
               Expanded(
-                child: AppButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (BuildContext context) => ConfirmedRemovePet(),
-                    );
-                  },
-                  label: 'Sim',
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey,
+                    side: BorderSide(color: Colors.grey[300]!),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Cancelar'),
                 ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
-                child: AppButton(
+                child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                    if (onConfirmarRemocao != null) {
+                      onConfirmarRemocao!();
+                    } else {
+                      Navigator.of(context).pop();
+                    }
                   },
-                  label: 'Não',
-                  buttonColor: Colors.white,
-                  textButtonColor: Colors.black,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Remover'),
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );

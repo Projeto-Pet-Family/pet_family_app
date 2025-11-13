@@ -1,3 +1,4 @@
+// pages/booking/template/booking_template.dart
 import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
@@ -57,7 +58,6 @@ class BookingTemplate extends StatelessWidget {
     }
   }
 
-  // Método para obter a lista de pets como widgets
   List<Widget> _buildPetIcons() {
     if (contrato.pets == null || contrato.pets!.isEmpty) {
       return [
@@ -70,7 +70,6 @@ class BookingTemplate extends StatelessWidget {
     return contrato.pets!.map((pet) {
       String petName = 'Pet';
 
-      // Verifica o tipo do objeto pet e extrai o nome
       if (pet is Map<String, dynamic>) {
         petName = pet['nome'] as String? ?? 'Pet';
       } else if (pet is PetModel) {
@@ -88,7 +87,6 @@ class BookingTemplate extends StatelessWidget {
     }).toList();
   }
 
-  // Função para abrir o modal de detalhes
   void _abrirModalDetalhes(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -106,9 +104,7 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  // Função para abrir o modal de confirmação de cancelamento
   void _abrirModalConfirmacaoCancelamento(BuildContext context) {
-    // Verifica se o contrato pode ser cancelado
     if (!contrato.podeCancelar) {
       _mostrarMensagemNaoCancelavel(context);
       return;
@@ -128,7 +124,7 @@ class BookingTemplate extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Fecha o modal
+                Navigator.of(context).pop();
               },
               child: const Text(
                 "Não",
@@ -137,7 +133,7 @@ class BookingTemplate extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Fecha o modal
+                Navigator.of(context).pop();
                 _cancelarHospedagem(context);
               },
               child: const Text(
@@ -154,7 +150,6 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  // Função para mostrar mensagem quando não pode cancelar
   void _mostrarMensagemNaoCancelavel(BuildContext context) {
     String mensagem = '';
 
@@ -201,10 +196,11 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  // Função para cancelar a hospedagem - VERSÃO FUNCIONAL
+  // ✅ FUNÇÃO DE CANCELAMENTO CORRIGIDA
   void _cancelarHospedagem(BuildContext context) {
     try {
       print('🚀 Iniciando cancelamento do contrato: ${contrato.idContrato}');
+      print('📊 Status atual: ${contrato.status}');
 
       // Cria uma cópia do contrato com status atualizado para 'cancelado'
       final contratoCancelado = contrato.copyWith(
@@ -212,9 +208,9 @@ class BookingTemplate extends StatelessWidget {
         dataAtualizacao: DateTime.now(),
       );
 
-      print('📝 Status atualizado para: ${contratoCancelado.status}');
+      print('📝 Novo status: ${contratoCancelado.status}');
 
-      // PRIMEIRO: Atualiza o contrato via callback (se existir)
+      // PRIMEIRO: Atualiza o contrato via callback para atualizar a UI
       if (onContratoEditado != null) {
         print('🔄 Chamando onContratoEditado com contrato atualizado');
         onContratoEditado!(contratoCancelado);
@@ -222,8 +218,8 @@ class BookingTemplate extends StatelessWidget {
         print('⚠️ onContratoEditado não está definido');
       }
 
-      // DEPOIS: Executa a ação de cancelamento original
-      print('🔄 Executando onCancelar original');
+      // DEPOIS: Executa a ação de cancelamento (chamada à API)
+      print('🔄 Executando onCancelar para chamar a API');
       onCancelar();
 
       // Feedback visual de sucesso
@@ -243,7 +239,6 @@ class BookingTemplate extends StatelessWidget {
     } catch (e) {
       print('❌ Erro durante o cancelamento: $e');
 
-      // Feedback visual de erro
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
@@ -292,7 +287,6 @@ class BookingTemplate extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Status do contrato
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -314,10 +308,7 @@ class BookingTemplate extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Ícone da casa
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -330,10 +321,7 @@ class BookingTemplate extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Nome da hospedagem
               Text(
                 contrato.hospedagemNome ?? 'Hospedagem',
                 style: const TextStyle(
@@ -345,10 +333,7 @@ class BookingTemplate extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-
               const SizedBox(height: 12),
-
-              // Período
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -368,8 +353,6 @@ class BookingTemplate extends StatelessWidget {
                   ),
                 ],
               ),
-
-              // Duração em dias
               if (contrato.duracaoDias != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -381,10 +364,7 @@ class BookingTemplate extends StatelessWidget {
                   ),
                 ),
               ],
-
               const SizedBox(height: 20),
-
-              // Pets
               if (petIcons.isNotEmpty) ...[
                 Container(
                   padding:
@@ -417,8 +397,6 @@ class BookingTemplate extends StatelessWidget {
             ],
           ),
         ),
-
-        // Botão Ver Mais
         AppButton(
           label: 'Ver Mais',
           onPressed: () => _abrirModalDetalhes(context),
@@ -428,8 +406,6 @@ class BookingTemplate extends StatelessWidget {
           icon: const Icon(Icons.arrow_forward, size: 20),
           borderSide: const BorderSide(color: Color(0xffCFCCCC)),
         ),
-
-        // Botão Editar - só mostra se o contrato pode ser editado
         if (contrato.podeEditar)
           AppButton(
             label: 'Editar',
@@ -440,8 +416,6 @@ class BookingTemplate extends StatelessWidget {
             icon: const Icon(Icons.edit, size: 20),
             borderSide: const BorderSide(color: Color(0xffCFCCCC)),
           ),
-
-        // Botão Cancelar
         AppButton(
           label: contrato.status == 'cancelado' ? 'Cancelado' : 'Cancelar',
           onPressed: contrato.podeCancelar

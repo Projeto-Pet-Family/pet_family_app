@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
+import 'package:provider/provider.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -16,7 +16,6 @@ class _EditProfileState extends State<EditProfile> {
   late TextEditingController _nomeController;
   late TextEditingController _emailController;
   late TextEditingController _telefoneController;
-  bool _dadosCarregados = false;
 
   @override
   void initState() {
@@ -24,50 +23,27 @@ class _EditProfileState extends State<EditProfile> {
     _nomeController = TextEditingController();
     _emailController = TextEditingController();
     _telefoneController = TextEditingController();
-    _carregarDadosUsuario();
-  }
 
-  void _carregarDadosUsuario() {
-    print('🔄 Carregando dados do usuário...');
-
+    // Carrega os dados após um pequeno delay para garantir que o widget está montado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final usuario = authProvider.usuarioLogado;
-
-      if (usuario != null) {
-        _nomeController.text = usuario['nome']?.toString() ?? '';
-        _emailController.text = usuario['email']?.toString() ?? '';
-        _telefoneController.text = usuario['telefone']?.toString() ?? '';
-
-        print('✅ Dados carregados no EditProfile:');
-        print('✅ Nome: ${_nomeController.text}');
-        print('✅ Email: ${_emailController.text}');
-        print('✅ Telefone: ${_telefoneController.text}');
-
-        setState(() {
-          _dadosCarregados = true;
-        });
-      } else {
-        print('❌ Usuário não encontrado no provider');
-      }
+      _carregarDadosUsuario();
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Recarrega os dados quando o provider mudar
-    if (!_dadosCarregados) {
-      _carregarDadosUsuario();
-    }
-  }
+  void _carregarDadosUsuario() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final usuario = authProvider.usuarioLogado;
 
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    _emailController.dispose();
-    _telefoneController.dispose();
-    super.dispose();
+    if (usuario != null) {
+      _nomeController.text = usuario['nome']?.toString() ?? '';
+      _emailController.text = usuario['email']?.toString() ?? '';
+      _telefoneController.text = usuario['telefone']?.toString() ?? '';
+
+      print('✅ Dados carregados no EditProfile:');
+      print('✅ Nome: ${_nomeController.text}');
+      print('✅ Email: ${_emailController.text}');
+      print('✅ Telefone: ${_telefoneController.text}');
+    }
   }
 
   void _salvarAlteracoes() async {
@@ -85,8 +61,8 @@ class _EditProfileState extends State<EditProfile> {
       final sucesso = await authProvider.atualizarPerfil(dadosAtualizados);
 
       if (sucesso) {
-        // ✅ ATUALIZA OS CAMPOS COM OS NOVOS DADOS
-        _carregarDadosUsuario();
+        // ✅ OS DADOS JÁ FORAM ATUALIZADOS NO PROVIDER
+        // O Consumer vai reconstruir automaticamente
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -96,9 +72,7 @@ class _EditProfileState extends State<EditProfile> {
           ),
         );
 
-        // Espera um pouco antes de voltar para mostrar o feedback
-        await Future.delayed(Duration(seconds: 1));
-
+        // Volta para a tela anterior - os dados já estarão atualizados
         if (context.mounted) {
           context.pop();
         }
@@ -114,12 +88,20 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   @override
+  void dispose() {
+    _nomeController.dispose();
+    _emailController.dispose();
+    _telefoneController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final usuario = authProvider.usuarioLogado;
 
-        if (!_dadosCarregados || usuario == null) {
+        if (usuario == null) {
           return Scaffold(
             body: Column(
               children: [
@@ -144,6 +126,17 @@ class _EditProfileState extends State<EditProfile> {
               ],
             ),
           );
+        }
+
+        // ✅ ATUALIZA OS CONTROLADORES SEMPRE QUE OS DADOS MUDAREM
+        if (_nomeController.text != usuario['nome']?.toString() ||
+            _emailController.text != usuario['email']?.toString() ||
+            _telefoneController.text != usuario['telefone']?.toString()) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _nomeController.text = usuario['nome']?.toString() ?? '';
+            _emailController.text = usuario['email']?.toString() ?? '';
+            _telefoneController.text = usuario['telefone']?.toString() ?? '';
+          });
         }
 
         return Scaffold(

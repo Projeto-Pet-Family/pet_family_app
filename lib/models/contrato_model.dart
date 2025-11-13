@@ -88,27 +88,29 @@ class ContratoModel {
   }
 
   // Método para converter para Map (útil para atualizações)
+  // No seu ContratoModel, atualize o método toJson():
   Map<String, dynamic> toJson() {
     return {
-      'idcontrato': idContrato,
-      'idhospedagem': idHospedagem,
-      'idusuario': idUsuario,
-      'status': status,
-      'datainicio': dataInicio.toIso8601String(),
-      'datafim': dataFim?.toIso8601String(),
+      'idcontrato': idContrato ?? 0, // ✅ Garante que não seja null
+      'idhospedagem': idHospedagem, // ✅ Já é required, não pode ser null
+      'idusuario': idUsuario, // ✅ Já é required, não pode ser null
+      'status': status, // ✅ Já é required, não pode ser null
+      'datainicio': dataInicio.toIso8601String(), // ✅ Já é required
+      'datafim': dataFim?.toIso8601String(), // ✅ Pode ser null
       'datacriacao': dataCriacao?.toIso8601String(),
       'dataatualizacao': dataAtualizacao?.toIso8601String(),
-      'hospedagem_nome': hospedagemNome,
-      'hospedagem_endereco': hospedagemEndereco,
-      'hospedagem_telefone': hospedagemTelefone,
-      'usuario_nome': usuarioNome,
-      'usuario_email': usuarioEmail,
-      'usuario_telefone': usuarioTelefone,
-      'status_descricao': statusDescricao,
-      'pets': pets,
-      'servicos': servicos,
-      'total_servicos': totalServicos,
-      'duracao_dias': duracaoDias,
+      // Campos opcionais - só inclui se não forem null
+      if (hospedagemNome != null) 'hospedagem_nome': hospedagemNome,
+      if (hospedagemEndereco != null) 'hospedagem_endereco': hospedagemEndereco,
+      if (hospedagemTelefone != null) 'hospedagem_telefone': hospedagemTelefone,
+      if (usuarioNome != null) 'usuario_nome': usuarioNome,
+      if (usuarioEmail != null) 'usuario_email': usuarioEmail,
+      if (usuarioTelefone != null) 'usuario_telefone': usuarioTelefone,
+      if (statusDescricao != null) 'status_descricao': statusDescricao,
+      if (pets != null) 'pets': pets,
+      if (servicos != null) 'servicos': servicos,
+      if (totalServicos != null) 'total_servicos': totalServicos,
+      if (duracaoDias != null) 'duracao_dias': duracaoDias,
     };
   }
 

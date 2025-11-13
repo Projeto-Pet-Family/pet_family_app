@@ -1,8 +1,8 @@
+// pages/booking/booking.dart
 import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/booking/template/booking_template.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
-import 'package:pet_family_app/widgets/app_drop_down.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 
@@ -30,7 +30,6 @@ class _BookingState extends State<Booking> {
     'cancelado'
   ];
 
-  // Mapeamento de status para valores da API
   final Map<String, String> _statusMap = {
     'em aprovação': 'em_aprovacao',
     'aprovado': 'aprovado',
@@ -40,7 +39,6 @@ class _BookingState extends State<Booking> {
     'Cancelado': 'cancelado',
   };
 
-  // Mapeamento inverso para exibição
   final Map<String, String> _statusDisplayMap = {
     'em_aprovacao': 'Em aprovação',
     'aprovado': 'Aprovado',
@@ -57,7 +55,6 @@ class _BookingState extends State<Booking> {
     _carregarContratos();
   }
 
-  // Cria contrato automaticamente com dados do cache
   Future<void> _criarContratoComCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -68,14 +65,12 @@ class _BookingState extends State<Booking> {
         return;
       }
 
-      // Verifica se já existe um contrato criado
       final contratoCriado = prefs.getBool('contrato_criado') ?? false;
       if (contratoCriado) {
         print('✅ Contrato já foi criado anteriormente');
         return;
       }
 
-      // Busca dados do cache
       final startDateMillis = prefs.getInt('selected_start_date');
       final endDateMillis = prefs.getInt('selected_end_date');
       final selectedPetIds = prefs.getStringList('selected_pets') ?? [];
@@ -98,13 +93,11 @@ class _BookingState extends State<Booking> {
         _isCreating = true;
       });
 
-      // Formatar datas
       final dataInicio =
           '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
       final dataFim =
           '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
 
-      // Converter IDs
       final petIds = selectedPetIds.map(int.parse).toList();
       final servicosFormatados = selectedServiceIds.map((id) {
         return {
@@ -119,16 +112,14 @@ class _BookingState extends State<Booking> {
       print('📅 Data Fim: $dataFim');
       print('🛎️ Serviços: $servicosFormatados');
 
-      // Criar o contrato usando o método correto
       final response = await _contratoRepository.criarContrato(
-        idHospedagem: 1, // ID fixo da hospedagem
+        idHospedagem: 1,
         dataInicio: dataInicio,
         dataFim: dataFim,
         pets: petIds,
         servicos: servicosFormatados,
       );
 
-      // Marca como criado no cache
       await prefs.setBool('contrato_criado', true);
 
       print('✅ Contrato criado com sucesso: $response');
@@ -137,7 +128,6 @@ class _BookingState extends State<Booking> {
         _isCreating = false;
       });
 
-      // Recarrega a lista de contratos
       _carregarContratos();
     } catch (e) {
       print('❌ Erro ao criar contrato: $e');
@@ -148,7 +138,6 @@ class _BookingState extends State<Booking> {
     }
   }
 
-  // Carrega contratos do usuário
   Future<void> _carregarContratos() async {
     try {
       setState(() {
@@ -181,7 +170,6 @@ class _BookingState extends State<Booking> {
     }
   }
 
-  // Filtra contratos por status selecionado
   Future<void> _filtrarContratosPorStatus(String? status) async {
     try {
       if (status == null) {
@@ -216,6 +204,53 @@ class _BookingState extends State<Booking> {
         _errorMessage = 'Erro ao filtrar agendamentos: $e';
       });
     }
+  }
+
+  // ✅ MÉTODO PARA ATUALIZAR CONTRATO NA LISTA
+  void _atualizarContratoNaLista(ContratoModel contratoAtualizado) {
+    setState(() {
+      final index = _contratos.indexWhere(
+        (c) => c.idContrato == contratoAtualizado.idContrato,
+      );
+
+      if (index != -1) {
+        _contratos[index] = contratoAtualizado;
+        print(
+            '✅ Contrato ${contratoAtualizado.idContrato} atualizado na lista');
+        print('📊 Novo status: ${contratoAtualizado.status}');
+      }
+    });
+  }
+
+  // ✅ MÉTODO PARA CANCELAR NO BACKEND
+  Future<void> _cancelarContratoNoBackend(ContratoModel contrato) async {
+    try {
+      print('🚀 Cancelando contrato no backend: ${contrato.idContrato}');
+
+      await _contratoRepository.cancelarContrato(contrato.idContrato!);
+
+      print('✅ Contrato cancelado com sucesso no backend');
+    } catch (e) {
+      print('❌ Erro ao cancelar contrato no backend: $e');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Erro ao cancelar: $e",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      _carregarContratos();
+    }
+  }
+
+  // ✅ MÉTODO PARA EDITAR CONTRATO
+  void _editarContrato(ContratoModel contrato) {
+    print('📝 Editando contrato: ${contrato.idContrato}');
   }
 
   String _formatarData(DateTime date) {
@@ -254,7 +289,6 @@ class _BookingState extends State<Booking> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               const Center(
                 child: Column(
                   children: [
@@ -277,10 +311,7 @@ class _BookingState extends State<Booking> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              // Indicadores de carregamento
               if (_isCreating) ...[
                 const LinearProgressIndicator(),
                 const SizedBox(height: 10),
@@ -290,7 +321,6 @@ class _BookingState extends State<Booking> {
                 ),
                 const SizedBox(height: 20),
               ],
-
               if (_isLoading) ...[
                 const Center(child: CircularProgressIndicator()),
                 const SizedBox(height: 20),
@@ -301,8 +331,6 @@ class _BookingState extends State<Booking> {
                 ),
                 const SizedBox(height: 20),
               ],
-
-              // Mensagem de erro
               if (_errorMessage.isNotEmpty)
                 Container(
                   width: double.infinity,
@@ -335,13 +363,10 @@ class _BookingState extends State<Booking> {
                     ],
                   ),
                 ),
-
-              // Lista de contratos
               if (!_isLoading && _contratos.isEmpty && _errorMessage.isEmpty)
                 _buildEmptyState()
               else if (!_isLoading && _contratos.isNotEmpty)
                 _buildContratosList(),
-
               const SizedBox(height: 20),
             ],
           ),
@@ -394,13 +419,23 @@ class _BookingState extends State<Booking> {
       children: [
         const SizedBox(height: 16),
         ..._contratos.map((contrato) {
-          return BookingTemplate(
-            contrato: contrato,
-            onTap: () {
-              _mostrarDetalhesContrato(contrato);
-            },
-            onEditar: () {},
-            onCancelar: () {},
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: BookingTemplate(
+              contrato: contrato,
+              onTap: () {
+                _mostrarDetalhesContrato(contrato);
+              },
+              onEditar: () {
+                _editarContrato(contrato);
+              },
+              onCancelar: () {
+                _cancelarContratoNoBackend(contrato);
+              },
+              onContratoEditado: (contratoAtualizado) {
+                _atualizarContratoNaLista(contratoAtualizado);
+              },
+            ),
           );
         }).toList(),
       ],
