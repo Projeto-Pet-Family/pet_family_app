@@ -142,8 +142,8 @@ class ApiService {
         data['dataFim'] = dataFim;
       }
 
-      final response = await _dio.patch(
-        '/contrato/$idContrato/atualizar-datas',
+      final response = await _dio.put(
+        '/contrato/$idContrato/atualizar-data',
         data: data,
       );
 
