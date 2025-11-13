@@ -142,7 +142,7 @@ class _EditProfileState extends State<EditProfile> {
         return Scaffold(
           body: Column(
             children: [
-              const AppBarReturn(route: '/profile'),
+              const AppBarReturn(route: '/core-navigation'),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(20),

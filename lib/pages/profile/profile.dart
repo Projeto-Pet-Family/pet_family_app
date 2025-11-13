@@ -217,7 +217,7 @@ class _ProfileState extends State<Profile> {
                 Navigator.of(context).pop();
                 await authProvider.logout();
                 if (context.mounted) {
-                  context.go('/login');
+                  context.go('/');
                 }
               },
               child: Text('Sair', style: TextStyle(color: Colors.white)),

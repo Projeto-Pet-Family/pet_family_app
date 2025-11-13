@@ -161,8 +161,8 @@ class _ChooseServiceState extends State<ChooseService> {
       final service = _services.firstWhere(
         (s) => s.idServico == id,
         orElse: () => ServiceModel(
-          idServico: 0,
-          idHospedagem: 0,
+          idservico: 0,
+          idhospedagem: 0,
           descricao: '',
           preco: 0,
         ),

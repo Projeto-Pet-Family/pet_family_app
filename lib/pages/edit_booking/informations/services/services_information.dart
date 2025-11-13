@@ -3,7 +3,7 @@ import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/models/service_model.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/services/services_template.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/title_information_template.dart';
-import 'package:pet_family_app/services/api_service.dart'; // Importe seu serviço de API
+import 'package:pet_family_app/services/api_service.dart';
 
 class ServicesInformation extends StatefulWidget {
   final ContratoModel contrato;
@@ -23,10 +23,53 @@ class ServicesInformation extends StatefulWidget {
 
 class _ServicesInformationState extends State<ServicesInformation> {
   bool _carregando = false;
+  List<ServiceModel> _servicosDisponiveis = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarServicosDisponiveis();
+  }
+
+  Future<void> _carregarServicosDisponiveis() async {
+    if (!widget.editavel) return;
+
+    try {
+      // TODO: Implementar API para buscar serviços disponíveis da hospedagem
+      // Por enquanto, vamos simular alguns serviços
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      setState(() {
+        _servicosDisponiveis = [
+          ServiceModel(
+            idservico: 1,
+            descricao: 'Banho e Tosa',
+            preco: 50.0,
+          ),
+          ServiceModel(
+            idservico: 2,
+            descricao: 'Hospedagem Diária',
+            preco: 80.0,
+          ),
+          ServiceModel(
+            idservico: 3,
+            descricao: 'Passeio com Pet',
+            preco: 30.0,
+          ),
+          ServiceModel(
+            idservico: 4,
+            descricao: 'Veterinário',
+            preco: 100.0,
+          ),
+        ];
+      });
+    } catch (e) {
+      print('❌ Erro ao carregar serviços disponíveis: $e');
+    }
+  }
 
   double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
-
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) {
@@ -34,20 +77,17 @@ class _ServicesInformationState extends State<ServicesInformation> {
           .replaceAll('R\$', '')
           .replaceAll(',', '.')
           .replaceAll(RegExp(r'[^\d.]'), '');
-
       try {
         return double.parse(cleanedValue);
       } catch (e) {
         return 0.0;
       }
     }
-
     return 0.0;
   }
 
   int _parseInt(dynamic value) {
     if (value == null) return 1;
-
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value is String) {
@@ -57,7 +97,6 @@ class _ServicesInformationState extends State<ServicesInformation> {
         return 1;
       }
     }
-
     return 1;
   }
 
@@ -84,6 +123,86 @@ class _ServicesInformationState extends State<ServicesInformation> {
     return total;
   }
 
+  // Verifica se um serviço já existe no contrato
+  bool _servicoJaExiste(int idServico) {
+    if (widget.contrato.servicos == null) return false;
+
+    for (var servico in widget.contrato.servicos!) {
+      if (servico is Map<String, dynamic>) {
+        if (servico['idservico'] == idServico) {
+          return true;
+        }
+      } else if (servico is ServiceModel) {
+        if (servico.idservico == idServico) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Filtra serviços disponíveis (remove os que já estão no contrato)
+  List<ServiceModel> get _servicosParaAdicionar {
+    return _servicosDisponiveis.where((servico) {
+      return !_servicoJaExiste(servico.idservico!);
+    }).toList();
+  }
+
+  Future<void> _adicionarServico(ServiceModel servico) async {
+    if (!widget.editavel || _carregando) return;
+
+    setState(() {
+      _carregando = true;
+    });
+
+    try {
+      print('➕ Adicionando serviço ${servico.descricao} ao contrato');
+
+      // TODO: Implementar API para adicionar serviço ao contrato
+      // Por enquanto, vamos simular a adição local
+
+      final List<dynamic> novosServicos =
+          List.from(widget.contrato.servicos ?? []);
+      novosServicos.add({
+        'idservico': servico.idservico,
+        'descricao': servico.descricao,
+        'preco_unitario': servico.preco,
+        'quantidade': 1,
+      });
+
+      final contratoAtualizado = widget.contrato.copyWith(
+        servicos: novosServicos,
+      );
+
+      if (widget.onContratoAtualizado != null) {
+        widget.onContratoAtualizado!(contratoAtualizado,
+            tipoAlteracao: 'servico_adicionado');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Serviço "${servico.descricao}" adicionado com sucesso'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('❌ Erro ao adicionar serviço: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao adicionar serviço: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _carregando = false;
+      });
+    }
+  }
+
   Future<void> _removerServico(int index) async {
     if (!widget.editavel || _carregando) return;
 
@@ -95,11 +214,10 @@ class _ServicesInformationState extends State<ServicesInformation> {
     final servicoParaRemover = widget.contrato.servicos![index];
     int? idServico;
 
-    // Extrai o ID do serviço baseado no tipo
     if (servicoParaRemover is Map<String, dynamic>) {
       idServico = servicoParaRemover['idservico'] as int?;
     } else if (servicoParaRemover is ServiceModel) {
-      idServico = servicoParaRemover.idServico;
+      idServico = servicoParaRemover.idservico;
     }
 
     if (idServico == null) {
@@ -114,7 +232,6 @@ class _ServicesInformationState extends State<ServicesInformation> {
     try {
       print('🗑️ Removendo serviço ID: $idServico');
 
-      // Chama a API para remover o serviço
       final bool sucesso = await ApiService().removerServicoContrato(
         idContrato: widget.contrato.idContrato!,
         idServico: idServico,
@@ -123,7 +240,6 @@ class _ServicesInformationState extends State<ServicesInformation> {
       if (sucesso) {
         print('✅ Serviço removido com sucesso na API');
 
-        // Atualiza a lista localmente
         final List<dynamic> novosServicos =
             List.from(widget.contrato.servicos!);
         novosServicos.removeAt(index);
@@ -132,15 +248,13 @@ class _ServicesInformationState extends State<ServicesInformation> {
           servicos: novosServicos.isEmpty ? null : novosServicos,
         );
 
-        // Notifica o componente pai sobre a atualização
         if (widget.onContratoAtualizado != null) {
           widget.onContratoAtualizado!(contratoAtualizado,
               tipoAlteracao: 'servico_removido');
         }
 
-        // Mostra mensagem de sucesso
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Serviço removido com sucesso'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
@@ -151,12 +265,11 @@ class _ServicesInformationState extends State<ServicesInformation> {
       }
     } catch (e) {
       print('❌ Erro ao remover serviço: $e');
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao remover serviço: $e'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
     } finally {
@@ -164,13 +277,6 @@ class _ServicesInformationState extends State<ServicesInformation> {
         _carregando = false;
       });
     }
-  }
-
-  void _adicionarServico() {
-    if (!widget.editavel || _carregando) return;
-
-    // Implemente a lógica para adicionar serviço
-    // Pode ser um modal para selecionar serviços disponíveis
   }
 
   void _confirmarRemocaoServico(int index) {
@@ -212,7 +318,7 @@ class _ServicesInformationState extends State<ServicesInformation> {
                 _removerServico(index);
               },
               child: _carregando
-                  ? SizedBox(
+                  ? const SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
@@ -232,11 +338,109 @@ class _ServicesInformationState extends State<ServicesInformation> {
     );
   }
 
+  void _mostrarModalAdicionarServico() {
+    if (_servicosParaAdicionar.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Todos os serviços disponíveis já foram adicionados'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[300]!),
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 24, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Adicionar Serviço',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _servicosParaAdicionar.length,
+                itemBuilder: (context, index) {
+                  final servico = _servicosParaAdicionar[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading:
+                          const Icon(Icons.room_service, color: Colors.blue),
+                      title: Text(
+                        servico.descricao,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'R\$${servico.preco.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        onPressed: () => _adicionarServico(servico),
+                        icon: const Icon(Icons.add, color: Colors.green),
+                      ),
+                      onTap: () => _adicionarServico(servico),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool temServicos = widget.contrato.servicos != null &&
         widget.contrato.servicos!.isNotEmpty;
     final double totalServicos = _calcularTotalServicos();
+    final bool podeAdicionar = _servicosParaAdicionar.isNotEmpty;
 
     return Column(
       children: [
@@ -245,28 +449,14 @@ class _ServicesInformationState extends State<ServicesInformation> {
           children: [
             const TitleInformationTemplate(description: 'Serviço(s)'),
             if (widget.editavel) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Editável',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ),
+
             ],
           ],
         ),
         const SizedBox(height: 12),
         if (_carregando) ...[
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          const Padding(
+            padding: EdgeInsets.all(16.0),
             child: CircularProgressIndicator(),
           ),
         ] else if (temServicos) ...[
@@ -342,11 +532,13 @@ class _ServicesInformationState extends State<ServicesInformation> {
         ],
         if (widget.editavel && !_carregando) ...[
           const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: _adicionarServico,
+          /* OutlinedButton(
+            onPressed: podeAdicionar ? _mostrarModalAdicionarServico : null,
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.blue[600],
-              side: BorderSide(color: Colors.blue[300]!),
+              foregroundColor: podeAdicionar ? Colors.blue[600] : Colors.grey,
+              side: BorderSide(
+                color: podeAdicionar ? Colors.blue[300]! : Colors.grey[300]!,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -355,19 +547,25 @@ class _ServicesInformationState extends State<ServicesInformation> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add, size: 18, color: Colors.blue[600]),
+                Icon(
+                  Icons.add,
+                  size: 18,
+                  color: podeAdicionar ? Colors.blue[600] : Colors.grey,
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  'Adicionar Serviço',
+                  podeAdicionar
+                      ? 'Adicionar Serviço'
+                      : 'Todos os serviços adicionados',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.blue[600],
+                    color: podeAdicionar ? Colors.blue[600] : Colors.grey,
                   ),
                 ),
               ],
             ),
-          ),
+          ), */
         ],
       ],
     );

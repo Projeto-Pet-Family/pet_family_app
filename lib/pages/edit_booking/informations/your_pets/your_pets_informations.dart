@@ -214,21 +214,7 @@ class _YourPetsInformationsState extends State<YourPetsInformations> {
           children: [
             const TitleInformationTemplate(description: 'Seu(s) pet(s)'),
             if (widget.editavel) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'Editável',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ),
+              
             ],
           ],
         ),
@@ -272,7 +258,7 @@ class _YourPetsInformationsState extends State<YourPetsInformations> {
         ],
         if (widget.editavel && !_carregando) ...[
           const SizedBox(height: 16),
-          OutlinedButton(
+          /* OutlinedButton(
             onPressed: _adicionarPet,
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.blue[600],
@@ -297,7 +283,7 @@ class _YourPetsInformationsState extends State<YourPetsInformations> {
                 ),
               ],
             ),
-          ),
+          ), */
         ],
       ],
     );
