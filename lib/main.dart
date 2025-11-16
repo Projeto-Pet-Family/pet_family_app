@@ -32,6 +32,7 @@ import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
 import 'package:pet_family_app/pages/register/insert_your_address.dart';
 import 'package:pet_family_app/pages/register/insert_your_datas.dart';
 import 'package:pet_family_app/pages/register/want_host_pet.dart';
+import 'package:pet_family_app/pages/messages/message.dart';
 
 void main() {
   runApp(const MyApp());
@@ -189,5 +190,16 @@ final router = GoRouter(
       path: '/profile',
       builder: (context, state) => const Profile(),
     ),
+    GoRoute(
+      path: '/messages',
+      builder: (context, state) {
+        final args = state.extra as Map<String, dynamic>?;
+
+        return Message(
+          contratoId: args?['contratoId']?.toString(), // ✅ Converte para String
+          hospedagemNome: args?['hospedagemNome']?.toString(),
+        );
+      },
+    )
   ],
 );

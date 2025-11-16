@@ -1,5 +1,6 @@
 // pages/booking/template/booking_template.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/pages/booking/modal/show_more/show_more_modal.dart';
@@ -42,19 +43,19 @@ class BookingTemplate extends StatelessWidget {
   Color _obterCorStatus(String status) {
     switch (status) {
       case 'em_aprovacao':
-        return Colors.orange;
+        return const Color.fromARGB(255, 250, 155, 12);
       case 'aprovado':
-        return Colors.green;
+        return const Color.fromARGB(255, 81, 189, 84);
       case 'em_execucao':
-        return Colors.blue;
+        return const Color.fromARGB(255, 85, 197, 201);
       case 'concluido':
-        return Colors.grey;
+        return const Color.fromARGB(255, 172, 172, 172);
       case 'negado':
-        return Colors.red;
+        return const Color.fromARGB(255, 236, 61, 48);
       case 'cancelado':
-        return Colors.red;
+        return const Color.fromARGB(255, 133, 12, 4);
       default:
-        return Colors.grey;
+        return const Color.fromARGB(255, 163, 163, 163);
     }
   }
 
@@ -101,6 +102,16 @@ class BookingTemplate extends StatelessWidget {
       context: context,
       contrato: contrato,
       onContratoEditado: onContratoEditado,
+    );
+  }
+
+  void _abrirTelaMensagem(BuildContext context) {
+    context.push(
+      '/messages',
+      extra: {
+        'contratoId': contrato.idContrato,
+        'hospedagemNome': contrato.hospedagemNome,
+      },
     );
   }
 
@@ -414,6 +425,16 @@ class BookingTemplate extends StatelessWidget {
             textButtonColor: const Color(0xff000000),
             borderRadiusValue: 0,
             icon: const Icon(Icons.edit, size: 20),
+            borderSide: const BorderSide(color: Color(0xffCFCCCC)),
+          ),
+        if (contrato.estaAtivo)
+          AppButton(
+            label: 'Enviar mensagem',
+            onPressed: () => _abrirTelaMensagem(context),
+            buttonColor: const Color(0xffEDEDED),
+            textButtonColor: const Color(0xff000000),
+            borderRadiusValue: 0,
+            icon: const Icon(Icons.message, size: 20),
             borderSide: const BorderSide(color: Color(0xffCFCCCC)),
           ),
         AppButton(
