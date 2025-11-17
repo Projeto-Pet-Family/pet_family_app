@@ -413,42 +413,130 @@ class BookingTemplate extends StatelessWidget {
     }
   }
 
-  Widget _buildBotaoAvaliacao(BuildContext context) {
-    final jaAvaliou = avaliacaoExistente != null;
-
-    return AppButton(
-      label: jaAvaliou ? 'Ver Avaliação' : 'Avaliar Hospedagem',
-      onPressed: () => _abrirModalAvaliacao(context),
-      buttonColor: jaAvaliou ? Colors.amber[100]! : const Color(0xffEDEDED),
-      textButtonColor: jaAvaliou ? Colors.amber[800]! : const Color(0xff000000),
-      borderRadiusValue: 0,
-      icon: Icon(
-        jaAvaliou ? Icons.star : Icons.star_outline,
-        size: 20,
-        color: jaAvaliou ? Colors.amber[800]! : null,
+  Widget _buildStatusAvaliacao() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        border: Border.all(color: Colors.amber[300]!),
+        borderRadius: BorderRadius.zero,
       ),
-      borderSide: BorderSide(
-        color: jaAvaliou ? Colors.amber[300]! : const Color(0xffCFCCCC),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.star,
+            color: Colors.amber[700],
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Já Avaliado',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.amber[800],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBotaoDenuncia(BuildContext context) {
-    final jaDenunciou = denunciaExistente != null;
-
-    return AppButton(
-      label: jaDenunciou ? 'Ver Denúncia' : 'Fazer Denúncia',
-      onPressed: () => _abrirModalDenuncia(context),
-      buttonColor: jaDenunciou ? Colors.red[100]! : const Color(0xffEDEDED),
-      textButtonColor: jaDenunciou ? Colors.red[800]! : const Color(0xff000000),
-      borderRadiusValue: 0,
-      icon: Icon(
-        jaDenunciou ? Icons.warning : Icons.warning_outlined,
-        size: 20,
-        color: jaDenunciou ? Colors.red[800]! : null,
+  Widget _buildStatusDenuncia() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        border: Border.all(color: Colors.red[300]!),
+        borderRadius: BorderRadius.zero,
       ),
-      borderSide: BorderSide(
-        color: jaDenunciou ? Colors.red[300]! : const Color(0xffCFCCCC),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.warning,
+            color: Colors.red[700],
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Já Denunciado',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.red[800],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBotaoAvaliacao(BuildContext context) {
+    // Se já existe avaliação, mostra o status em vez do botão
+    if (avaliacaoExistente != null) {
+      return _buildStatusAvaliacao();
+    }
+
+    return _buildBotaoPadrao(
+      label: 'Avaliar Hospedagem',
+      onPressed: () => _abrirModalAvaliacao(context),
+      icon: const Icon(Icons.star_outline, size: 20),
+    );
+  }
+
+  Widget _buildBotaoDenuncia(BuildContext context) {
+    // Se já existe denúncia, mostra o status em vez do botão
+    if (denunciaExistente != null) {
+      return _buildStatusDenuncia();
+    }
+
+    return _buildBotaoPadrao(
+      label: 'Fazer Denúncia',
+      onPressed: () => _abrirModalDenuncia(context),
+      icon: const Icon(Icons.warning_outlined, size: 20),
+    );
+  }
+
+  Widget _buildBotaoPadrao({
+    required String label,
+    required VoidCallback onPressed,
+    Widget? icon,
+    Color? backgroundColor,
+    BorderRadius? borderRadius,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 0),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor ?? const Color(0xffEDEDED),
+          foregroundColor: const Color(0xff000000),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: borderRadius ?? BorderRadius.zero,
+            side: const BorderSide(color: Color(0xffCFCCCC)),
+          ),
+          elevation: 0,
+          alignment: Alignment.center,
+        ),
+        onPressed: onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (icon != null) icon,
+          ],
+        ),
       ),
     );
   }
@@ -459,224 +547,240 @@ class BookingTemplate extends StatelessWidget {
     final podeAvaliar = contrato.podeAvaliar;
     final podeDenunciar = contrato.podeDenunciar;
 
-    return Column(
-      children: [
-        // Cabeçalho do contrato
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(10),
-              topRight: Radius.circular(10),
-            ),
-            color: const Color(0xff8692DE),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Status
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _obterCorStatus(contrato.status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _obterCorStatus(contrato.status),
-                    width: 1.5,
+        ],
+      ),
+      child: Column(
+        children: [
+          // Cabeçalho do contrato
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
+              color: const Color(0xff8692DE),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Status
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _obterCorStatus(contrato.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _obterCorStatus(contrato.status),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Text(
+                    _obterNomeStatus(contrato.status).toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: _obterCorStatus(contrato.status),
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
-                child: Text(
-                  _obterNomeStatus(contrato.status).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _obterCorStatus(contrato.status),
-                    letterSpacing: 0.5,
+                const SizedBox(height: 16),
+
+                // Ícone da hospedagem
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.house,
+                    size: 60,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Ícone da hospedagem
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.house,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Nome da hospedagem
-              Text(
-                contrato.hospedagemNome ?? 'Hospedagem',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-
-              // Datas
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: Color(0xffD9D9D9),
+                // Nome da hospedagem
+                Text(
+                  contrato.hospedagemNome ?? 'Hospedagem',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 8),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+
+                // Datas
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: Color(0xffD9D9D9),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_formatarData(contrato.dataInicio)} - ${_formatarData(contrato.dataFim ?? contrato.dataInicio)}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xffD9D9D9),
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Duração
+                if (contrato.duracaoDias != null) ...[
+                  const SizedBox(height: 8),
                   Text(
-                    '${_formatarData(contrato.dataInicio)} - ${_formatarData(contrato.dataFim ?? contrato.dataInicio)}',
+                    '${contrato.duracaoDias} ${contrato.duracaoDias == 1 ? 'dia' : 'dias'}',
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Color(0xffD9D9D9),
                       fontWeight: FontWeight.w300,
                     ),
                   ),
                 ],
-              ),
+                const SizedBox(height: 20),
 
-              // Duração
-              if (contrato.duracaoDias != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '${contrato.duracaoDias} ${contrato.duracaoDias == 1 ? 'dia' : 'dias'}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xffD9D9D9),
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-
-              // Pets
-              if (petIcons.isNotEmpty) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Pets incluídos:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w500,
+                // Pets
+                if (petIcons.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Pets incluídos:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: petIcons,
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.center,
+                          children: petIcons,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Botão Ver Mais
+          _buildBotaoPadrao(
+            label: 'Ver Mais',
+            onPressed: () => _abrirModalDetalhes(context),
+            icon: const Icon(Icons.arrow_forward, size: 20),
+          ),
+
+          // Botão Editar (se aplicável)
+          if (contrato.podeEditar)
+            _buildBotaoPadrao(
+              label: 'Editar',
+              onPressed: () => _abrirTelaEdicao(context),
+              icon: const Icon(Icons.edit, size: 20),
+            ),
+
+          // Botão Enviar Mensagem (se aplicável)
+          if (contrato.estaAtivo)
+            _buildBotaoPadrao(
+              label: 'Enviar mensagem',
+              onPressed: () => _abrirTelaMensagem(context),
+              icon: const Icon(Icons.message, size: 20),
+            ),
+
+          // Botão Avaliação (APENAS quando status for 'concluido')
+          if (podeAvaliar) _buildBotaoAvaliacao(context),
+
+          // Botão Denúncia (APENAS quando status for 'concluido')
+          if (podeDenunciar) _buildBotaoDenuncia(context),
+
+          // Botão Cancelar
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: contrato.status == 'cancelado'
+                    ? Colors.grey[300]!
+                    : const Color(0xffEDEDED),
+                foregroundColor: contrato.status == 'cancelado'
+                    ? Colors.grey[600]!
+                    : const Color(0xff000000),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(10),
+                    bottomRight: Radius.circular(10),
+                  ),
+                  side: BorderSide(
+                    color: contrato.status == 'cancelado'
+                        ? Colors.grey[400]!
+                        : const Color(0xffCFCCCC),
                   ),
                 ),
-              ],
-            ],
+                elevation: 0,
+                alignment: Alignment.center,
+              ),
+              onPressed: contrato.podeCancelar
+                  ? () => _abrirModalConfirmacaoCancelamento(context)
+                  : () => _mostrarMensagemNaoCancelavel(context),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    contrato.status == 'cancelado' ? 'Cancelado' : 'Cancelar',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Icon(
+                    contrato.status == 'cancelado' ? Icons.block : Icons.close,
+                    size: 20,
+                    color: contrato.status == 'cancelado'
+                        ? Colors.grey[600]!
+                        : null,
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-
-        // Botão Ver Mais
-        AppButton(
-          label: 'Ver Mais',
-          onPressed: () => _abrirModalDetalhes(context),
-          buttonColor: const Color(0xffEDEDED),
-          textButtonColor: const Color(0xff000000),
-          borderRadiusValue: 0,
-          icon: const Icon(Icons.arrow_forward, size: 20),
-          borderSide: const BorderSide(color: Color(0xffCFCCCC)),
-        ),
-
-        // Botão Editar (se aplicável)
-        if (contrato.podeEditar)
-          AppButton(
-            label: 'Editar',
-            onPressed: () => _abrirTelaEdicao(context),
-            buttonColor: const Color(0xffEDEDED),
-            textButtonColor: const Color(0xff000000),
-            borderRadiusValue: 0,
-            icon: const Icon(Icons.edit, size: 20),
-            borderSide: const BorderSide(color: Color(0xffCFCCCC)),
-          ),
-
-        // Botão Enviar Mensagem (se aplicável)
-        if (contrato.estaAtivo)
-          AppButton(
-            label: 'Enviar mensagem',
-            onPressed: () => _abrirTelaMensagem(context),
-            buttonColor: const Color(0xffEDEDED),
-            textButtonColor: const Color(0xff000000),
-            borderRadiusValue: 0,
-            icon: const Icon(Icons.message, size: 20),
-            borderSide: const BorderSide(color: Color(0xffCFCCCC)),
-          ),
-
-        // Botão Avaliação (APENAS quando status for 'concluido')
-        if (podeAvaliar) _buildBotaoAvaliacao(context),
-
-        // Botão Denúncia (APENAS quando status for 'concluido')
-        if (podeDenunciar) _buildBotaoDenuncia(context),
-
-        // Botão Cancelar
-        AppButton(
-          label: contrato.status == 'cancelado' ? 'Cancelado' : 'Cancelar',
-          onPressed: contrato.podeCancelar
-              ? () => _abrirModalConfirmacaoCancelamento(context)
-              : () => _mostrarMensagemNaoCancelavel(context),
-          buttonColor: contrato.status == 'cancelado'
-              ? Colors.grey[300]!
-              : const Color(0xffEDEDED),
-          textButtonColor: contrato.status == 'cancelado'
-              ? Colors.grey[600]!
-              : const Color(0xff000000),
-          icon: Icon(
-            contrato.status == 'cancelado' ? Icons.block : Icons.close,
-            size: 20,
-            color: contrato.status == 'cancelado' ? Colors.grey[600]! : null,
-          ),
-          borderSide: BorderSide(
-            color: contrato.status == 'cancelado'
-                ? Colors.grey[400]!
-                : const Color(0xffCFCCCC),
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: const Radius.circular(10),
-            bottomRight: const Radius.circular(10),
-            topLeft: Radius.zero,
-            topRight: Radius.zero,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
