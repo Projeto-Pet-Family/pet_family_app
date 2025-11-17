@@ -172,15 +172,24 @@ class ContratoModel {
     return statusAtivos.contains(status);
   }
 
-  // Método para verificar se o contrato pode ser editado
+// Método para verificar se o contrato pode ser editado
   bool get podeEditar {
     final statusEditaveis = ['em_aprovacao'];
     return statusEditaveis.contains(status);
   }
 
-  // Método para verificar se o contrato pode ser cancelado
+// Método para verificar se o contrato pode ser cancelado
   bool get podeCancelar {
-    final statusCancelaveis = ['em_aprovacao', 'aprovado'];
-    return statusCancelaveis.contains(status);
+    return status == 'em_aprovacao' || status == 'aprovado';
+  }
+
+// CORREÇÃO: Avaliação apenas quando concluído
+  bool get podeAvaliar {
+    return status == 'concluido';
+  }
+
+// CORREÇÃO: Denúncia apenas quando concluído (removido 'em_execucao')
+  bool get podeDenunciar {
+    return status == 'concluido';
   }
 }

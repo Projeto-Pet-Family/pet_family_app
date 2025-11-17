@@ -1,12 +1,16 @@
 // pages/booking/template/booking_template.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/models/avaliacao_model.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
+import 'package:pet_family_app/models/denuncia_model.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/pages/booking/modal/show_more/show_more_modal.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import './pet_icon_bookin_template.dart';
+import '../modal/avaliacao_modal.dart';
+import '../modal/denuncia_modal.dart';
 
 class BookingTemplate extends StatelessWidget {
   final ContratoModel contrato;
@@ -14,6 +18,8 @@ class BookingTemplate extends StatelessWidget {
   final VoidCallback onEditar;
   final VoidCallback onCancelar;
   final Function(ContratoModel)? onContratoEditado;
+  final AvaliacaoModel? avaliacaoExistente;
+  final DenunciaModel? denunciaExistente;
 
   const BookingTemplate({
     super.key,
@@ -22,6 +28,8 @@ class BookingTemplate extends StatelessWidget {
     required this.onEditar,
     required this.onCancelar,
     this.onContratoEditado,
+    this.avaliacaoExistente,
+    this.denunciaExistente,
   });
 
   String _formatarData(DateTime date) {
@@ -111,6 +119,146 @@ class BookingTemplate extends StatelessWidget {
       extra: {
         'contratoId': contrato.idContrato,
         'hospedagemNome': contrato.hospedagemNome,
+      },
+    );
+  }
+
+  void _abrirModalAvaliacao(BuildContext context) {
+    if (!contrato.podeAvaliar) {
+      _mostrarMensagemAvaliacaoNaoDisponivel(context);
+      return;
+    }
+
+    AvaliacaoModal.show(
+      context: context,
+      contrato: contrato,
+      onAvaliacaoCriada: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Avaliação enviada com sucesso!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      },
+      avaliacaoExistente: avaliacaoExistente,
+    );
+  }
+
+  void _abrirModalDenuncia(BuildContext context) {
+    if (!contrato.podeDenunciar) {
+      _mostrarMensagemDenunciaNaoDisponivel(context);
+      return;
+    }
+
+    DenunciaModal.show(
+      context: context,
+      contrato: contrato,
+      onDenunciaCriada: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Denúncia enviada com sucesso!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      },
+      denunciaExistente: denunciaExistente,
+    );
+  }
+
+  void _mostrarMensagemAvaliacaoNaoDisponivel(BuildContext context) {
+    String mensagem = '';
+
+    switch (contrato.status) {
+      case 'em_aprovacao':
+        mensagem = 'Avaliação disponível apenas para hospedagens concluídas.';
+        break;
+      case 'aprovado':
+        mensagem = 'Aguarde a conclusão da hospedagem para avaliar.';
+        break;
+      case 'em_execucao':
+        mensagem = 'Avaliação disponível após a conclusão da hospedagem.';
+        break;
+      case 'negado':
+        mensagem = 'Esta hospedagem foi negada e não pode ser avaliada.';
+        break;
+      case 'cancelado':
+        mensagem = 'Esta hospedagem foi cancelada e não pode ser avaliada.';
+        break;
+      default:
+        mensagem = 'Avaliação não disponível no momento.';
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            "Avaliação Indisponível",
+            style: TextStyle(color: Colors.orange),
+          ),
+          content: Text(mensagem),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Entendi",
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _mostrarMensagemDenunciaNaoDisponivel(BuildContext context) {
+    String mensagem = '';
+
+    switch (contrato.status) {
+      case 'em_aprovacao':
+        mensagem = 'Denúncia disponível apenas para hospedagens concluídas.';
+        break;
+      case 'aprovado':
+        mensagem = 'Aguarde a conclusão da hospedagem para fazer denúncia.';
+        break;
+      case 'em_execucao':
+        mensagem = 'Denúncia disponível após a conclusão da hospedagem.';
+        break;
+      case 'negado':
+        mensagem = 'Esta hospedagem foi negada e não permite denúncia.';
+        break;
+      case 'cancelado':
+        mensagem = 'Esta hospedagem foi cancelada e não permite denúncia.';
+        break;
+      default:
+        mensagem = 'Denúncia não disponível no momento.';
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            "Denúncia Indisponível",
+            style: TextStyle(color: Colors.orange),
+          ),
+          content: Text(mensagem),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Entendi",
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -207,13 +355,11 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  // ✅ FUNÇÃO DE CANCELAMENTO CORRIGIDA
   void _cancelarHospedagem(BuildContext context) {
     try {
       print('🚀 Iniciando cancelamento do contrato: ${contrato.idContrato}');
       print('📊 Status atual: ${contrato.status}');
 
-      // Cria uma cópia do contrato com status atualizado para 'cancelado'
       final contratoCancelado = contrato.copyWith(
         status: 'cancelado',
         dataAtualizacao: DateTime.now(),
@@ -221,7 +367,6 @@ class BookingTemplate extends StatelessWidget {
 
       print('📝 Novo status: ${contratoCancelado.status}');
 
-      // PRIMEIRO: Atualiza o contrato via callback para atualizar a UI
       if (onContratoEditado != null) {
         print('🔄 Chamando onContratoEditado com contrato atualizado');
         onContratoEditado!(contratoCancelado);
@@ -229,11 +374,9 @@ class BookingTemplate extends StatelessWidget {
         print('⚠️ onContratoEditado não está definido');
       }
 
-      // DEPOIS: Executa a ação de cancelamento (chamada à API)
       print('🔄 Executando onCancelar para chamar a API');
       onCancelar();
 
-      // Feedback visual de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -270,12 +413,55 @@ class BookingTemplate extends StatelessWidget {
     }
   }
 
+  Widget _buildBotaoAvaliacao(BuildContext context) {
+    final jaAvaliou = avaliacaoExistente != null;
+
+    return AppButton(
+      label: jaAvaliou ? 'Ver Avaliação' : 'Avaliar Hospedagem',
+      onPressed: () => _abrirModalAvaliacao(context),
+      buttonColor: jaAvaliou ? Colors.amber[100]! : const Color(0xffEDEDED),
+      textButtonColor: jaAvaliou ? Colors.amber[800]! : const Color(0xff000000),
+      borderRadiusValue: 0,
+      icon: Icon(
+        jaAvaliou ? Icons.star : Icons.star_outline,
+        size: 20,
+        color: jaAvaliou ? Colors.amber[800]! : null,
+      ),
+      borderSide: BorderSide(
+        color: jaAvaliou ? Colors.amber[300]! : const Color(0xffCFCCCC),
+      ),
+    );
+  }
+
+  Widget _buildBotaoDenuncia(BuildContext context) {
+    final jaDenunciou = denunciaExistente != null;
+
+    return AppButton(
+      label: jaDenunciou ? 'Ver Denúncia' : 'Fazer Denúncia',
+      onPressed: () => _abrirModalDenuncia(context),
+      buttonColor: jaDenunciou ? Colors.red[100]! : const Color(0xffEDEDED),
+      textButtonColor: jaDenunciou ? Colors.red[800]! : const Color(0xff000000),
+      borderRadiusValue: 0,
+      icon: Icon(
+        jaDenunciou ? Icons.warning : Icons.warning_outlined,
+        size: 20,
+        color: jaDenunciou ? Colors.red[800]! : null,
+      ),
+      borderSide: BorderSide(
+        color: jaDenunciou ? Colors.red[300]! : const Color(0xffCFCCCC),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final petIcons = _buildPetIcons();
+    final podeAvaliar = contrato.podeAvaliar;
+    final podeDenunciar = contrato.podeDenunciar;
 
     return Column(
       children: [
+        // Cabeçalho do contrato
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -298,6 +484,7 @@ class BookingTemplate extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Status
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -320,6 +507,8 @@ class BookingTemplate extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Ícone da hospedagem
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -333,6 +522,8 @@ class BookingTemplate extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Nome da hospedagem
               Text(
                 contrato.hospedagemNome ?? 'Hospedagem',
                 style: const TextStyle(
@@ -345,6 +536,8 @@ class BookingTemplate extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
+
+              // Datas
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -364,6 +557,8 @@ class BookingTemplate extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // Duração
               if (contrato.duracaoDias != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -376,6 +571,8 @@ class BookingTemplate extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 20),
+
+              // Pets
               if (petIcons.isNotEmpty) ...[
                 Container(
                   padding:
@@ -408,6 +605,8 @@ class BookingTemplate extends StatelessWidget {
             ],
           ),
         ),
+
+        // Botão Ver Mais
         AppButton(
           label: 'Ver Mais',
           onPressed: () => _abrirModalDetalhes(context),
@@ -417,6 +616,8 @@ class BookingTemplate extends StatelessWidget {
           icon: const Icon(Icons.arrow_forward, size: 20),
           borderSide: const BorderSide(color: Color(0xffCFCCCC)),
         ),
+
+        // Botão Editar (se aplicável)
         if (contrato.podeEditar)
           AppButton(
             label: 'Editar',
@@ -427,6 +628,8 @@ class BookingTemplate extends StatelessWidget {
             icon: const Icon(Icons.edit, size: 20),
             borderSide: const BorderSide(color: Color(0xffCFCCCC)),
           ),
+
+        // Botão Enviar Mensagem (se aplicável)
         if (contrato.estaAtivo)
           AppButton(
             label: 'Enviar mensagem',
@@ -437,6 +640,14 @@ class BookingTemplate extends StatelessWidget {
             icon: const Icon(Icons.message, size: 20),
             borderSide: const BorderSide(color: Color(0xffCFCCCC)),
           ),
+
+        // Botão Avaliação (APENAS quando status for 'concluido')
+        if (podeAvaliar) _buildBotaoAvaliacao(context),
+
+        // Botão Denúncia (APENAS quando status for 'concluido')
+        if (podeDenunciar) _buildBotaoDenuncia(context),
+
+        // Botão Cancelar
         AppButton(
           label: contrato.status == 'cancelado' ? 'Cancelado' : 'Cancelar',
           onPressed: contrato.podeCancelar
@@ -461,10 +672,8 @@ class BookingTemplate extends StatelessWidget {
           borderRadius: BorderRadius.only(
             bottomLeft: const Radius.circular(10),
             bottomRight: const Radius.circular(10),
-            topLeft:
-                contrato.podeEditar ? Radius.zero : const Radius.circular(0),
-            topRight:
-                contrato.podeEditar ? Radius.zero : const Radius.circular(0),
+            topLeft: Radius.zero,
+            topRight: Radius.zero,
           ),
         ),
       ],
