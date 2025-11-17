@@ -1,7 +1,8 @@
 // lib/pages/messages/widgets/message_bubble.dart
 import 'package:flutter/material.dart';
-import 'package:pet_family_app/models/message_model.dart';
-import '../../models/message_model.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../models/message_model.dart';
 
 class MessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -15,28 +16,49 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final usuarioLogado = authProvider.usuarioLogado;
+
+    // ✅ CORREÇÃO: Acessando o Map corretamente
+    final currentUserId =
+        usuarioLogado?['idusuario'] ?? usuarioLogado?['idUsuario'];
+
+    if (currentUserId == null) {
+      return Container(); // Ou algum widget de fallback
+    }
+
+    // Converter para int se necessário
+    final userId = currentUserId is int
+        ? currentUserId
+        : int.tryParse(currentUserId.toString());
+
+    if (userId == null) {
+      return Container();
+    }
+
+    // ✅ CORREÇÃO: Usando métodos em vez de getters
+    final isMe = message.isMeForUser(userId);
+    final displaySenderName = message.displaySenderNameForUser(userId);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment:
-            message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!message.isMe) _buildAvatar(),
+          if (!isMe) _buildAvatar(),
           const SizedBox(width: 8),
           Flexible(
             child: Column(
-              crossAxisAlignment: message.isMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                if (!message.isMe &&
-                    showSenderName &&
-                    message.senderName != null)
+                if (!isMe && showSenderName && displaySenderName != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4, left: 8),
                     child: Text(
-                      message.senderName!,
+                      displaySenderName,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -50,16 +72,14 @@ class MessageBubble extends StatelessWidget {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: message.isMe
-                        ? const Color(0xff8692DE)
-                        : Colors.grey[100],
+                    color: isMe ? const Color(0xff8692DE) : Colors.grey[100],
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(20),
                       topRight: const Radius.circular(20),
-                      bottomLeft: message.isMe
+                      bottomLeft: isMe
                           ? const Radius.circular(20)
                           : const Radius.circular(4),
-                      bottomRight: message.isMe
+                      bottomRight: isMe
                           ? const Radius.circular(4)
                           : const Radius.circular(20),
                     ),
@@ -72,9 +92,9 @@ class MessageBubble extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    message.text,
+                    message.mensagem,
                     style: TextStyle(
-                      color: message.isMe ? Colors.white : Colors.black87,
+                      color: isMe ? Colors.white : Colors.black87,
                       fontSize: 16,
                     ),
                   ),
@@ -85,13 +105,13 @@ class MessageBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        message.formattedTime,
+                        message.formattedTime, // ✅ Usando o getter correto
                         style: const TextStyle(
                           fontSize: 11,
                           color: Colors.grey,
                         ),
                       ),
-                      if (message.isMe) ...[
+                      if (isMe) ...[
                         const SizedBox(width: 4),
                         _buildStatusIcon(),
                       ],
@@ -101,8 +121,8 @@ class MessageBubble extends StatelessWidget {
               ],
             ),
           ),
-          if (message.isMe) const SizedBox(width: 8),
-          if (message.isMe) _buildAvatar(isMe: true),
+          if (isMe) const SizedBox(width: 8),
+          if (isMe) _buildAvatar(isMe: true),
         ],
       ),
     );
@@ -125,28 +145,25 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildStatusIcon() {
-    IconData icon;
-    Color color;
-
-    switch (message.status) {
-      case MessageStatus.sent:
-        icon = Icons.check;
-        color = Colors.grey;
-        break;
-      case MessageStatus.delivered:
-        icon = Icons.done_all;
-        color = Colors.grey;
-        break;
-      case MessageStatus.read:
-        icon = Icons.done_all;
-        color = const Color(0xff8692DE);
-        break;
-      case MessageStatus.error:
-        icon = Icons.error_outline;
-        color = Colors.red;
-        break;
+    // ✅ CORREÇÃO: Mensagens temporárias não têm ID
+    if (message.idmensagem == null) {
+      return const Icon(
+        Icons.access_time,
+        size: 14,
+        color: Colors.grey,
+      );
+    } else if (message.lida) {
+      return const Icon(
+        Icons.done_all,
+        size: 14,
+        color: Color(0xff8692DE),
+      );
+    } else {
+      return const Icon(
+        Icons.done,
+        size: 14,
+        color: Colors.grey,
+      );
     }
-
-    return Icon(icon, size: 14, color: color);
   }
 }

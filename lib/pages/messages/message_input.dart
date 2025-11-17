@@ -21,10 +21,23 @@ class _MessageInputState extends State<MessageInput> {
 
   void _sendMessage() {
     final text = _controller.text.trim();
-    if (text.isEmpty || widget.isLoading) return;
+    print('📤 Tentando enviar mensagem: "$text"'); // DEBUG
+    print('📤 isLoading: ${widget.isLoading}'); // DEBUG
 
+    if (text.isEmpty) {
+      print('❌ Mensagem vazia, não enviando'); // DEBUG
+      return;
+    }
+
+    if (widget.isLoading) {
+      print('❌ Já está carregando, não enviando'); // DEBUG
+      return;
+    }
+
+    print('✅ Chamando onSendMessage com: "$text"'); // DEBUG
     widget.onSendMessage(text);
     _controller.clear();
+    print('✅ Campo limpo após envio'); // DEBUG
   }
 
   @override

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
+import 'package:pet_family_app/providers/message_provider.dart';
+import 'package:pet_family_app/services/message_service.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/providers/pet/pet_provider.dart';
@@ -47,6 +49,31 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PetProvider()),
+        ChangeNotifierProvider<MensagemProvider>(
+          create: (context) {
+            final authProvider =
+                Provider.of<AuthProvider>(context, listen: false);
+            final usuarioLogado = authProvider.usuarioLogado;
+
+            // ✅ CORREÇÃO: Acesse o ID do usuário corretamente
+            final currentUserId =
+                usuarioLogado?['idusuario'] ?? usuarioLogado?['idUsuario'] ?? 0;
+
+            if (currentUserId == 0) {
+              print('⚠️ AVISO: Usuário não logado ou ID não encontrado');
+            }
+
+            print(
+                '🔧 Inicializando MensagemProvider com userId: $currentUserId');
+
+            return MensagemProvider(
+              mensagemService: MensagemService(client: http.Client()),
+              currentUserId: currentUserId is int
+                  ? currentUserId
+                  : int.tryParse(currentUserId.toString()) ?? 0,
+            );
+          },
+        ),
 
         // ✅ ADICIONE ESTES NOVOS PROVIDERS
         ChangeNotifierProvider(
@@ -126,7 +153,6 @@ final router = GoRouter(
           print('Hotel Name: ${hotelData['nome']}');
         }
 
-        // ✅ CORREÇÃO: Não use ChangeNotifierProvider aqui
         return Hotel(hotelData: hotelData);
       },
     ),
@@ -171,11 +197,9 @@ final router = GoRouter(
     GoRoute(
       path: '/edit-booking',
       builder: (context, state) {
-        // Recupera o contrato passado como extra
         final contrato = state.extra as ContratoModel?;
 
         if (contrato == null) {
-          // Se não houver contrato, volta para a tela anterior ou mostra erro
           return Scaffold(
             body: Center(
               child: Text('Erro: Contrato não encontrado'),
@@ -196,10 +220,22 @@ final router = GoRouter(
         final args = state.extra as Map<String, dynamic>?;
 
         return Message(
-          contratoId: args?['contratoId']?.toString(), // ✅ Converte para String
+          idHospedagem: args?['idHospedagem'] as int?, // ✅ NOVO
+          idUsuario: args?['idUsuario'] as int?, // ✅ NOVO
           hospedagemNome: args?['hospedagemNome']?.toString(),
+          contratoId: args?['contratoId']?.toString(),
         );
       },
-    )
+    ),
+    // ✅ ROTA TEMPORÁRIA PARA TESTE
+    GoRoute(
+      path: '/test-messages',
+      builder: (context, state) => Message(
+        idHospedagem: 1, // ID de teste
+        idUsuario: 2, // ID de teste (diferente do seu usuário)
+        hospedagemNome: 'Hospedagem Teste',
+        contratoId: 'TEST123',
+      ),
+    ),
   ],
 );
