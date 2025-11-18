@@ -324,12 +324,6 @@ class _BookingState extends State<Booking> {
               if (_isLoading) ...[
                 const Center(child: CircularProgressIndicator()),
                 const SizedBox(height: 20),
-                const Text(
-                  'Carregando agendamentos...',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 20),
               ],
               if (_errorMessage.isNotEmpty)
                 Container(

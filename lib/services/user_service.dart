@@ -10,8 +10,7 @@ class UserService {
 
   UserService({required this.client});
 
-  /// Registra um novo usuário no sistema
-  Future<void> registerUser(UserModel user) async {
+  Future<Map<String, dynamic>> registerUser(UserModel user) async {
     try {
       final response = await client.post(
         Uri.parse('$baseUrl/usuarios'),
@@ -21,9 +20,27 @@ class UserService {
         body: json.encode(user.toJson()),
       );
 
+      print('🔍 Status Code: ${response.statusCode}');
+      print('🔍 Response Body: ${response.body}');
+
       if (response.statusCode == 201) {
-        // Cadastro realizado com sucesso
-        return;
+        final responseData = json.decode(response.body);
+
+        // ✅ CORREÇÃO: Verifica se a estrutura da resposta está correta
+        if (responseData is Map<String, dynamic>) {
+          return {
+            'success': true,
+            'data': responseData,
+            'message': 'Usuário criado com sucesso!',
+          };
+        } else {
+          // Se a resposta for diferente do esperado
+          return {
+            'success': true,
+            'data': {'idusuario': null}, // Placeholder
+            'message': 'Usuário criado, mas estrutura de resposta inesperada',
+          };
+        }
       } else {
         // Tratamento de erros específicos
         final errorResponse = json.decode(response.body);
@@ -41,6 +58,7 @@ class UserService {
         }
       }
     } catch (e) {
+      print('❌ Erro no registerUser: $e');
       if (e is Exception) {
         rethrow;
       }

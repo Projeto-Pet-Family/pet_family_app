@@ -61,11 +61,6 @@ class _ProfileState extends State<Profile> {
                   // Header com refresh
                   Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.refresh),
-                        onPressed: _recarregarPerfil,
-                        tooltip: 'Atualizar perfil',
-                      ),
                       Spacer(),
                       Text(
                         'Meu Perfil',

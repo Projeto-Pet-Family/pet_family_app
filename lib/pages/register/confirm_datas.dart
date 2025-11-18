@@ -32,8 +32,19 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
       // 1. Primeiro cadastra o usuário
       final userId = await _registerUser();
 
-      // 2. Depois cadastra o pet (se houver dados)
-      await _registerPet(userId);
+      // 2. Verifica se obteve um ID válido
+      if (userId == null) {
+        print('⚠️ Não foi possível obter o ID do usuário');
+        _showSuccessDialog(false, hasUserIdError: true);
+      } else {
+        // 3. Tenta cadastrar o pet apenas se tiver um ID válido
+        try {
+          await _registerPet(userId);
+        } catch (petError) {
+          print('⚠️ Erro ao cadastrar pet, mas usuário foi criado: $petError');
+          _showSuccessDialog(false, hasPetError: true);
+        }
+      }
     } catch (e) {
       print('❌ ERRO NO CADASTRO: $e');
       _showErrorDialog('Erro ao cadastrar: $e');
@@ -44,38 +55,39 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
     }
   }
 
-  Future<String> _registerUser() async {
+  Future<String?> _registerUser() async {
     print('👤 ===== CADASTRANDO USUÁRIO =====');
 
     final user = await _buildUserData();
     final userService = UserService(client: http.Client());
 
-    // DEBUG: Mostra dados do usuário
     _debugUserData(user);
 
-    final resultado =
-        await userService.registerUser(user) as Map<String, dynamic>;
+    final resultado = await userService.registerUser(user);
 
-    if (resultado['success'] == true) {
-      print('✅ Usuário cadastrado com sucesso!');
+    print('✅ Resposta da API: $resultado');
 
-      // Obtém o ID do usuário criado da resposta da API
-      final userId =
-          (resultado['data'] as Map<String, dynamic>)['idusuario']?.toString();
+    // ✅ CORREÇÃO: Retorna null se não conseguir o ID, em vez de string temporária
+    String? userId;
 
-      if (userId == null) {
-        throw Exception('ID do usuário não retornado pela API');
-      }
+    // Tenta acessar em diferentes níveis da estrutura
+    if (resultado['data'] != null &&
+        resultado['data'] is Map<String, dynamic> &&
+        resultado['data']['usuario'] != null &&
+        resultado['data']['usuario'] is Map<String, dynamic>) {
+      final usuarioData = resultado['data']['usuario'] as Map<String, dynamic>;
+      userId = usuarioData['idusuario']?.toString();
+    }
 
-      // Salva o ID do usuário no cache para usar no pet
+    if (userId != null) {
+      // Salva o ID do usuário no cache
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_id', userId);
-
-      print('📝 ID do usuário obtido da API: $userId');
+      print('📝 ID do usuário obtido: $userId');
       return userId;
     } else {
-      throw Exception(
-          resultado['message']?.toString() ?? 'Erro ao cadastrar usuário');
+      print('⚠️ ID do usuário não encontrado na resposta');
+      return null; // ✅ Retorna null em vez de string temporária
     }
   }
 
@@ -191,23 +203,37 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
     return camposFaltantes;
   }
 
-  void _showSuccessDialog(bool hasPet) {
+  void _showSuccessDialog(bool hasPet,
+      {bool hasUserIdError = false, bool hasPetError = false}) {
+    String message;
+    String buttonText = 'Fazer Login';
+
+    if (hasUserIdError) {
+      message = 'Usuário criado com sucesso! '
+          'Não foi possível cadastrar seu pet agora, mas você pode adicioná-lo depois no aplicativo.';
+    } else if (hasPetError) {
+      message = 'Usuário criado com sucesso! '
+          'Houve um problema ao cadastrar seu pet, mas você pode adicioná-lo depois.';
+    } else if (hasPet) {
+      message = 'Usuário e pet cadastrados com sucesso!';
+    } else {
+      message = 'Usuário criado com sucesso!';
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Cadastro Confirmado!'),
-          content: Text(hasPet
-              ? 'Usuário e pet cadastrados com sucesso!'
-              : 'Usuário criado com sucesso!'),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 _clearCacheAndNavigate();
               },
-              child: const Text('Fazer Login'),
+              child: Text(buttonText),
             ),
           ],
         );
