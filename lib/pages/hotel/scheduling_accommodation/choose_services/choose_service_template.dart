@@ -42,7 +42,7 @@ class _ChooseServiceTemplateState extends State<ChooseServiceTemplate> {
                     : Colors.grey,
             width: widget.isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(50),
           color: widget.isSelected
               ? Colors.green[50]
               : _isTapped

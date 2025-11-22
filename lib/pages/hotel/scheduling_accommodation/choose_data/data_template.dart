@@ -63,7 +63,7 @@ class DataTemplate extends StatelessWidget {
           border: Border.all(
             color: enabled ? Colors.grey : Colors.grey[300]!,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(50),
           color: enabled ? Colors.white : Colors.grey[100],
         ),
         child: Row(

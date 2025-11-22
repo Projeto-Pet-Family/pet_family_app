@@ -6,7 +6,7 @@ import 'package:pet_family_app/widgets/app_button.dart';
 class HotelTemplate extends StatefulWidget {
   final String name;
   final String street;
-  final String number; // ✅ MUDEI de int para String
+  final String number;
   final String neighborhood;
   final String city;
   final String state;
@@ -14,12 +14,13 @@ class HotelTemplate extends StatefulWidget {
   final String zipCode;
   final String complement;
   final int idHotel;
+  final double valorDiaria; // ✅ NOVO CAMPO
 
   const HotelTemplate({
     super.key,
     required this.name,
     required this.street,
-    required this.number, // ✅ Agora é String
+    required this.number,
     required this.neighborhood,
     required this.city,
     required this.state,
@@ -27,6 +28,7 @@ class HotelTemplate extends StatefulWidget {
     required this.zipCode,
     required this.complement,
     required this.idHotel,
+    required this.valorDiaria, // ✅ NOVO PARÂMETRO
   });
 
   @override
@@ -46,7 +48,13 @@ class _HotelTemplateState extends State<HotelTemplate> {
       'estado': widget.state,
       'sigla': widget.uf,
       'cep': widget.zipCode,
+      'valor_diaria': widget.valorDiaria, // ✅ INCLUINDO VALOR DA DIÁRIA
     };
+  }
+
+  // Função para formatar o valor em Reais
+  String _formatarValor(double valor) {
+    return 'R\$${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
   @override
@@ -56,6 +64,7 @@ class _HotelTemplateState extends State<HotelTemplate> {
     print('   Nome: ${widget.name}');
     print('   ID: ${widget.idHotel}');
     print('   Número: ${widget.number} (tipo: ${widget.number.runtimeType})');
+    print('   Valor Diária: ${_formatarValor(widget.valorDiaria)}');
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -79,6 +88,8 @@ class _HotelTemplateState extends State<HotelTemplate> {
                       color: Color(0xFF1C1B1F),
                     ),
                   ),
+
+                  // Nome do Hotel
                   Text(
                     widget.name,
                     style: TextStyle(
@@ -87,7 +98,33 @@ class _HotelTemplateState extends State<HotelTemplate> {
                       color: Colors.white,
                     ),
                   ),
+
+                  SizedBox(height: 8),
+
+                  // ✅ VALOR DA DIÁRIA - Destaque
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF159800),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${_formatarValor(widget.valorDiaria)} / diária',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   SizedBox(height: 12),
+
                   Text(
                     '${widget.street}, ${widget.number}, ${widget.neighborhood}, ${widget.city}, ${widget.state}, ${widget.uf}, ${widget.zipCode}, ${widget.complement}',
                     style: TextStyle(
@@ -96,6 +133,8 @@ class _HotelTemplateState extends State<HotelTemplate> {
                       fontSize: 10,
                     ),
                   ),
+
+                  // Distância
                   Text(
                     'há 2.5km',
                     style: TextStyle(
@@ -104,52 +143,20 @@ class _HotelTemplateState extends State<HotelTemplate> {
                       fontSize: 12,
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Text(
-                        '4.45',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFFFFFFFF),
-                          fontSize: 15,
-                        ),
-                      ),
-                      SizedBox(width: 5),
-                      RatingBar.builder(
-                        initialRating: 4.5,
-                        minRating: 1,
-                        direction: Axis.horizontal,
-                        allowHalfRating: true,
-                        itemCount: 5,
-                        itemSize: 15,
-                        itemPadding: EdgeInsets.symmetric(horizontal: 1.0),
-                        itemBuilder: (context, _) => Icon(
-                          Icons.star,
-                          color: Colors.white,
-                        ),
-                        onRatingUpdate: (rating) {},
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '2500 avaliações',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFFFFFFFF),
-                      fontSize: 15,
-                    ),
-                  ),
+
                   SizedBox(height: 16),
                 ],
               ),
             ),
+
+            // Botão
             AppButton(
               onPressed: () {
                 final hotelData = _getHotelData();
 
                 print('🎯 Navegando para hotel: ${widget.name}');
                 print('🎯 ID enviado: ${widget.idHotel}');
+                print('🎯 Valor diária: ${_formatarValor(widget.valorDiaria)}');
                 print('🎯 Dados completos enviados: $hotelData');
 
                 context.go('/hotel', extra: hotelData);

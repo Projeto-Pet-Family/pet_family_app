@@ -283,28 +283,27 @@ class _ChooseDataState extends State<ChooseData> {
 
                   const SizedBox(height: 40),
 
-                  // Botão para limpar todas as seleções
-                  if (_startDate != null || _endDate != null)
-                    OutlinedButton(
-                      onPressed: _limparDatasDoCache,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text('Limpar Datas'),
-                    ),
-
-                  if (_startDate != null || _endDate != null)
-                    const SizedBox(height: 16),
-
-                  // Botão próximo
                   if (_startDate != null && _endDate != null)
                     AppButton(
                       onPressed: _navigateToNext,
                       label: 'Próximo',
                       fontSize: 20,
                     ),
+
+                  const SizedBox(height: 16),
+
+                  if (_startDate != null || _endDate != null)
+                    AppButton(
+                      onPressed: _navigateToNext,
+                      label: 'Limpar datas',
+                      fontSize: 20,
+                      buttonColor: Colors.redAccent,
+                    ),
+
+                  if (_startDate != null || _endDate != null)
+                    const SizedBox(height: 16),
+
+                  // Botão próximo
 
                   // Mensagem informativa
                   if (_startDate == null)

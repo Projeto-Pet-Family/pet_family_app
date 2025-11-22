@@ -69,12 +69,12 @@ class Home extends StatelessWidget {
                 title: 'Hospedagens',
                 titleSize: 25,
                 icon: Icons.house,
-                iconSize: 100,
+                iconSize: 40,
                 width: 330,
-                height: 150,
-                radius: 20,
+                height: 80,
+                radius: 50,
               ),
-              SizedBox(height: 60),
+              SizedBox(height: 20),
               HomeButtons(
                 onTap: () {
                   CoreNavigation.of(context)?.changePage(2);

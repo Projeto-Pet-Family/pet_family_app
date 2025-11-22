@@ -90,6 +90,7 @@ class _SearchState extends State<Search> {
                             zipCode: hospedagem.cep,
                             complement: hospedagem.complemento,
                             idHotel: hospedagem.idHospedagem,
+                            valorDiaria: hospedagem.valorDiaria,
                           );
                         },
                       ),

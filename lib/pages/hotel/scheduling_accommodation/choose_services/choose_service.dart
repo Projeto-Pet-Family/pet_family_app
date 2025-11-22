@@ -215,11 +215,23 @@ class _ChooseServiceState extends State<ChooseService> {
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Escolha o(s) serviço(s):',
+                      'Escolha o(s) serviço(s)',
                       style: TextStyle(
-                        fontSize: 30,
+                        fontSize: 25,
                         fontWeight: FontWeight.w200,
                         color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Opcional',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w200,
+                        color: Colors.grey[400],
                       ),
                     ),
                   ),
@@ -330,27 +342,26 @@ class _ChooseServiceState extends State<ChooseService> {
 
                   const SizedBox(height: 30),
 
-                  // Botão para limpar seleção
+                  AppButton(
+                    onPressed: _navigateToNext,
+                    label: 'Próximo',
+                    fontSize: 17,
+                  ),
+
+                  const SizedBox(height: 16),
+
                   if (_selectedServices.isNotEmpty)
-                    OutlinedButton(
-                      onPressed: _limparServicosSelecionados,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text('Limpar Serviços'),
+                    AppButton(
+                      onPressed: _navigateToNext,
+                      label: 'Limpar serviços',
+                      fontSize: 17,
+                      buttonColor: Colors.redAccent,
                     ),
 
                   if (_selectedServices.isNotEmpty) const SizedBox(height: 16),
 
                   // Botão próximo
-                  if (_selectedServices.isNotEmpty)
-                    AppButton(
-                      onPressed: _navigateToNext,
-                      label: 'Próximo',
-                      fontSize: 17,
-                    ),
+                  
                 ],
               ),
             ),

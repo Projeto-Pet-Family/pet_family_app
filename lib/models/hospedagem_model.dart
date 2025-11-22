@@ -10,6 +10,7 @@ class HospedagemModel {
   final String cidade;
   final String estado;
   final String sigla;
+  final double valorDiaria;
 
   HospedagemModel({
     required this.idHospedagem,
@@ -23,6 +24,7 @@ class HospedagemModel {
     required this.cidade,
     required this.estado,
     required this.sigla,
+    required this.valorDiaria,
   });
 
   factory HospedagemModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,8 @@ class HospedagemModel {
     print('🔍 JSON recebido no fromJson:');
     print(
         '   idhospedagem: ${json['idhospedagem']} (tipo: ${json['idhospedagem']?.runtimeType})');
+    print(
+        '   valor_diaria: ${json['valor_diaria']} (tipo: ${json['valor_diaria']?.runtimeType})');
 
     // ✅ CORREÇÃO: Garantir que o ID seja mapeado corretamente
     final dynamic idRaw = json['idhospedagem'];
@@ -43,7 +47,22 @@ class HospedagemModel {
       idHospedagem = 0;
     }
 
+    // ✅ CORREÇÃO: Garantir que o valor_diaria seja mapeado corretamente
+    final dynamic valorDiariaRaw = json['valor_diaria'];
+    final double valorDiaria;
+
+    if (valorDiariaRaw is double) {
+      valorDiaria = valorDiariaRaw;
+    } else if (valorDiariaRaw is int) {
+      valorDiaria = valorDiariaRaw.toDouble();
+    } else if (valorDiariaRaw is String) {
+      valorDiaria = double.tryParse(valorDiariaRaw) ?? 0.0;
+    } else {
+      valorDiaria = 0.0;
+    }
+
     print('   ID mapeado: $idHospedagem');
+    print('   Valor diária mapeado: $valorDiaria');
 
     return HospedagemModel(
       idHospedagem: idHospedagem,
@@ -57,10 +76,11 @@ class HospedagemModel {
       cidade: json['cidade'] ?? '',
       estado: json['estado'] ?? '',
       sigla: json['sigla'] ?? '',
+      valorDiaria: valorDiaria, // ✅ INCLUINDO VALOR DA DIÁRIA
     );
   }
 
-  // ✅ ADICIONE ESTE MÉTODO toJson()
+  // ✅ MÉTODO toJson() ATUALIZADO
   Map<String, dynamic> toJson() {
     return {
       'idhospedagem': idHospedagem,
@@ -74,6 +94,53 @@ class HospedagemModel {
       'cidade': cidade,
       'estado': estado,
       'sigla': sigla,
+      'valor_diaria': valorDiaria, // ✅ INCLUINDO VALOR DA DIÁRIA
     };
+  }
+
+  // ✅ MÉTODO PARA CRIAR CÓPIA COM VALORES ALTERADOS (OPCIONAL)
+  HospedagemModel copyWith({
+    int? idHospedagem,
+    String? nome,
+    int? idEndereco,
+    String? numero,
+    String? complemento,
+    String? cep,
+    String? logradouro,
+    String? bairro,
+    String? cidade,
+    String? estado,
+    String? sigla,
+    double? valorDiaria,
+  }) {
+    return HospedagemModel(
+      idHospedagem: idHospedagem ?? this.idHospedagem,
+      nome: nome ?? this.nome,
+      idEndereco: idEndereco ?? this.idEndereco,
+      numero: numero ?? this.numero,
+      complemento: complemento ?? this.complemento,
+      cep: cep ?? this.cep,
+      logradouro: logradouro ?? this.logradouro,
+      bairro: bairro ?? this.bairro,
+      cidade: cidade ?? this.cidade,
+      estado: estado ?? this.estado,
+      sigla: sigla ?? this.sigla,
+      valorDiaria: valorDiaria ?? this.valorDiaria,
+    );
+  }
+
+  // ✅ MÉTODO PARA FORMATAR VALOR (OPCIONAL)
+  String formatarValorDiaria() {
+    return 'R\$${valorDiaria.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  // ✅ MÉTODO PARA CALCULAR VALOR TOTAL (OPCIONAL)
+  double calcularValorTotal(int dias) {
+    return valorDiaria * dias;
+  }
+
+  String formatarValorTotal(int dias) {
+    final total = calcularValorTotal(dias);
+    return 'R\$${total.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 }

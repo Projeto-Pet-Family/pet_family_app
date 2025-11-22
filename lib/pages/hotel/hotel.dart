@@ -152,6 +152,8 @@ class _HotelState extends State<Hotel> {
   Widget _buildHotelHeader(
       Map<String, dynamic> hotel, String enderecoCompleto) {
     final String nome = hotel['nome'] ?? 'Nome não disponível';
+    final String valorDiaria =
+        _formatarPreco(hotel['valor_diaria']?.toString() ?? '0.00');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,29 +174,29 @@ class _HotelState extends State<Hotel> {
                     fontWeight: FontWeight.w200,
                     color: Colors.black,
                   ),
-                )
+                ),
               ],
             ),
-            Column(
-              children: [
-                const Text(
-                  'Aberto',
-                  style: TextStyle(
-                    fontSize: 40,
-                    color: Color(0xFF60F700),
-                    fontWeight: FontWeight.w200,
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Color(0xFF159800),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$valorDiaria / diária',
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const Text(
-                  '08:00 as 19:30',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Color(0xFF4A4A4A),
-                    fontWeight: FontWeight.w100,
-                  ),
-                ),
-              ],
-            )
+                ],
+              ),
+            ),
           ],
         ),
         Padding(
@@ -210,14 +212,6 @@ class _HotelState extends State<Hotel> {
                     color: Colors.black,
                     fontSize: 15,
                   ),
-                ),
-              ),
-              const Text(
-                'há 2.5km',
-                style: TextStyle(
-                  fontWeight: FontWeight.w100,
-                  color: Colors.black,
-                  fontSize: 20,
                 ),
               ),
             ],
@@ -238,32 +232,7 @@ class _HotelState extends State<Hotel> {
   Widget _buildRatingSection() {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              '4.5',
-              style: TextStyle(
-                fontWeight: FontWeight.w100,
-                color: Colors.black,
-                fontSize: 20,
-              ),
-            ),
-            SizedBox(width: 5),
-            RatingStars(
-              colorStar: Colors.black,
-            ),
-          ],
-        ),
-        Text(
-          '2500 avaliações',
-          style: TextStyle(
-            fontWeight: FontWeight.w100,
-            color: Colors.black,
-            fontSize: 20,
-          ),
-        ),
-      ],
+      children: [Row(children: [])],
     );
   }
 

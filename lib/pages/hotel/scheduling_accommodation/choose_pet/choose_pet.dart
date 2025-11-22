@@ -226,27 +226,27 @@ class _ChoosePetState extends State<ChoosePet> {
 
                   const SizedBox(height: 30),
 
-                  // Botão para limpar seleção
-                  if (_selectedPets.isNotEmpty)
-                    OutlinedButton(
-                      onPressed: _limparPetsSelecionados,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text('Limpar Seleção'),
-                    ),
-
-                  if (_selectedPets.isNotEmpty) const SizedBox(height: 16),
-
-                  // Botão próximo
                   if (_selectedPets.isNotEmpty)
                     AppButton(
                       onPressed: _navigateToNext,
                       label: 'Próximo',
                       fontSize: 18,
                     ),
+
+                  const SizedBox(height: 16),
+
+                  // Botão para limpar seleção
+                  if (_selectedPets.isNotEmpty)
+                    AppButton(
+                      onPressed: _navigateToNext,
+                      label: 'Limpar seleção',
+                      fontSize: 18,
+                      buttonColor: Colors.redAccent,
+                    ),
+
+                  if (_selectedPets.isNotEmpty) const SizedBox(height: 16),
+
+                  // Botão próximo
                 ],
               ),
             ),
