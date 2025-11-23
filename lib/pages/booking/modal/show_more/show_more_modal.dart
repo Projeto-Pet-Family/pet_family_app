@@ -28,44 +28,155 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
 
   double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
-
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) {
-      String cleanedValue = value
-          .replaceAll('R\$', '')
-          .replaceAll(',', '.')
-          .replaceAll(RegExp(r'[^\d.]'), '');
-
       try {
-        return double.parse(cleanedValue);
+        return double.parse(value);
       } catch (e) {
-        print('Erro ao converter valor: $value - $e');
         return 0.0;
       }
     }
-
     return 0.0;
   }
 
   int _parseInt(dynamic value) {
     if (value == null) return 1;
-
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value is String) {
       try {
         return int.parse(value);
       } catch (e) {
-        print('Erro ao converter quantidade: $value - $e');
         return 1;
       }
     }
-
     return 1;
   }
 
-  double _calcularTotalServicos() {
+  // VERIFICA SE TEM DADOS DA API
+  bool get _temDadosCalculadosAPI {
+    return widget.contrato.temValoresCalculadosAPI;
+  }
+
+  // OBTER VALOR DA DIÁRIA - PRIORIDADE API
+  double _obterValorDiaria() {
+    // 1. Tenta dos dados calculados da API
+    if (_temDadosCalculadosAPI) {
+      final valorDiariaAPI = widget.contrato.calculoValores!['valor_diaria'];
+      if (valorDiariaAPI != null) {
+        return _parseDouble(valorDiariaAPI);
+      }
+    }
+
+    // 2. Tenta do campo direto da API
+    if (widget.contrato.valorDiaria != null) {
+      return widget.contrato.valorDiaria!;
+    }
+
+    // 3. Fallback
+    return 89.90;
+  }
+
+  // OBTER QUANTIDADE DE DIAS - PRIORIDADE API
+  int _obterQuantidadeDias() {
+    // 1. Tenta da API (calculo_valores)
+    if (widget.contrato.quantidadeDiasAPI != null) {
+      return widget.contrato.quantidadeDiasAPI!;
+    }
+
+    // 2. Tenta do campo duracaoDias
+    if (widget.contrato.duracaoDias != null) {
+      return widget.contrato.duracaoDias!;
+    }
+
+    // 3. Calcula manualmente
+    return _calcularDiasHospedagem();
+  }
+
+  // OBTER VALOR HOSPEDAGEM - PRIORIDADE API
+  double _obterValorHospedagem() {
+    // 1. Tenta da API (calculo_valores)
+    if (widget.contrato.valorTotalHospedagem != null) {
+      return widget.contrato.valorTotalHospedagem!;
+    }
+
+    // 2. Calcula manualmente
+    return _obterValorDiaria() * _obterQuantidadeDias();
+  }
+
+  // OBTER VALOR SERVIÇOS - PRIORIDADE API
+  double _obterValorServicos() {
+    // 1. Tenta da API (calculo_valores)
+    if (widget.contrato.valorTotalServicos != null) {
+      return widget.contrato.valorTotalServicos!;
+    }
+
+    // 2. Tenta do campo totalServicos
+    if (widget.contrato.totalServicos != null) {
+      return widget.contrato.totalServicos!;
+    }
+
+    // 3. Calcula manualmente
+    return _calcularTotalServicosManual();
+  }
+
+  // OBTER VALOR TOTAL - PRIORIDADE API
+  double _obterValorTotal() {
+    // 1. Tenta da API (calculo_valores)
+    if (widget.contrato.valorTotalContrato != null) {
+      return widget.contrato.valorTotalContrato!;
+    }
+
+    // 2. Calcula manualmente
+    return _obterValorHospedagem() + _obterValorServicos();
+  }
+
+  // OBTER VALORES FORMATADOS DA API
+  String _obterValorFormatado(String campo) {
+    // Tenta da API primeiro
+    final valorFormatadoAPI = widget.contrato.getValorFormatado(campo);
+    if (valorFormatadoAPI != null) {
+      return valorFormatadoAPI;
+    }
+
+    // Fallback: formata localmente
+    switch (campo) {
+      case 'valor_diaria':
+        return _formatarMoeda(_obterValorDiaria());
+      case 'valor_total_hospedagem':
+        return _formatarMoeda(_obterValorHospedagem());
+      case 'valor_total_servicos':
+        return _formatarMoeda(_obterValorServicos());
+      case 'valor_total_contrato':
+        return _formatarMoeda(_obterValorTotal());
+      default:
+        return '';
+    }
+  }
+
+  // OBTER PERÍODO FORMATADO
+  String _obterPeriodoFormatado() {
+    // Tenta da API primeiro
+    if (widget.contrato.periodoFormatadoAPI != null) {
+      return widget.contrato.periodoFormatadoAPI!;
+    }
+
+    // Fallback: formata localmente
+    final dias = _obterQuantidadeDias();
+    return '$dias ${dias == 1 ? 'dia' : 'dias'}';
+  }
+
+  // MÉTODOS DE FALLBACK
+  int _calcularDiasHospedagem() {
+    final dataInicio = widget.contrato.dataInicio;
+    final dataFim =
+        widget.contrato.dataFim ?? dataInicio.add(const Duration(days: 1));
+    final dias = dataFim.difference(dataInicio).inDays;
+    return dias > 0 ? dias : 1;
+  }
+
+  double _calcularTotalServicosManual() {
     double totalServicos = 0;
 
     if (widget.contrato.servicos != null) {
@@ -116,12 +227,23 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
   }
 
   Widget _buildServicosList() {
+    // Usar serviços do contrato (já vêm formatados da API)
     if (widget.contrato.servicos == null || widget.contrato.servicos!.isEmpty) {
-      return const Text(
-        'Nenhum serviço contratado',
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey,
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: const Center(
+          child: Text(
+            'Nenhum serviço adicional contratado',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
         ),
       );
     }
@@ -132,18 +254,20 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
         double precoUnitario = 0;
         int quantidade = 1;
         String descricao = 'Serviço';
+        double subtotal = 0;
 
         if (servico is Map<String, dynamic>) {
           precoUnitario = _parseDouble(servico['preco_unitario']);
           quantidade = _parseInt(servico['quantidade']);
           descricao = servico['descricao'] as String? ?? 'Serviço';
+          subtotal =
+              _parseDouble(servico['subtotal']) ?? (precoUnitario * quantidade);
         } else if (servico is ServiceModel) {
           precoUnitario = servico.preco;
           quantidade = 1;
           descricao = servico.descricao;
+          subtotal = precoUnitario * quantidade;
         }
-
-        double subtotal = precoUnitario * quantidade;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -192,13 +316,219 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
     );
   }
 
+  Widget _buildResumoFinanceiro() {
+    // OBTER TODOS OS VALORES JÁ FORMATADOS
+    final valorDiariaFormatado = _obterValorFormatado('valor_diaria');
+    final valorHospedagemFormatado =
+        _obterValorFormatado('valor_total_hospedagem');
+    final valorServicosFormatado = _obterValorFormatado('valor_total_servicos');
+    final valorTotalFormatado = _obterValorFormatado('valor_total_contrato');
+    final periodoFormatado = _obterPeriodoFormatado();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '💰 Resumo Financeiro',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Valor da diária
+          _buildItemFinanceiro(
+            '🏨 Valor da diária',
+            valorDiariaFormatado,
+          ),
+          const SizedBox(height: 8),
+
+          // Período
+          _buildItemFinanceiro(
+            '📅 Período da hospedagem',
+            periodoFormatado,
+          ),
+          const SizedBox(height: 12),
+
+          // Cálculo da hospedagem (só mostra se não veio pronto da API)
+          if (!_temDadosCalculadosAPI) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[100]!),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Cálculo da hospedagem:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '${_formatarMoeda(_obterValorDiaria())} × ${_obterQuantidadeDias()} dias',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Subtotal da hospedagem
+          _buildItemFinanceiro(
+            '🏠 Subtotal da hospedagem',
+            valorHospedagemFormatado,
+            isSubtotal: true,
+          ),
+          const SizedBox(height: 12),
+
+          // Serviços adicionais
+          if (_obterValorServicos() > 0) ...[
+            _buildItemFinanceiro(
+              '🛎️ Serviços adicionais',
+              valorServicosFormatado,
+              isSubtotal: true,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Total - DESTAQUE PRINCIPAL
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '💳 Total do contrato:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                Text(
+                  valorTotalFormatado,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Informação sobre origem dos dados
+          const SizedBox(height: 12),
+          _buildInfoOrigemDados(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoOrigemDados() {
+    String origem;
+    Color cor;
+    IconData icone;
+
+    if (_temDadosCalculadosAPI) {
+      origem = 'Valores calculados pela API';
+      cor = Colors.green;
+      icone = Icons.check_circle;
+    } else if (widget.contrato.valorDiaria != null) {
+      origem = 'Valor da diária da API + cálculo local';
+      cor = Colors.blue;
+      icone = Icons.info;
+    } else {
+      origem = 'Valores calculados localmente';
+      cor = Colors.orange;
+      icone = Icons.info;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:Colors.grey[200], // CORRIGIDO: Usar a cor correspondente
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cor),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icone,
+            color: Colors.black, // CORRIGIDO: Usar a cor correspondente
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              origem,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.black, // CORRIGIDO: Usar a cor correspondente
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemFinanceiro(String titulo, String valor,
+      {bool isSubtotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[700],
+            fontWeight: isSubtotal ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: 14,
+            color: isSubtotal ? Colors.blue : Colors.black,
+            fontWeight: isSubtotal ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double totalServicos = _calcularTotalServicos();
     final List<Widget> petIcons = _buildPetIconsForModal();
 
     return Container(
-      color: Colors.white, // Fundo branco para todo o modal
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
@@ -227,7 +557,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
                       fontSize: 18,
                     ),
                   ),
-                  const SizedBox(width: 30), // Para balancear o layout
+                  const SizedBox(width: 30),
                 ],
               ),
 
@@ -268,9 +598,9 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
-                              'Em Aprovação',
-                              style: TextStyle(
+                            child: Text(
+                              widget.contrato.statusFormatado,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,
@@ -283,6 +613,11 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 20),
+
+              // Resumo Financeiro
+              _buildResumoFinanceiro(),
 
               const SizedBox(height: 20),
 
@@ -318,63 +653,41 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
               const SizedBox(height: 16),
 
               // Endereço
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 20,
-                      color: Color(0xff8692DE),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.contrato.hospedagemEndereco ??
-                            'Endereço não informado',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF1C1B1F),
+              if (widget.contrato.hospedagemEndereco != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 20,
+                        color: Color(0xff8692DE),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.contrato.hospedagemEndereco!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF1C1B1F),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Valor Total
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xff8692DE).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xff8692DE)),
-                ),
-                child: Center(
-                  child: Text(
-                    _formatarMoeda(totalServicos),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      color: Color(0xff8692DE),
-                      fontWeight: FontWeight.bold,
-                    ),
+                    ],
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
+              ],
 
               // Serviços Contratados
               const Text(
-                'Serviços Contratados',
+                'Serviços Adicionais',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

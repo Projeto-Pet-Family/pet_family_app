@@ -241,7 +241,7 @@ class _HotelState extends State<Hotel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Serviços',
+          'Serviços extras',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w200,
