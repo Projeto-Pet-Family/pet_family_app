@@ -23,7 +23,6 @@ class _ChooseDataState extends State<ChooseData> {
     _carregarDatasDoCache();
   }
 
-  // Carrega as datas salvas no cache
   Future<void> _carregarDatasDoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -51,7 +50,20 @@ class _ChooseDataState extends State<ChooseData> {
     }
   }
 
-  // Salva as datas no cache
+  // Novo método para calcular e salvar dias de hospedagem
+  Future<void> _calcularESalvarDiasHospedagem() async {
+    try {
+      if (_startDate != null && _endDate != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final dias = _endDate!.difference(_startDate!).inDays;
+        await prefs.setInt('stay_days_count', dias);
+        print('💾 Dias de hospedagem salvos no cache: $dias');
+      }
+    } catch (e) {
+      print('❌ Erro ao salvar dias de hospedagem: $e');
+    }
+  }
+
   Future<void> _salvarDatasNoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -76,6 +88,7 @@ class _ChooseDataState extends State<ChooseData> {
         // Calcula e salva a quantidade de dias
         final days = _endDate!.difference(_startDate!).inDays;
         await prefs.setInt('selected_days_count', days);
+        await prefs.setInt('stay_days_count', days); // Garante que está salvo
       }
 
       print('💾 Datas salvas no cache - Início: $_startDate, Fim: $_endDate');
@@ -84,7 +97,6 @@ class _ChooseDataState extends State<ChooseData> {
     }
   }
 
-  // Limpa as datas do cache
   Future<void> _limparDatasDoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -94,6 +106,7 @@ class _ChooseDataState extends State<ChooseData> {
       await prefs.remove('selected_start_date_str');
       await prefs.remove('selected_end_date_str');
       await prefs.remove('selected_days_count');
+      await prefs.remove('stay_days_count'); // Novo
 
       setState(() {
         _startDate = null;
@@ -120,6 +133,7 @@ class _ChooseDataState extends State<ChooseData> {
 
     // Salva automaticamente no cache
     _salvarDatasNoCache();
+    _calcularESalvarDiasHospedagem(); // Novo método
   }
 
   void _onEndDateSelected(DateTime date) {
@@ -129,11 +143,13 @@ class _ChooseDataState extends State<ChooseData> {
 
     // Salva automaticamente no cache
     _salvarDatasNoCache();
+    _calcularESalvarDiasHospedagem(); // Novo método
   }
 
   void _navigateToNext() {
     // Garante que as datas estão salvas antes de navegar
     _salvarDatasNoCache();
+    _calcularESalvarDiasHospedagem();
 
     context.go('/choose-service');
   }
@@ -159,7 +175,7 @@ class _ChooseDataState extends State<ChooseData> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(route: '/choose-pet'),
+            const AppBarReturn(route: '/choose-pet'),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -277,8 +293,7 @@ class _ChooseDataState extends State<ChooseData> {
                     hintText: _startDate == null
                         ? 'Selecione a data de início primeiro'
                         : 'Selecione a data de fim',
-                    enabled: _startDate !=
-                        null, // Desabilita se não tiver data de início
+                    enabled: _startDate != null,
                   ),
 
                   const SizedBox(height: 40),
@@ -293,17 +308,16 @@ class _ChooseDataState extends State<ChooseData> {
                   const SizedBox(height: 16),
 
                   if (_startDate != null || _endDate != null)
-                    AppButton(
-                      onPressed: _navigateToNext,
-                      label: 'Limpar datas',
-                      fontSize: 20,
-                      buttonColor: Colors.redAccent,
+                    TextButton(
+                      onPressed: _limparDatasDoCache,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                      ),
+                      child: const Text('Limpar datas'),
                     ),
 
                   if (_startDate != null || _endDate != null)
                     const SizedBox(height: 16),
-
-                  // Botão próximo
 
                   // Mensagem informativa
                   if (_startDate == null)

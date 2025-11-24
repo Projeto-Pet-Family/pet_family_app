@@ -633,4 +633,6 @@ class ContratoRepository {
       // Não lança exceção para não quebrar o fluxo principal
     }
   }
+
+  
 }

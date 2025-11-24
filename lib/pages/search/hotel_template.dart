@@ -112,7 +112,7 @@ class _HotelTemplateState extends State<HotelTemplate> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${_formatarValor(widget.valorDiaria)} / diária',
+                          '${_formatarValor(widget.valorDiaria)} / dia',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -131,16 +131,6 @@ class _HotelTemplateState extends State<HotelTemplate> {
                       fontWeight: FontWeight.w400,
                       color: Color(0xFFCCCCCC),
                       fontSize: 10,
-                    ),
-                  ),
-
-                  // Distância
-                  Text(
-                    'há 2.5km',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFFCCCCCC),
-                      fontSize: 12,
                     ),
                   ),
 

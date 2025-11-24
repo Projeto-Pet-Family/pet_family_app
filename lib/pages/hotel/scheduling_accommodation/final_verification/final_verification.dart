@@ -18,16 +18,300 @@ class FinalVerification extends StatefulWidget {
 
 class _FinalVerificationState extends State<FinalVerification> {
   Map<String, dynamic> _cachedData = {};
+  Map<String, dynamic> _dadosCalculoCache = {};
   bool _isLoading = true;
   bool _isCreatingContract = false;
   bool _isCalculating = false;
   Map<String, dynamic>? _calculoContrato;
   final ContratoRepository _contratoRepository = ContratoRepository();
 
+  // MÉTODOS DE FORMATAÇÃO E PARSE
+  String _formatarMoeda(double valor) {
+    return 'R\$${valor.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      try {
+        return double.parse(value);
+      } catch (e) {
+        return 0.0;
+      }
+    }
+    return 0.0;
+  }
+
+  int _parseInt(dynamic value) {
+    if (value == null) return 1;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (e) {
+        return 1;
+      }
+    }
+    return 1;
+  }
+
+  // MÉTODO PARA CARREGAR DADOS DE CÁLCULO DO CACHE
+  Future<void> _carregarDadosCalculoDoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Carrega todos os dados necessários para o cálculo
+      final valorDiariaStr = prefs.getString('hotel_daily_rate') ?? '0.00';
+      final quantidadePets = prefs.getInt('selected_pets_count') ?? 1;
+      final diasHospedagem = prefs.getInt('stay_days_count') ?? 1;
+
+      // Converte valor da diária para double
+      final valorDiaria = double.tryParse(valorDiariaStr) ?? 0.0;
+
+      // Calcula o valor total da hospedagem
+      final valorTotalHospedagem =
+          valorDiaria * quantidadePets * diasHospedagem;
+
+      setState(() {
+        _dadosCalculoCache = {
+          'valor_diaria': valorDiaria,
+          'quantidade_pets': quantidadePets,
+          'dias_hospedagem': diasHospedagem,
+          'valor_total_hospedagem': valorTotalHospedagem,
+        };
+      });
+
+      print('🧮 Dados de cálculo carregados do cache:');
+      print('   - Valor diária: $valorDiaria');
+      print('   - Quantidade pets: $quantidadePets');
+      print('   - Dias hospedagem: $diasHospedagem');
+      print('   - Valor total hospedagem: $valorTotalHospedagem');
+    } catch (e) {
+      print('❌ Erro ao carregar dados de cálculo: $e');
+    }
+  }
+
+  // OBTER QUANTIDADE DE PETS
+  int _obterQuantidadePets() {
+    final pets = _cachedData['selected_pets'] as Map<String, dynamic>?;
+    if (pets != null && pets['names'] != null) {
+      return (pets['names'] as List).length;
+    }
+    return _dadosCalculoCache['quantidade_pets'] ?? 1;
+  }
+
+  // VERIFICA SE TEM DADOS DA API
+  bool get _temDadosCalculadosAPI {
+    return _calculoContrato != null && _calculoContrato!['valores'] != null;
+  }
+
+  // OBTER VALOR DA DIÁRIA POR PET - PRIORIDADE API
+  double _obterValorDiariaPorPet() {
+    // 1. Tenta dos dados calculados da API
+    if (_temDadosCalculadosAPI) {
+      final valores = _calculoContrato!['valores'] as Map<String, dynamic>;
+      final hospedagem =
+          _calculoContrato!['hospedagem'] as Map<String, dynamic>;
+
+      // Tenta do campo valor_diaria da hospedagem
+      if (hospedagem['valor_diaria'] != null) {
+        return _parseDouble(hospedagem['valor_diaria']);
+      }
+
+      // Tenta calcular a partir do valor total da hospedagem
+      if (valores['hospedagem'] != null) {
+        final dias = _obterQuantidadeDias();
+        final pets = _obterQuantidadePets();
+        if (dias > 0 && pets > 0) {
+          return _parseDouble(valores['hospedagem']) / (dias * pets);
+        }
+      }
+    }
+
+    // 2. Tenta do cache
+    if (_dadosCalculoCache.isNotEmpty) {
+      return _dadosCalculoCache['valor_diaria'] ?? 89.90;
+    }
+
+    // 3. Fallback para valor padrão
+    return 89.90;
+  }
+
+  // OBTER QUANTIDADE DE DIAS - PRIORIDADE API
+  int _obterQuantidadeDias() {
+    // 1. Tenta da API (periodo)
+    if (_temDadosCalculadosAPI) {
+      final periodo = _calculoContrato!['periodo'] as Map<String, dynamic>;
+      if (periodo['quantidade_dias'] != null) {
+        return _parseInt(periodo['quantidade_dias']);
+      }
+    }
+
+    // 2. Tenta do cache
+    if (_dadosCalculoCache.isNotEmpty) {
+      return _dadosCalculoCache['dias_hospedagem'] ?? 1;
+    }
+
+    // 3. Tenta do cache de datas
+    final dates = _cachedData['selected_dates'] as Map<String, dynamic>?;
+    if (dates != null && dates['days_count'] != null) {
+      return _parseInt(dates['days_count']);
+    }
+
+    // 4. Calcula manualmente
+    return _calcularDiasHospedagem();
+  }
+
+  // OBTER VALOR HOSPEDAGEM - PRIORIDADE API (agora considerando pets)
+  double _obterValorHospedagem() {
+    // 1. Tenta da API (valores)
+    if (_temDadosCalculadosAPI) {
+      final valores = _calculoContrato!['valores'] as Map<String, dynamic>;
+      if (valores['hospedagem'] != null) {
+        return _parseDouble(valores['hospedagem']);
+      }
+    }
+
+    // 2. Tenta do cache
+    if (_dadosCalculoCache.isNotEmpty) {
+      return _dadosCalculoCache['valor_total_hospedagem'] ?? 0.0;
+    }
+
+    // 3. Calcula manualmente considerando pets
+    final valorDiariaPorPet = _obterValorDiariaPorPet();
+    final quantidadeDias = _obterQuantidadeDias();
+    final quantidadePets = _obterQuantidadePets();
+
+    return valorDiariaPorPet * quantidadeDias * quantidadePets;
+  }
+
+  // OBTER VALOR SERVIÇOS - PRIORIDADE API
+  double _obterValorServicos() {
+    // 1. Tenta da API (valores)
+    if (_temDadosCalculadosAPI) {
+      final valores = _calculoContrato!['valores'] as Map<String, dynamic>;
+      if (valores['servicos'] != null) {
+        return _parseDouble(valores['servicos']);
+      }
+    }
+
+    // 2. Tenta do cache
+    final services = _cachedData['selected_services'] as Map<String, dynamic>?;
+    if (services != null && services['total_value'] != null) {
+      return _parseDouble(services['total_value']);
+    }
+
+    // 3. Calcula manualmente
+    return _calcularTotalServicosManual();
+  }
+
+  // OBTER VALOR TOTAL - PRIORIDADE API
+  double _obterValorTotal() {
+    // 1. Tenta da API (valores)
+    if (_temDadosCalculadosAPI) {
+      final valores = _calculoContrato!['valores'] as Map<String, dynamic>;
+      if (valores['total'] != null) {
+        return _parseDouble(valores['total']);
+      }
+    }
+
+    // 2. Calcula manualmente
+    return _obterValorHospedagem() + _obterValorServicos();
+  }
+
+  // OBTER VALORES FORMATADOS
+  String _obterValorFormatado(String campo) {
+    // Tenta da API primeiro
+    if (_temDadosCalculadosAPI) {
+      final valores = _calculoContrato!['valores'] as Map<String, dynamic>;
+      switch (campo) {
+        case 'valor_diaria':
+          return _formatarMoeda(_obterValorDiariaPorPet());
+        case 'valor_total_hospedagem':
+          if (valores['hospedagem'] != null) {
+            return _formatarMoeda(_parseDouble(valores['hospedagem']));
+          }
+          break;
+        case 'valor_total_servicos':
+          if (valores['servicos'] != null) {
+            return _formatarMoeda(_parseDouble(valores['servicos']));
+          }
+          break;
+        case 'valor_total_contrato':
+          if (valores['total'] != null) {
+            return _formatarMoeda(_parseDouble(valores['total']));
+          }
+          break;
+      }
+    }
+
+    // Fallback: formata localmente
+    switch (campo) {
+      case 'valor_diaria':
+        return _formatarMoeda(_obterValorDiariaPorPet());
+      case 'valor_total_hospedagem':
+        return _formatarMoeda(_obterValorHospedagem());
+      case 'valor_total_servicos':
+        return _formatarMoeda(_obterValorServicos());
+      case 'valor_total_contrato':
+        return _formatarMoeda(_obterValorTotal());
+      default:
+        return '';
+    }
+  }
+
+  // OBTER PERÍODO FORMATADO
+  String _obterPeriodoFormatado() {
+    // Tenta da API primeiro
+    if (_temDadosCalculadosAPI) {
+      final periodo = _calculoContrato!['periodo'] as Map<String, dynamic>;
+      if (periodo['quantidade_dias'] != null) {
+        final dias = _parseInt(periodo['quantidade_dias']);
+        return '$dias ${dias == 1 ? 'dia' : 'dias'}';
+      }
+    }
+
+    // Fallback: formata localmente
+    final dias = _obterQuantidadeDias();
+    return '$dias ${dias == 1 ? 'dia' : 'dias'}';
+  }
+
+  // MÉTODOS DE FALLBACK
+  int _calcularDiasHospedagem() {
+    final dates = _cachedData['selected_dates'] as Map<String, dynamic>?;
+    if (dates == null) return 1;
+
+    final dataInicio = dates['start_date'] as DateTime?;
+    final dataFim = dates['end_date'] as DateTime?;
+
+    if (dataInicio == null || dataFim == null) return 1;
+
+    final dias = dataFim.difference(dataInicio).inDays;
+    return dias > 0 ? dias : 1;
+  }
+
+  double _calcularTotalServicosManual() {
+    double totalServicos = 0;
+    final services = _cachedData['selected_services'] as Map<String, dynamic>?;
+
+    if (services != null && services['prices'] != null) {
+      final prices = services['prices'] as List<String>;
+      for (var price in prices) {
+        totalServicos += _parseDouble(price);
+      }
+    }
+
+    return totalServicos;
+  }
+
   @override
   void initState() {
     super.initState();
     _carregarDadosDoCache().then((_) {
+      _carregarDadosCalculoDoCache(); // Novo método
       _calcularValorContrato();
     });
   }
@@ -66,7 +350,7 @@ class _FinalVerificationState extends State<FinalVerification> {
         'days_count': daysCount,
       };
 
-      // Serviços selecionados (OPCIONAL)
+      // Serviços selecionados
       final selectedServiceIds = prefs.getStringList('selected_services') ?? [];
       final selectedServiceNames =
           prefs.getStringList('selected_service_names') ?? [];
@@ -130,7 +414,7 @@ class _FinalVerificationState extends State<FinalVerification> {
         }).toList();
       }
 
-      // ID fixo da hospedagem (ajuste conforme sua aplicação)
+      // ID fixo da hospedagem
       const idHospedagem = 1;
 
       // Calcular valor do contrato
@@ -148,18 +432,328 @@ class _FinalVerificationState extends State<FinalVerification> {
 
       print('💰 Cálculo realizado: $_calculoContrato');
     } catch (e) {
-      print('❌ Erro ao calcular valor do contrato f: $e');
+      print('❌ Erro ao calcular valor do contrato: $e');
       setState(() {
         _isCalculating = false;
       });
       // Mostra erro mas não impede a continuação
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao calcular valores: $e'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao calcular valores: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
+  }
+
+  // MÉTODO PARA CONSTRUIR O RESUMO FINANCEIRO (COM CÁLCULO DE PETS)
+  Widget _buildResumoFinanceiro() {
+    // Se temos dados do cache, usamos eles para construir o resumo
+    if (_dadosCalculoCache.isNotEmpty) {
+      return _buildResumoComCache();
+    }
+
+    // Se não, usa o método original (com API ou fallback)
+    return _buildResumoComAPI();
+  }
+
+  // NOVO MÉTODO PARA CONSTRUIR RESUMO COM DADOS DO CACHE
+  Widget _buildResumoComCache() {
+    final valorDiaria = _dadosCalculoCache['valor_diaria'] ?? 0.0;
+    final quantidadePets = _dadosCalculoCache['quantidade_pets'] ?? 1;
+    final diasHospedagem = _dadosCalculoCache['dias_hospedagem'] ?? 1;
+    final valorHospedagem = _dadosCalculoCache['valor_total_hospedagem'] ?? 0.0;
+    final valorServicos = _obterValorServicos();
+    final valorTotal = valorHospedagem + valorServicos;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '💰 Resumo Financeiro',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Detalhamento do cálculo
+          _buildItemFinanceiro(
+            '🏨 Valor da diária por pet',
+            _formatarMoeda(valorDiaria),
+          ),
+          const SizedBox(height: 8),
+
+          _buildItemFinanceiro(
+            '🐕 Quantidade de pets',
+            '$quantidadePets ${quantidadePets == 1 ? 'pet' : 'pets'}',
+          ),
+          const SizedBox(height: 8),
+
+          _buildItemFinanceiro(
+            '📅 Dias de hospedagem',
+            '$diasHospedagem ${diasHospedagem == 1 ? 'dia' : 'dias'}',
+          ),
+
+          const SizedBox(height: 16),
+          _buildItemFinanceiro(
+            '🏠 Total da hospedagem',
+            _formatarMoeda(valorHospedagem),
+            isSubtotal: true,
+          ),
+          const SizedBox(height: 12),
+
+          // Serviços adicionais
+          if (valorServicos > 0) ...[
+            _buildItemFinanceiro(
+              '🛎️ Serviços adicionais',
+              _formatarMoeda(valorServicos),
+              isSubtotal: true,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Total
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '💳 Total do contrato:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                Text(
+                  _formatarMoeda(valorTotal),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Informação sobre origem dos dados
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // MÉTODO ORIGINAL PARA RESUMO COM API
+  Widget _buildResumoComAPI() {
+    final valorDiariaFormatado = _obterValorFormatado('valor_diaria');
+    final valorHospedagemFormatado =
+        _obterValorFormatado('valor_total_hospedagem');
+    final valorServicosFormatado = _obterValorFormatado('valor_total_servicos');
+    final valorTotalFormatado = _obterValorFormatado('valor_total_contrato');
+    final periodoFormatado = _obterPeriodoFormatado();
+
+    // Dados para o cálculo
+    final valorDiariaPorPet = _obterValorDiariaPorPet();
+    final quantidadeDias = _obterQuantidadeDias();
+    final quantidadePets = _obterQuantidadePets();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '💰 Resumo Financeiro',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Valor da diária POR PET
+          _buildItemFinanceiro(
+            '🏨 Valor da diária por pet',
+            valorDiariaFormatado,
+          ),
+          const SizedBox(height: 8),
+
+          // Quantidade de pets
+          _buildItemFinanceiro(
+            '🐕 Pets hospedados',
+            '$quantidadePets ${quantidadePets == 1 ? 'pet' : 'pets'}',
+          ),
+          const SizedBox(height: 8),
+
+          // Período
+          _buildItemFinanceiro(
+            '📅 Período da hospedagem',
+            periodoFormatado,
+          ),
+          const SizedBox(height: 12),
+
+          // Cálculo detalhado da hospedagem (só mostra se não veio pronto da API)
+          if (!_temDadosCalculadosAPI) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[100]!),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Cálculo da hospedagem:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        '${_formatarMoeda(valorDiariaPorPet)} × $quantidadePets pets × $quantidadeDias dias',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Detalhamento:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Text(
+                        '${_formatarMoeda(valorDiariaPorPet * quantidadePets)}/dia × $quantidadeDias dias',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Subtotal da hospedagem
+          _buildItemFinanceiro(
+            '🏠 Subtotal da hospedagem',
+            valorHospedagemFormatado,
+            isSubtotal: true,
+          ),
+          const SizedBox(height: 12),
+
+          // Serviços adicionais
+          if (_obterValorServicos() > 0) ...[
+            _buildItemFinanceiro(
+              '🛎️ Serviços adicionais',
+              valorServicosFormatado,
+              isSubtotal: true,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Total - DESTAQUE PRINCIPAL
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '💳 Total do contrato:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                Text(
+                  valorTotalFormatado,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Informação sobre origem dos dados
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemFinanceiro(String titulo, String valor,
+      {bool isSubtotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[700],
+            fontWeight: isSubtotal ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: 14,
+            color: isSubtotal ? Colors.blue : Colors.black,
+            fontWeight: isSubtotal ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _criarContrato() async {
@@ -173,7 +767,7 @@ class _FinalVerificationState extends State<FinalVerification> {
       final services =
           _cachedData['selected_services'] as Map<String, dynamic>?;
 
-      // Validar dados necessários (APENAS PETS E DATAS SÃO OBRIGATÓRIOS)
+      // Validar dados necessários
       if (pets == null || dates == null) {
         throw Exception('Dados incompletos para criar contrato');
       }
@@ -204,6 +798,20 @@ class _FinalVerificationState extends State<FinalVerification> {
 
       // ID fixo da hospedagem
       const idHospedagem = 1;
+
+      // Calcular valores finais (usando cache como fallback)
+      final valorHospedagem = _temDadosCalculadosAPI
+          ? _obterValorHospedagem()
+          : _dadosCalculoCache['valor_total_hospedagem'] ??
+              _obterValorHospedagem();
+
+      final valorServicos = _obterValorServicos();
+      final valorTotal = valorHospedagem + valorServicos;
+
+      print('💰 Valores calculados para envio:');
+      print('   - Hospedagem: $valorHospedagem');
+      print('   - Serviços: $valorServicos');
+      print('   - Total: $valorTotal');
 
       // Criar contrato
       final response = await _contratoRepository.criarContrato(
@@ -255,6 +863,11 @@ class _FinalVerificationState extends State<FinalVerification> {
       await prefs.remove('selected_service_names');
       await prefs.remove('selected_service_prices');
       await prefs.remove('selected_services_total');
+
+      // Limpar dados de cálculo
+      await prefs.remove('hotel_daily_rate');
+      await prefs.remove('selected_pets_count');
+      await prefs.remove('stay_days_count');
 
       print('🗑️ Cache limpo com sucesso');
     } catch (e) {
@@ -388,256 +1001,15 @@ class _FinalVerificationState extends State<FinalVerification> {
     );
   }
 
-  Widget _buildResumoFinanceiro() {
-    if (_calculoContrato == null) return const SizedBox();
-
-    final valores = _calculoContrato!['valores'] as Map<String, dynamic>;
-    final periodo = _calculoContrato!['periodo'] as Map<String, dynamic>;
-    final hospedagem = _calculoContrato!['hospedagem'] as Map<String, dynamic>;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '💰 Resumo Financeiro',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Diária e período
-          _buildResumoItem(
-            '🏨 Valor da diária',
-            'R\$${hospedagem['valor_diaria'].toStringAsFixed(2)}',
-          ),
-          _buildResumoItem(
-            '📅 Período da hospedagem',
-            '${periodo['quantidade_dias']} ${periodo['quantidade_dias'] == 1 ? 'dia' : 'dias'}',
-          ),
-
-          // Cálculo detalhado da hospedagem
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green[100]!),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cálculo da hospedagem:',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${hospedagem['valor_diaria'].toStringAsFixed(2)} × ${periodo['quantidade_dias']} dias',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.blue,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'R\$${valores['hospedagem'].toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Serviços (se houver)
-          if (valores['servicos'] > 0) ...[
-            const SizedBox(height: 12),
-            _buildResumoItem(
-              '🛎️ Serviços adicionais',
-              'R\$${valores['servicos'].toStringAsFixed(2)}',
-              subtotal: true,
-            ),
-
-            // Detalhamento dos serviços
-            if (_calculoContrato?['servicos'] != null &&
-                (_calculoContrato!['servicos'] as List).isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ...(_calculoContrato!['servicos'] as List<dynamic>)
-                  .map((servico) {
-                final servicoMap = servico as Map<String, dynamic>;
-                return Padding(
-                  padding: const EdgeInsets.only(left: 16, bottom: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '• ${servicoMap['descricao']}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        'R\$${servicoMap['subtotal'].toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ],
-          ],
-
-          // Total
-          const Divider(height: 20),
-          _buildResumoItem(
-            '💳 Total do contrato',
-            'R\$${valores['total'].toStringAsFixed(2)}',
-            isTotal: true,
-          ),
-
-          // Informação adicional sobre o cálculo
-          if (_calculoContrato?['usando_dados_mock'] == true) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.orange),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info, color: Colors.orange[700], size: 16),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Usando valores estimados para cálculo',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResumoItem(String title, String value,
-      {bool subtotal = false, bool isTotal = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: isTotal ? 16 : 14,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Colors.green : Colors.grey[700],
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isTotal ? 16 : 14,
-              fontWeight: isTotal
-                  ? FontWeight.bold
-                  : (subtotal ? FontWeight.w500 : FontWeight.normal),
-              color: isTotal
-                  ? Colors.green
-                  : (subtotal ? Colors.blue : Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAvisoModoOffline() {
-    if (_calculoContrato?['usando_dados_mock'] == true) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.wifi_off, color: Colors.orange[700]),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Modo Offline',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
-                    ),
-                  ),
-                  Text(
-                    'Usando valores estimados. Os valores reais serão confirmados quando a conexão estiver disponível.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return const SizedBox();
-  }
-
   Widget _buildDataSummary() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Aviso de modo offline
-        _buildAvisoModoOffline(),
-
-        // Resumo financeiro
+        // Resumo financeiro (implementação nova)
         _buildResumoFinanceiro(),
         const SizedBox(height: 30),
 
-        // Detalhes dos componentes
+        // Detalhes dos componentes (mantidos)
         PetInformations(cachedData: _cachedData),
         const SizedBox(height: 30),
         DatasInformations(cachedData: _cachedData),
@@ -666,7 +1038,7 @@ class _FinalVerificationState extends State<FinalVerification> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(route: '/choose-service'),
+            const AppBarReturn(route: '/choose-service'),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -734,11 +1106,16 @@ class _FinalVerificationState extends State<FinalVerification> {
                     Column(
                       children: [
                         AppButton(
-                          onPressed: () {
-                            context.go('/payment');
-                          },
-                          label: 'Escolher Método de Pagamento',
+                          onPressed: _criarContrato,
+                          label: 'Confirmar e Criar Contrato',
                           fontSize: 18,
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            context.go('/choose-service');
+                          },
+                          child: const Text('Voltar para Serviços'),
                         ),
                       ],
                     ),

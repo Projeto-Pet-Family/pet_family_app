@@ -44,7 +44,6 @@ class _ChoosePetState extends State<ChoosePet> {
     }
   }
 
-  // Carrega os pets selecionados anteriormente do cache
   Future<void> _carregarPetsSelecionadosDoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -63,7 +62,6 @@ class _ChoosePetState extends State<ChoosePet> {
     }
   }
 
-  // Salva os pets selecionados no cache
   Future<void> _salvarPetsSelecionadosNoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -78,7 +76,17 @@ class _ChoosePetState extends State<ChoosePet> {
     }
   }
 
-  // Salva informações detalhadas dos pets selecionados
+  // Novo método para salvar quantidade de pets
+  Future<void> _salvarQuantidadePetsNoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('selected_pets_count', _selectedPets.length);
+      print('💾 Quantidade de pets salva no cache: ${_selectedPets.length}');
+    } catch (e) {
+      print('❌ Erro ao salvar quantidade de pets: $e');
+    }
+  }
+
   Future<void> _salvarDetalhesPetsNoCache(
       List<PetModel> petsSelecionados) async {
     try {
@@ -93,6 +101,9 @@ class _ChoosePetState extends State<ChoosePet> {
           petsSelecionados.map((pet) => pet.idpet.toString()).toList();
       await prefs.setStringList('selected_pet_ids', petIds);
 
+      // Salva a quantidade de pets
+      await prefs.setInt('selected_pets_count', petsSelecionados.length);
+
       // Salva informações individuais de cada pet
       for (final pet in petsSelecionados) {
         await prefs.setString('pet_${pet.idpet}_name', pet.nome ?? '');
@@ -105,13 +116,13 @@ class _ChoosePetState extends State<ChoosePet> {
       }
 
       print('💾 Detalhes dos pets salvos no cache: $petNames');
+      print('💾 Quantidade de pets: ${petsSelecionados.length}');
     } catch (e) {
       print('❌ Erro ao salvar detalhes dos pets: $e');
     }
   }
 
   void _togglePetSelection(int? petId) {
-    // Se o petId for null, não faz nada
     if (petId == null) {
       print('⚠️ Tentativa de selecionar pet com ID null');
       return;
@@ -129,6 +140,7 @@ class _ChoosePetState extends State<ChoosePet> {
 
     // Salva automaticamente no cache quando a seleção muda
     _salvarPetsSelecionadosNoCache();
+    _salvarQuantidadePetsNoCache(); // Novo método
   }
 
   void _navigateToNext() {
@@ -144,13 +156,13 @@ class _ChoosePetState extends State<ChoosePet> {
     });
   }
 
-  // Método para limpar a seleção de pets do cache
   Future<void> _limparPetsSelecionados() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('selected_pets');
       await prefs.remove('selected_pet_names');
       await prefs.remove('selected_pet_ids');
+      await prefs.remove('selected_pets_count'); // Novo
 
       // Limpa informações individuais dos pets
       for (final pet in _pets) {
@@ -177,7 +189,7 @@ class _ChoosePetState extends State<ChoosePet> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            AppBarReturn(route: '/hotel'),
+            const AppBarReturn(route: '/hotel'),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -237,16 +249,15 @@ class _ChoosePetState extends State<ChoosePet> {
 
                   // Botão para limpar seleção
                   if (_selectedPets.isNotEmpty)
-                    AppButton(
-                      onPressed: _navigateToNext,
-                      label: 'Limpar seleção',
-                      fontSize: 18,
-                      buttonColor: Colors.redAccent,
+                    TextButton(
+                      onPressed: _limparPetsSelecionados,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                      ),
+                      child: const Text('Limpar seleção'),
                     ),
 
                   if (_selectedPets.isNotEmpty) const SizedBox(height: 16),
-
-                  // Botão próximo
                 ],
               ),
             ),

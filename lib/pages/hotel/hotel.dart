@@ -7,6 +7,7 @@ import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/rating_stars.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Hotel extends StatefulWidget {
   final Map<String, dynamic>? hotelData;
@@ -47,9 +48,19 @@ class _HotelState extends State<Hotel> {
   @override
   void didUpdateWidget(Hotel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Recarregar serviços se os dados do hotel mudaram
     if (widget.hotelData != oldWidget.hotelData) {
       _initializeData();
+    }
+  }
+
+  // Método para salvar valor da diária no cache
+  Future<void> _salvarValorDiariaNoCache(String valorDiaria) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('hotel_daily_rate', valorDiaria);
+      print('💾 Valor da diária salvo no cache: $valorDiaria');
+    } catch (e) {
+      print('❌ Erro ao salvar valor da diária: $e');
     }
   }
 
@@ -178,17 +189,17 @@ class _HotelState extends State<Hotel> {
               ],
             ),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Color(0xFF159800),
+                color: const Color(0xFF159800),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$valorDiaria / diária',
-                    style: TextStyle(
+                    '$valorDiaria / dia',
+                    style: const TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -249,8 +260,6 @@ class _HotelState extends State<Hotel> {
           ),
         ),
         const SizedBox(height: 20),
-
-        // Estado de carregamento
         if (hotelProvider.isLoading)
           const Padding(
             padding: EdgeInsets.all(20),
@@ -270,12 +279,8 @@ class _HotelState extends State<Hotel> {
               ),
             ),
           )
-
-        // Estado de erro
         else if (hotelProvider.errorMessage.isNotEmpty)
           _buildErrorSection(hotelProvider)
-
-        // Estado com serviços carregados
         else if (hotelProvider.servicos.isNotEmpty)
           Column(
             children: hotelProvider.servicos.map((servico) {
@@ -289,8 +294,6 @@ class _HotelState extends State<Hotel> {
               );
             }).toList(),
           )
-
-        // Estado sem serviços
         else
           const Padding(
             padding: EdgeInsets.all(20),
@@ -401,7 +404,6 @@ class _HotelState extends State<Hotel> {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             onPressed: () {
-              // TODO: Implementar funcionalidade de mensagem
               _showMessageDialog();
             },
             child: IntrinsicWidth(
@@ -497,9 +499,14 @@ class _HotelState extends State<Hotel> {
   void _navigateToSchedule() {
     final hotelId = widget.hotelData?['idhospedagem'];
     final hotelNome = widget.hotelData?['nome'] ?? 'Hotel';
+    final valorDiaria = widget.hotelData?['valor_diaria']?.toString() ?? '0.00';
 
     if (hotelId != null) {
       print('🏨 Navegando para agendamento - Hotel ID: $hotelId');
+
+      // Salvar valor da diária no cache antes de navegar
+      _salvarValorDiariaNoCache(valorDiaria);
+
       context.go('/choose-pet', extra: {
         'hotelId': hotelId,
         'hotelNome': hotelNome,
