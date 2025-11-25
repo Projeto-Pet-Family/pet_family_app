@@ -85,6 +85,136 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // ✅ MÉTODO: Armazenar idhospedagem no cache
+  static Future<void> setIdHospedagem(int idHospedagem) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('idhospedagem', idHospedagem);
+      print('✅ idhospedagem salvo no cache: $idHospedagem');
+    } catch (e) {
+      print('❌ Erro ao salvar idhospedagem no cache: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ MÉTODO: Obter idhospedagem do cache
+  static Future<int?> getIdHospedagem() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('idhospedagem');
+    } catch (e) {
+      print('❌ Erro ao obter idhospedagem do cache: $e');
+      return null;
+    }
+  }
+
+  // ✅ MÉTODO: Limpar idhospedagem do cache
+  static Future<void> limparIdHospedagem() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('idhospedagem');
+      print('✅ idhospedagem removido do cache');
+    } catch (e) {
+      print('❌ Erro ao remover idhospedagem do cache: $e');
+    }
+  }
+
+  // ✅ MÉTODO: Armazenar informações do anfitrião no cache
+  static Future<void> setInfoAnfitriao(
+      int idAnfitriao, String nomeAnfitriao) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('id_anfitriao', idAnfitriao);
+      await prefs.setString('nome_anfitriao', nomeAnfitriao);
+      print(
+          '✅ Informações do anfitrião salvas no cache: $nomeAnfitriao (ID: $idAnfitriao)');
+    } catch (e) {
+      print('❌ Erro ao salvar informações do anfitrião no cache: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ MÉTODO: Obter informações do anfitrião do cache
+  static Future<Map<String, dynamic>?> getInfoAnfitriao() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final idAnfitriao = prefs.getInt('id_anfitriao');
+      final nomeAnfitriao = prefs.getString('nome_anfitriao');
+
+      if (idAnfitriao != null && nomeAnfitriao != null) {
+        return {
+          'idAnfitriao': idAnfitriao,
+          'nomeAnfitriao': nomeAnfitriao,
+        };
+      }
+      return null;
+    } catch (e) {
+      print('❌ Erro ao obter informações do anfitrião do cache: $e');
+      return null;
+    }
+  }
+
+  // ✅ MÉTODO: Limpar informações do anfitrião do cache
+  static Future<void> limparInfoAnfitriao() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('id_anfitriao');
+      await prefs.remove('nome_anfitriao');
+      print('✅ Informações do anfitrião removidas do cache');
+    } catch (e) {
+      print('❌ Erro ao remover informações do anfitrião do cache: $e');
+    }
+  }
+
+  // ✅ MÉTODO: Limpar todo o cache relacionado a mensagens
+  static Future<void> limparCacheMensagens() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('idhospedagem');
+      await prefs.remove('id_anfitriao');
+      await prefs.remove('nome_anfitriao');
+      print('✅ Cache de mensagens limpo completamente');
+    } catch (e) {
+      print('❌ Erro ao limpar cache de mensagens: $e');
+    }
+  }
+
+  // ✅ MÉTODO: Verificar se há informações de hospedagem no cache
+  static Future<bool> temHospedagemNoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final idHospedagem = prefs.getInt('idhospedagem');
+      final idAnfitriao = prefs.getInt('id_anfitriao');
+
+      return idHospedagem != null && idAnfitriao != null;
+    } catch (e) {
+      print('❌ Erro ao verificar cache de hospedagem: $e');
+      return false;
+    }
+  }
+
+  // ✅ MÉTODO: Obter todas as informações da hospedagem do cache
+  static Future<Map<String, dynamic>?> getInfoHospedagemCompleta() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final idHospedagem = prefs.getInt('idhospedagem');
+      final idAnfitriao = prefs.getInt('id_anfitriao');
+      final nomeAnfitriao = prefs.getString('nome_anfitriao');
+
+      if (idHospedagem != null && idAnfitriao != null) {
+        return {
+          'idHospedagem': idHospedagem,
+          'idAnfitriao': idAnfitriao,
+          'nomeAnfitriao': nomeAnfitriao ?? 'Anfitrião',
+        };
+      }
+      return null;
+    } catch (e) {
+      print('❌ Erro ao obter informações completas da hospedagem: $e');
+      return null;
+    }
+  }
+
   // ✅ MÉTODO PRINCIPAL: Atualizar perfil na API e cache
   Future<bool> atualizarPerfil(Map<String, dynamic> dadosAtualizados) async {
     try {
@@ -207,17 +337,22 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Limpa dados do usuário
       await prefs.remove('usuario_atual');
       await prefs.remove('idUsuario');
       await prefs.remove('email');
       await prefs.remove('nome');
       await prefs.remove('telefone');
 
+      // Limpa dados de mensagens/hospedagem
+      await limparCacheMensagens();
+
       _usuarioLogado = null;
       _errorMessage = null;
       _isLoading = false;
 
-      print('✅ Logout realizado - cache limpo');
+      print('✅ Logout realizado - cache completamente limpo');
       notifyListeners();
     } catch (e) {
       print('❌ Erro ao fazer logout: $e');
@@ -311,13 +446,19 @@ class AuthProvider with ChangeNotifier {
       final email = prefs.getString('email');
       final nome = prefs.getString('nome');
       final telefone = prefs.getString('telefone');
+      final idHospedagem = prefs.getInt('idhospedagem');
+      final idAnfitriao = prefs.getInt('id_anfitriao');
+      final nomeAnfitriao = prefs.getString('nome_anfitriao');
 
-      print('\n🔍 === DEBUG CACHE ===');
+      print('\n🔍 === DEBUG CACHE COMPLETO ===');
       print('🔍 usuario_atual (JSON): $usuarioJson');
       print('🔍 idUsuario: $idUsuario');
       print('🔍 email: $email');
       print('🔍 nome: $nome');
       print('🔍 telefone: $telefone');
+      print('🔍 idhospedagem: $idHospedagem');
+      print('🔍 id_anfitriao: $idAnfitriao');
+      print('🔍 nome_anfitriao: $nomeAnfitriao');
       print('🔍 Todas as chaves: ${prefs.getKeys()}');
 
       if (usuarioJson != null) {

@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
-import 'package:pet_family_app/providers/message_provider.dart';
-import 'package:pet_family_app/services/message_service.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/providers/pet/pet_provider.dart';
@@ -34,7 +32,6 @@ import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
 import 'package:pet_family_app/pages/register/insert_your_address.dart';
 import 'package:pet_family_app/pages/register/insert_your_datas.dart';
 import 'package:pet_family_app/pages/register/want_host_pet.dart';
-import 'package:pet_family_app/pages/messages/message.dart';
 
 void main() {
   runApp(const MyApp());
@@ -49,33 +46,6 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PetProvider()),
-        ChangeNotifierProvider<MensagemProvider>(
-          create: (context) {
-            final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
-            final usuarioLogado = authProvider.usuarioLogado;
-
-            // ✅ CORREÇÃO: Acesse o ID do usuário corretamente
-            final currentUserId =
-                usuarioLogado?['idusuario'] ?? usuarioLogado?['idUsuario'] ?? 0;
-
-            if (currentUserId == 0) {
-              print('⚠️ AVISO: Usuário não logado ou ID não encontrado');
-            }
-
-            print(
-                '🔧 Inicializando MensagemProvider com userId: $currentUserId');
-
-            return MensagemProvider(
-              mensagemService: MensagemService(client: http.Client()),
-              currentUserId: currentUserId is int
-                  ? currentUserId
-                  : int.tryParse(currentUserId.toString()) ?? 0,
-            );
-          },
-        ),
-
-        // ✅ ADICIONE ESTES NOVOS PROVIDERS
         ChangeNotifierProvider(
           create: (_) => EspecieProvider(
             especieService: EspecieService(client: http.Client()),
@@ -213,29 +183,6 @@ final router = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const Profile(),
-    ),
-    GoRoute(
-      path: '/messages',
-      builder: (context, state) {
-        final args = state.extra as Map<String, dynamic>?;
-
-        return Message(
-          idHospedagem: args?['idHospedagem'] as int?, // ✅ NOVO
-          idUsuario: args?['idUsuario'] as int?, // ✅ NOVO
-          hospedagemNome: args?['hospedagemNome']?.toString(),
-          contratoId: args?['contratoId']?.toString(),
-        );
-      },
-    ),
-    // ✅ ROTA TEMPORÁRIA PARA TESTE
-    GoRoute(
-      path: '/test-messages',
-      builder: (context, state) => Message(
-        idHospedagem: 1, // ID de teste
-        idUsuario: 2, // ID de teste (diferente do seu usuário)
-        hospedagemNome: 'Hospedagem Teste',
-        contratoId: 'TEST123',
-      ),
     ),
   ],
 );

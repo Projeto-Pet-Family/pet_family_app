@@ -1,44 +1,33 @@
-// lib/models/message_model.dart
-class MessageModel {
-  final int? idmensagem;
+// models/mensagem_model.dart
+class MensagemModel {
+  final int idmensagem;
   final int idusuarioRemetente;
   final int idusuarioDestinatario;
-  final int idHospedagem;
-  final String assunto;
   final String mensagem;
-  final DateTime? dataEnvio;
+  final DateTime dataEnvio;
   final bool lida;
-  final bool arquivada;
   final String? nomeRemetente;
   final String? nomeDestinatario;
 
-  MessageModel({
-    this.idmensagem,
+  MensagemModel({
+    required this.idmensagem,
     required this.idusuarioRemetente,
     required this.idusuarioDestinatario,
-    required this.idHospedagem,
-    required this.assunto,
     required this.mensagem,
-    this.dataEnvio,
-    this.lida = false,
-    this.arquivada = false,
+    required this.dataEnvio,
+    required this.lida,
     this.nomeRemetente,
     this.nomeDestinatario,
   });
 
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel(
-      idmensagem: json['idmensagem'],
-      idusuarioRemetente: json['idusuario_remetente'],
-      idusuarioDestinatario: json['idusuario_destinatario'],
-      idHospedagem: json['id_hospedagem'] ?? 0,
-      assunto: json['assunto'],
-      mensagem: json['mensagem'],
-      dataEnvio: json['data_envio'] != null
-          ? DateTime.parse(json['data_envio'])
-          : null,
-      lida: json['lida'] ?? false,
-      arquivada: json['arquivada'] ?? false,
+  factory MensagemModel.fromJson(Map<String, dynamic> json) {
+    return MensagemModel(
+      idmensagem: json['idmensagem'] as int,
+      idusuarioRemetente: json['idusuario_remetente'] as int,
+      idusuarioDestinatario: json['idusuario_destinatario'] as int,
+      mensagem: json['mensagem'] as String,
+      dataEnvio: DateTime.parse(json['data_envio'] as String),
+      lida: json['lida'] as bool,
       nomeRemetente: json['nome_remetente'],
       nomeDestinatario: json['nome_destinatario'],
     );
@@ -46,106 +35,79 @@ class MessageModel {
 
   Map<String, dynamic> toJson() {
     return {
-      if (idmensagem != null) 'idmensagem': idmensagem,
+      'idmensagem': idmensagem,
       'idusuario_remetente': idusuarioRemetente,
       'idusuario_destinatario': idusuarioDestinatario,
-      'id_hospedagem': idHospedagem,
-      'assunto': assunto,
       'mensagem': mensagem,
-      'data_envio': dataEnvio?.toIso8601String(),
+      'data_envio': dataEnvio.toIso8601String(),
       'lida': lida,
-      'arquivada': arquivada,
-      if (nomeRemetente != null) 'nome_remetente': nomeRemetente,
-      if (nomeDestinatario != null) 'nome_destinatario': nomeDestinatario,
+      'nome_remetente': nomeRemetente,
+      'nome_destinatario': nomeDestinatario,
     };
   }
 
-  String get formattedTime {
-    if (dataEnvio == null) return 'Agora';
-    final now = DateTime.now();
-    final difference = now.difference(dataEnvio!);
-
-    if (difference.inMinutes < 1) return 'Agora';
-    if (difference.inHours < 1) return '${difference.inMinutes}m';
-    if (difference.inDays < 1) return '${difference.inHours}h';
-    if (difference.inDays < 7) return '${difference.inDays}d';
-
-    return '${dataEnvio!.day}/${dataEnvio!.month}/${dataEnvio!.year}';
-  }
-
-  bool isMeForUser(int currentUserId) {
-    return idusuarioRemetente == currentUserId;
-  }
-
-  String? displaySenderNameForUser(int currentUserId) {
-    return isMeForUser(currentUserId) ? null : (nomeRemetente ?? 'Usuário');
-  }
-
-  MessageModel copyWith({
+  MensagemModel copyWith({
     int? idmensagem,
     int? idusuarioRemetente,
     int? idusuarioDestinatario,
-    int? idHospedagem,
-    String? assunto,
     String? mensagem,
     DateTime? dataEnvio,
     bool? lida,
-    bool? arquivada,
     String? nomeRemetente,
     String? nomeDestinatario,
   }) {
-    return MessageModel(
+    return MensagemModel(
       idmensagem: idmensagem ?? this.idmensagem,
       idusuarioRemetente: idusuarioRemetente ?? this.idusuarioRemetente,
       idusuarioDestinatario:
           idusuarioDestinatario ?? this.idusuarioDestinatario,
-      idHospedagem: idHospedagem ?? this.idHospedagem,
-      assunto: assunto ?? this.assunto,
       mensagem: mensagem ?? this.mensagem,
       dataEnvio: dataEnvio ?? this.dataEnvio,
       lida: lida ?? this.lida,
-      arquivada: arquivada ?? this.arquivada,
       nomeRemetente: nomeRemetente ?? this.nomeRemetente,
       nomeDestinatario: nomeDestinatario ?? this.nomeDestinatario,
     );
   }
-}
 
-class EnviarMensagemRequest {
-  final int idusuarioRemetente;
-  final int idusuarioDestinatario;
-  final int idHospedagem;
-  final String assunto;
-  final String mensagem;
-
-  EnviarMensagemRequest({
-    required this.idusuarioRemetente,
-    required this.idusuarioDestinatario,
-    required this.idHospedagem,
-    required this.assunto,
-    required this.mensagem,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'idusuario_remetente': idusuarioRemetente,
-      'idusuario_destinatario': idusuarioDestinatario,
-      'id_hospedagem': idHospedagem,
-      'assunto': assunto,
-      'mensagem': mensagem,
-    };
+  bool isEnviadaPorMim(int currentUserId) {
+    return idusuarioRemetente == currentUserId;
   }
 
-  MessageModel toMessageModel() {
-    return MessageModel(
-      idusuarioRemetente: idusuarioRemetente,
-      idusuarioDestinatario: idusuarioDestinatario,
-      idHospedagem: idHospedagem,
-      assunto: assunto,
-      mensagem: mensagem,
-      dataEnvio: DateTime.now(),
-      lida: false,
-      arquivada: false,
-    );
+  String getNomeContato(int currentUserId) {
+    if (idusuarioRemetente == currentUserId) {
+      return nomeDestinatario ?? 'Usuário $idusuarioDestinatario';
+    } else {
+      return nomeRemetente ?? 'Usuário $idusuarioRemetente';
+    }
+  }
+
+  String formatarData() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate =
+        DateTime(dataEnvio.year, dataEnvio.month, dataEnvio.day);
+
+    if (messageDate == today) {
+      return '${dataEnvio.hour.toString().padLeft(2, '0')}:${dataEnvio.minute.toString().padLeft(2, '0')}';
+    } else if (messageDate == today.subtract(const Duration(days: 1))) {
+      return 'Ontem';
+    } else {
+      return '${dataEnvio.day.toString().padLeft(2, '0')}/${dataEnvio.month.toString().padLeft(2, '0')}';
+    }
+  }
+
+  String formatarTimestamp() {
+    final now = DateTime.now();
+    final difference = now.difference(dataEnvio);
+
+    if (difference.inMinutes < 1) {
+      return 'Agora';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else {
+      return '${difference.inDays}d';
+    }
   }
 }
