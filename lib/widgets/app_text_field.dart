@@ -6,6 +6,7 @@ class AppTextField extends StatelessWidget {
     super.key,
     required this.controller,
     this.labelText,
+    this.focusNode,
     this.hintText,
     this.keyboardType = TextInputType.text,
     this.inputFormatters = const [],
@@ -15,6 +16,7 @@ class AppTextField extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String? labelText;
   final String? hintText;
   final TextInputType keyboardType;
@@ -43,6 +45,7 @@ class AppTextField extends StatelessWidget {
         if (labelText != null) const SizedBox(height: 4),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: const TextStyle(

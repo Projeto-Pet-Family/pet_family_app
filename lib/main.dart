@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/contrato_model.dart';
+import 'package:pet_family_app/pages/message/message.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
+import 'package:pet_family_app/providers/message_provider.dart';
+import 'package:pet_family_app/repository/message_repository.dart';
+import 'package:pet_family_app/services/message_service.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/providers/pet/pet_provider.dart';
@@ -46,6 +50,13 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PetProvider()),
+        ChangeNotifierProvider<MensagemProvider>(
+          create: (context) {
+            final service = MensagemService();
+            final repository = MensagemRepository(service);
+            return MensagemProvider(repository);
+          },
+        ),
         ChangeNotifierProvider(
           create: (_) => EspecieProvider(
             especieService: EspecieService(client: http.Client()),
@@ -184,5 +195,16 @@ final router = GoRouter(
       path: '/profile',
       builder: (context, state) => const Profile(),
     ),
+    GoRoute(
+      path: '/message',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return Message(
+          idusuario: extra['idusuario'] ?? 0,
+          nomeHospedagem: extra['nomeHospedagem'] ?? 'Hospedagem',
+          idhospedagem: extra['idhospedagem'] ?? 0,
+        );
+      },
+    )
   ],
 );

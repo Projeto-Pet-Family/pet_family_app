@@ -1,5 +1,4 @@
-// models/mensagem_model.dart
-class MensagemModel {
+class Mensagem {
   final int idmensagem;
   final int idusuarioRemetente;
   final int idusuarioDestinatario;
@@ -9,7 +8,7 @@ class MensagemModel {
   final String? nomeRemetente;
   final String? nomeDestinatario;
 
-  MensagemModel({
+  Mensagem({
     required this.idmensagem,
     required this.idusuarioRemetente,
     required this.idusuarioDestinatario,
@@ -20,14 +19,14 @@ class MensagemModel {
     this.nomeDestinatario,
   });
 
-  factory MensagemModel.fromJson(Map<String, dynamic> json) {
-    return MensagemModel(
-      idmensagem: json['idmensagem'] as int,
-      idusuarioRemetente: json['idusuario_remetente'] as int,
-      idusuarioDestinatario: json['idusuario_destinatario'] as int,
-      mensagem: json['mensagem'] as String,
-      dataEnvio: DateTime.parse(json['data_envio'] as String),
-      lida: json['lida'] as bool,
+  factory Mensagem.fromJson(Map<String, dynamic> json) {
+    return Mensagem(
+      idmensagem: json['idmensagem'],
+      idusuarioRemetente: json['idusuario_remetente'],
+      idusuarioDestinatario: json['idusuario_destinatario'],
+      mensagem: json['mensagem'],
+      dataEnvio: DateTime.parse(json['data_envio']),
+      lida: json['lida'],
       nomeRemetente: json['nome_remetente'],
       nomeDestinatario: json['nome_destinatario'],
     );
@@ -45,69 +44,150 @@ class MensagemModel {
       'nome_destinatario': nomeDestinatario,
     };
   }
+}
 
-  MensagemModel copyWith({
-    int? idmensagem,
-    int? idusuarioRemetente,
-    int? idusuarioDestinatario,
-    String? mensagem,
-    DateTime? dataEnvio,
-    bool? lida,
-    String? nomeRemetente,
-    String? nomeDestinatario,
-  }) {
-    return MensagemModel(
-      idmensagem: idmensagem ?? this.idmensagem,
-      idusuarioRemetente: idusuarioRemetente ?? this.idusuarioRemetente,
-      idusuarioDestinatario:
-          idusuarioDestinatario ?? this.idusuarioDestinatario,
-      mensagem: mensagem ?? this.mensagem,
-      dataEnvio: dataEnvio ?? this.dataEnvio,
-      lida: lida ?? this.lida,
-      nomeRemetente: nomeRemetente ?? this.nomeRemetente,
-      nomeDestinatario: nomeDestinatario ?? this.nomeDestinatario,
+class MensagemEnvio {
+  final int idusuarioRemetente;
+  final int idusuarioDestinatario;
+  final String mensagem;
+
+  MensagemEnvio({
+    required this.idusuarioRemetente,
+    required this.idusuarioDestinatario,
+    required this.mensagem,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'idusuario_remetente': idusuarioRemetente,
+      'idusuario_destinatario': idusuarioDestinatario,
+      'mensagem': mensagem,
+    };
+  }
+}
+
+class MensagemMobileEnvio {
+  final int idusuario;
+  final int idhospedagem;
+  final String mensagem;
+
+  MensagemMobileEnvio({
+    required this.idusuario,
+    required this.idhospedagem,
+    required this.mensagem,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'idusuario': idusuario,
+      'idhospedagem': idhospedagem,
+      'mensagem': mensagem,
+    };
+  }
+}
+
+class ConversaMobile {
+  final List<Mensagem> conversa;
+  final Map<String, dynamic> participantes;
+  final Paginacao paginacao;
+
+  ConversaMobile({
+    required this.conversa,
+    required this.participantes,
+    required this.paginacao,
+  });
+
+  factory ConversaMobile.fromJson(Map<String, dynamic> json) {
+    return ConversaMobile(
+      conversa:
+          (json['conversa'] as List).map((e) => Mensagem.fromJson(e)).toList(),
+      participantes: json['participantes'],
+      paginacao: Paginacao.fromJson(json['paginacao']),
     );
   }
+}
 
-  bool isEnviadaPorMim(int currentUserId) {
-    return idusuarioRemetente == currentUserId;
+class ConversaResumidaMobile {
+  final int idcontato;
+  final String nomeContato;
+  final String tipoContato;
+  final String ultimaMensagem;
+  final DateTime ultimaData;
+  final bool lida;
+  final int naoLidas;
+
+  ConversaResumidaMobile({
+    required this.idcontato,
+    required this.nomeContato,
+    required this.tipoContato,
+    required this.ultimaMensagem,
+    required this.ultimaData,
+    required this.lida,
+    required this.naoLidas,
+  });
+
+  factory ConversaResumidaMobile.fromJson(Map<String, dynamic> json) {
+    return ConversaResumidaMobile(
+      idcontato: json['idcontato'],
+      nomeContato: json['nome_contato'],
+      tipoContato: json['tipo_contato'],
+      ultimaMensagem: json['ultima_mensagem'],
+      ultimaData: DateTime.parse(json['ultima_data']),
+      lida: json['lida'],
+      naoLidas: json['nao_lidas'],
+    );
   }
+}
 
-  String getNomeContato(int currentUserId) {
-    if (idusuarioRemetente == currentUserId) {
-      return nomeDestinatario ?? 'Usuário $idusuarioDestinatario';
-    } else {
-      return nomeRemetente ?? 'Usuário $idusuarioRemetente';
-    }
+class RespostaConversasMobile {
+  final List<ConversaResumidaMobile> conversas;
+  final Paginacao paginacao;
+
+  RespostaConversasMobile({
+    required this.conversas,
+    required this.paginacao,
+  });
+
+  factory RespostaConversasMobile.fromJson(Map<String, dynamic> json) {
+    return RespostaConversasMobile(
+      conversas: (json['conversas'] as List)
+          .map((e) => ConversaResumidaMobile.fromJson(e))
+          .toList(),
+      paginacao: Paginacao.fromJson(json['paginacao']),
+    );
   }
+}
 
-  String formatarData() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDate =
-        DateTime(dataEnvio.year, dataEnvio.month, dataEnvio.day);
+class Paginacao {
+  final int limit;
+  final int offset;
+  final int total;
 
-    if (messageDate == today) {
-      return '${dataEnvio.hour.toString().padLeft(2, '0')}:${dataEnvio.minute.toString().padLeft(2, '0')}';
-    } else if (messageDate == today.subtract(const Duration(days: 1))) {
-      return 'Ontem';
-    } else {
-      return '${dataEnvio.day.toString().padLeft(2, '0')}/${dataEnvio.month.toString().padLeft(2, '0')}';
-    }
+  Paginacao({
+    required this.limit,
+    required this.offset,
+    required this.total,
+  });
+
+  factory Paginacao.fromJson(Map<String, dynamic> json) {
+    return Paginacao(
+      limit: json['limit'],
+      offset: json['offset'],
+      total: json['total'],
+    );
   }
+}
 
-  String formatarTimestamp() {
-    final now = DateTime.now();
-    final difference = now.difference(dataEnvio);
+class RespostaContadorNaoLidas {
+  final int totalNaoLidas;
 
-    if (difference.inMinutes < 1) {
-      return 'Agora';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h';
-    } else {
-      return '${difference.inDays}d';
-    }
+  RespostaContadorNaoLidas({
+    required this.totalNaoLidas,
+  });
+
+  factory RespostaContadorNaoLidas.fromJson(Map<String, dynamic> json) {
+    return RespostaContadorNaoLidas(
+      totalNaoLidas: json['total_nao_lidas'],
+    );
   }
 }

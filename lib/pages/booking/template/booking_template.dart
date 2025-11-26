@@ -7,10 +7,12 @@ import 'package:pet_family_app/models/denuncia_model.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/pages/booking/modal/show_more/show_more_modal.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
+import 'package:pet_family_app/pages/message/message.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import './pet_icon_bookin_template.dart';
 import '../modal/avaliacao_modal.dart';
 import '../modal/denuncia_modal.dart';
+import '../../../models/contrato_model.dart';
 
 class BookingTemplate extends StatelessWidget {
   final ContratoModel contrato;
@@ -31,6 +33,27 @@ class BookingTemplate extends StatelessWidget {
     this.avaliacaoExistente,
     this.denunciaExistente,
   });
+
+  void _abrirTelaMensagem(BuildContext context) {
+    if (contrato.idUsuario == null ||
+        contrato.idHospedagem == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dados do contrato incompletos')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Message(
+          idusuario: contrato.idUsuario!, // idusuario
+          idhospedagem: contrato.idHospedagem!, // idhospedagem
+          nomeHospedagem: contrato.hospedagemNome ?? 'Hospedagem',
+        ),
+      ),
+    );
+  }
 
   String _formatarData(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -110,16 +133,6 @@ class BookingTemplate extends StatelessWidget {
       context: context,
       contrato: contrato,
       onContratoEditado: onContratoEditado,
-    );
-  }
-
-  void _abrirTelaMensagem(BuildContext context) {
-    context.push(
-      '/messages',
-      extra: {
-        'contratoId': contrato.idContrato,
-        'hospedagemNome': contrato.hospedagemNome,
-      },
     );
   }
 
@@ -718,7 +731,8 @@ class BookingTemplate extends StatelessWidget {
           if (contrato.estaAtivo)
             _buildBotaoPadrao(
               label: 'Enviar mensagem',
-              onPressed: () => _abrirTelaMensagem(context),
+              onPressed: () =>
+                  _abrirTelaMensagem(context), // Use o método diretamente
               icon: const Icon(Icons.message, size: 20),
             ),
 
@@ -740,7 +754,8 @@ class BookingTemplate extends StatelessWidget {
                 foregroundColor: contrato.status == 'cancelado'
                     ? Colors.grey[600]!
                     : const Color(0xff000000),
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(10),
