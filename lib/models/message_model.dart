@@ -1,7 +1,7 @@
 class Mensagem {
   final int idmensagem;
-  final int idusuarioRemetente;
-  final int idusuarioDestinatario;
+  final int idRemetente;
+  final int idDestinatario;
   final String mensagem;
   final DateTime dataEnvio;
   final bool lida;
@@ -10,8 +10,8 @@ class Mensagem {
 
   Mensagem({
     required this.idmensagem,
-    required this.idusuarioRemetente,
-    required this.idusuarioDestinatario,
+    required this.idRemetente,
+    required this.idDestinatario,
     required this.mensagem,
     required this.dataEnvio,
     required this.lida,
@@ -22,8 +22,8 @@ class Mensagem {
   factory Mensagem.fromJson(Map<String, dynamic> json) {
     return Mensagem(
       idmensagem: json['idmensagem'],
-      idusuarioRemetente: json['idusuario_remetente'],
-      idusuarioDestinatario: json['idusuario_destinatario'],
+      idRemetente: json['id_remetente'],
+      idDestinatario: json['id_destinatario'],
       mensagem: json['mensagem'],
       dataEnvio: DateTime.parse(json['data_envio']),
       lida: json['lida'],
@@ -35,8 +35,8 @@ class Mensagem {
   Map<String, dynamic> toJson() {
     return {
       'idmensagem': idmensagem,
-      'idusuario_remetente': idusuarioRemetente,
-      'idusuario_destinatario': idusuarioDestinatario,
+      'idusuario_remetente': idRemetente,
+      'idusuario_destinatario': idDestinatario,
       'mensagem': mensagem,
       'data_envio': dataEnvio.toIso8601String(),
       'lida': lida,
@@ -47,20 +47,20 @@ class Mensagem {
 }
 
 class MensagemEnvio {
-  final int idusuarioRemetente;
-  final int idusuarioDestinatario;
+  final int idRemetente;
+  final int idDestinatario;
   final String mensagem;
 
   MensagemEnvio({
-    required this.idusuarioRemetente,
-    required this.idusuarioDestinatario,
+    required this.idRemetente,
+    required this.idDestinatario,
     required this.mensagem,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'idusuario_remetente': idusuarioRemetente,
-      'idusuario_destinatario': idusuarioDestinatario,
+      'id_remetente': idRemetente,
+      'id_destinatario': idDestinatario,
       'mensagem': mensagem,
     };
   }

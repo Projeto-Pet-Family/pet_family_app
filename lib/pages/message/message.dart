@@ -176,7 +176,7 @@ class _MessageState extends State<Message> {
   }
 
   Widget _buildMessageBubble(Mensagem mensagem) {
-    final isMinhaMensagem = mensagem.idusuarioRemetente == widget.idusuario;
+    final isMinhaMensagem = mensagem.idRemetente == widget.idusuario;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),

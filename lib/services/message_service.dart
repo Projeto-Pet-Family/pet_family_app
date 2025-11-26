@@ -17,8 +17,6 @@ class MensagemService {
     return headers;
   }
 
-  // MÉTODOS MOBILE
-
   Future<Map<String, dynamic>> enviarMensagemMobile({
     required int idusuario,
     required int idhospedagem,

@@ -47,8 +47,8 @@ class BookingTemplate extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => Message(
-          idusuario: contrato.idUsuario!, // idusuario
-          idhospedagem: contrato.idHospedagem!, // idhospedagem
+          idusuario: contrato.idUsuario!,
+          idhospedagem: contrato.idHospedagem!,
           nomeHospedagem: contrato.hospedagemNome ?? 'Hospedagem',
         ),
       ),
