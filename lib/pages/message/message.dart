@@ -22,6 +22,7 @@ class Message extends StatefulWidget {
 class _MessageState extends State<Message> {
   TextEditingController messageController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -38,6 +39,11 @@ class _MessageState extends State<Message> {
       idusuario: widget.idusuario,
       idhospedagem: widget.idhospedagem,
     );
+
+    // Rolar para o final após carregar as mensagens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
   }
 
   Future<void> _enviarMensagem() async {
@@ -47,6 +53,7 @@ class _MessageState extends State<Message> {
     final provider = Provider.of<MensagemProvider>(context, listen: false);
 
     try {
+      // Envia a mensagem
       await provider.enviarMensagemMobile(
         idusuario: widget.idusuario,
         idhospedagem: widget.idhospedagem,
@@ -55,9 +62,23 @@ class _MessageState extends State<Message> {
 
       messageController.clear();
       _focusNode.requestFocus();
+
+      // Aguarda um pouco e rola para o final
+      await Future.delayed(const Duration(milliseconds: 100));
+      _scrollToBottom();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao enviar mensagem: $e')),
+      );
+    }
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0, // Sempre rola para o início (que é o topo quando reverse=false)
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
       );
     }
   }
@@ -90,6 +111,15 @@ class _MessageState extends State<Message> {
           final mensagens =
               provider.getConversaMobile(widget.idusuario, widget.idhospedagem);
 
+          // VERIFIQUE A ORDEM DAS MENSAGENS NO CONSOLE
+          print('📱 Total de mensagens: ${mensagens.length}');
+          if (mensagens.isNotEmpty) {
+            print(
+                '📱 Primeira mensagem: ${mensagens.first.mensagem} - ${mensagens.first.dataEnvio}');
+            print(
+                '📱 Última mensagem: ${mensagens.last.mensagem} - ${mensagens.last.dataEnvio}');
+          }
+
           return Column(
             children: [
               // Área de mensagens
@@ -108,9 +138,12 @@ class _MessageState extends State<Message> {
                             ),
                           )
                         : ListView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.all(16),
+                            reverse: false, // MUDOU PARA false
                             itemCount: mensagens.length,
                             itemBuilder: (context, index) {
+                              // MANTÉM A ORDEM ORIGINAL - mais antigas primeiro
                               final mensagem = mensagens[index];
                               return _buildMessageBubble(mensagem);
                             },
@@ -249,6 +282,7 @@ class _MessageState extends State<Message> {
   void dispose() {
     messageController.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

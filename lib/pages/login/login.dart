@@ -213,7 +213,7 @@ class _LoginState extends State<Login> {
                           height: 50,
                         ),
                         Image.asset(
-                          'assets/icons/ic_gmail.png',
+                          'assets/icons/ic_facebook.png',
                           width: 50,
                           height: 50,
                         ),

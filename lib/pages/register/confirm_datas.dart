@@ -137,19 +137,16 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
   Future<Map<String, dynamic>> _prepararDadosPetParaEnvio(String userId) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Obtém os dados do pet do SharedPreferences
     final petData = {
-      'idusuario':
-          userId, // Campo OBRIGATÓRIO - usa o ID do usuário recém-criado
-      'nome': prefs.getString('pet_name')?.trim() ?? '', // Campo OBRIGATÓRIO
-      'sexo': prefs.getString('pet_sex')?.trim() ?? '', // Campo OBRIGATÓRIO
-      'idespecie': prefs.getInt('pet_id_especie'), // Campo OBRIGATÓRIO
-      'idraca': prefs.getInt('pet_id_raca'), // Campo OBRIGATÓRIO
-      'idporte': prefs.getInt('pet_id_porte'), // Campo OBRIGATÓRIO
+      'idusuario': userId,
+      'nome': prefs.getString('pet_name')?.trim() ?? '',
+      'sexo': prefs.getString('pet_sex')?.trim() ?? '',
+      'idespecie': prefs.getInt('pet_id_especie'),
+      'idraca': prefs.getInt('pet_id_raca'),
+      'idporte': prefs.getInt('pet_id_porte'),
       'observacoes': prefs.getString('pet_observation')?.trim(),
     };
 
-    // Remove apenas campos de observações se forem nulos (mantém obrigatórios)
     if (petData['observacoes'] == null) {
       petData.remove('observacoes');
     }

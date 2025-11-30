@@ -35,7 +35,6 @@ import 'package:pet_family_app/pages/register/confirm_datas.dart';
 import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
 import 'package:pet_family_app/pages/register/insert_your_address.dart';
 import 'package:pet_family_app/pages/register/insert_your_datas.dart';
-import 'package:pet_family_app/pages/register/want_host_pet.dart';
 
 void main() {
   runApp(const MyApp());
@@ -93,10 +92,6 @@ final router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const Login(),
-    ),
-    GoRoute(
-      path: '/want-host-pets',
-      builder: (context, state) => const WantHostPet(),
     ),
     GoRoute(
       path: '/forgot-password',

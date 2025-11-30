@@ -24,10 +24,10 @@ class MensagemProvider with ChangeNotifier {
 
   List<Mensagem> getConversaMobile(int idusuario, int idhospedagem) {
     final key = '${idusuario}_$idhospedagem';
-    return _conversasDetalhadasMobile[key] ?? [];
+    final conversa = _conversasDetalhadasMobile[key] ?? [];
+    conversa.sort((a, b) => a.dataEnvio.compareTo(b.dataEnvio));
+    return conversa;
   }
-
-  // MÉTODOS MOBILE
 
   Future<void> carregarConversasMobile({
     required int idusuario,
