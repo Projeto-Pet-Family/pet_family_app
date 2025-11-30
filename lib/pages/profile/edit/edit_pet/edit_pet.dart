@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/providers/pet/especie_provider.dart';
+import 'package:pet_family_app/providers/pet/pet_provider.dart';
+import 'package:pet_family_app/providers/pet/porte_provider.dart';
+import 'package:pet_family_app/providers/pet/raca_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:pet_family_app/pages/profile/edit/edit_pet/modal/modal_edit_pet.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_pet/modal/modal_add_pet.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_pet/pet_edit_template.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
-import 'package:pet_family_app/providers/pet/pet_provider.dart';
-import 'package:pet_family_app/services/pet/especie_service.dart';
-import 'package:pet_family_app/services/pet/raca_service.dart';
-import 'package:pet_family_app/services/pet/porte_service.dart';
-import 'package:pet_family_app/providers/pet/especie_provider.dart';
-import 'package:pet_family_app/providers/pet/raca_provider.dart';
-import 'package:pet_family_app/providers/pet/porte_provider.dart';
 
 class EditPet extends StatefulWidget {
   const EditPet({super.key});
@@ -31,84 +28,124 @@ class _EditPetState extends State<EditPet> {
     });
   }
 
-  void _carregarPets() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final petProvider = Provider.of<PetProvider>(context, listen: false);
-    final usuarioId = authProvider.usuarioLogado?['idusuario'];
+  void _carregarPets() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final petProvider = Provider.of<PetProvider>(context, listen: false);
+      final usuarioId = authProvider.usuarioLogado?['idusuario'];
 
-    if (usuarioId != null) {
-      petProvider.buscarPetsPorUsuario(usuarioId.toString());
+      if (usuarioId != null) {
+        await petProvider.listarPetsPorUsuario(usuarioId);
+
+        if (mounted && petProvider.pets.isNotEmpty) {
+          for (var i = 0; i < petProvider.pets.length; i++) {
+            var pet = petProvider.pets[i];
+            print('✅ Pet $i carregado:');
+            print('   - Nome: ${pet.nome}');
+            print('   - Sexo: ${pet.sexo}');
+            print('   - Espécie: ${pet.descricaoEspecie}');
+            print('   - Raça: ${pet.descricaoRaca}');
+            print('   - Porte: ${pet.descricaoPorte}');
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar pets: $e');
     }
   }
 
-  void _adicionarNovoPet(Map<String, dynamic> novoPet) async {
+  void _adicionarNovoPet(PetModel novoPet) async {
     final petProvider = Provider.of<PetProvider>(context, listen: false);
 
-    final sucesso = await petProvider.adicionarPet(novoPet);
+    try {
+      await petProvider.criarPet(novoPet);
 
-    if (sucesso) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pet adicionado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao adicionar pet: ${petProvider.errorMessage}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _editarPet(int index, Map<String, dynamic> petEditado) async {
-    final petProvider = Provider.of<PetProvider>(context, listen: false);
-    final pet = petProvider.pets[index];
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final usuarioId = authProvider.usuarioLogado?['idusuario'];
-
-    final sucesso = await petProvider.atualizarPet(pet['idpet'], petEditado);
-
-    if (sucesso) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pet atualizado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao atualizar pet: ${petProvider.errorMessage}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _removerPet(int index) async {
-    final petProvider = Provider.of<PetProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final pet = petProvider.pets[index];
-    final usuarioId = authProvider.usuarioLogado?['idusuario'];
-
-    if (usuarioId != null) {
-      final sucesso =
-          await petProvider.removerPet(pet['idpet'], usuarioId.toString());
-
-      if (sucesso) {
+      if (petProvider.success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${pet['nome']} removido com sucesso!'),
+          const SnackBar(
+            content: Text('Pet adicionado com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao remover pet: ${petProvider.errorMessage}'),
+            content: Text('Erro ao adicionar pet: ${petProvider.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao adicionar pet: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _editarPet(int index, PetModel petEditado) async {
+    final petProvider = Provider.of<PetProvider>(context, listen: false);
+    final pet = petProvider.pets[index];
+
+    if (pet.idPet != null) {
+      try {
+        await petProvider.atualizarPet(pet.idPet!, petEditado);
+
+        if (petProvider.error == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pet atualizado com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao atualizar pet: ${petProvider.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao atualizar pet: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _removerPet(int index) async {
+    final petProvider = Provider.of<PetProvider>(context, listen: false);
+    final pet = petProvider.pets[index];
+
+    if (pet.idPet != null) {
+      try {
+        await petProvider.excluirPet(pet.idPet!);
+
+        if (petProvider.error == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${pet.nome} removido com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao remover pet: ${petProvider.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao remover pet: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -150,7 +187,7 @@ class _EditPetState extends State<EditPet> {
                       ),
                       const SizedBox(height: 20),
                       AppButton(
-                        onPressed: usuarioId == null
+                        onPressed: usuarioId == null || petProvider.loading
                             ? null
                             : () {
                                 showModalBottomSheet(
@@ -159,28 +196,24 @@ class _EditPetState extends State<EditPet> {
                                   builder: (BuildContext context) =>
                                       MultiProvider(
                                     providers: [
-                                      ChangeNotifierProvider(
-                                        create: (_) => EspecieProvider(
-                                          especieService: EspecieService(
-                                              client: http.Client()),
-                                        ),
+                                      Provider<EspecieProvider>.value(
+                                        value: Provider.of<EspecieProvider>(
+                                            context),
                                       ),
-                                      ChangeNotifierProvider(
-                                        create: (_) => RacaProvider(
-                                          racaService: RacaService(
-                                              client: http.Client()),
-                                        ),
+                                      Provider<RacaProvider>.value(
+                                        value:
+                                            Provider.of<RacaProvider>(context),
                                       ),
-                                      ChangeNotifierProvider(
-                                        create: (_) => PorteProvider(
-                                          porteService: PorteService(
-                                              client: http.Client()),
-                                        ),
+                                      Provider<PorteProvider>.value(
+                                        value:
+                                            Provider.of<PorteProvider>(context),
                                       ),
                                     ],
                                     child: ModalAddPet(
                                       idUsuario: usuarioId,
-                                      onPetAdded: _adicionarNovoPet,
+                                      onPetAdded: (petData) {
+                                        _adicionarNovoPet(petData);
+                                      },
                                     ),
                                   ),
                                 );
@@ -189,17 +222,17 @@ class _EditPetState extends State<EditPet> {
                       ),
                       const SizedBox(height: 20),
 
-                      // CONTEÚDO PRINCIPAL COM ALTURA FIXA
-                      if (petProvider.isLoading)
+                      // CONTEÚDO PRINCIPAL
+                      if (petProvider.loading)
                         Container(
-                          height: 200, // Altura fixa
+                          height: 200,
                           child: const Center(
                             child: CircularProgressIndicator(),
                           ),
                         )
-                      else if (petProvider.errorMessage.isNotEmpty)
+                      else if (petProvider.error != null)
                         Container(
-                          height: 200, // Altura fixa
+                          height: 200,
                           child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -211,7 +244,7 @@ class _EditPetState extends State<EditPet> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  petProvider.errorMessage,
+                                  petProvider.error!,
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 16,
@@ -229,7 +262,7 @@ class _EditPetState extends State<EditPet> {
                         )
                       else if (petProvider.pets.isEmpty)
                         Container(
-                          height: 200, // Altura fixa
+                          height: 200,
                           child: const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -266,18 +299,13 @@ class _EditPetState extends State<EditPet> {
                             itemBuilder: (context, index) {
                               final pet = petProvider.pets[index];
                               return PetEditTemplate(
-                                name: pet['nome'] ?? 'Sem nome',
-                                especie: pet['descricaoespecie'] ??
-                                    pet['idespecie']?.toString() ??
-                                    'Não informado',
-                                raca: pet['descricaoraca'] ??
-                                    pet['idraca']?.toString() ??
-                                    'Não informado',
-                                idade: _calcularIdade(pet['nascimento']),
-                                sexo: pet['sexo'],
-                                porte: pet['descricaoporte'] ??
-                                    pet['idporte']?.toString() ??
-                                    'Não informado',
+                                name: pet.nome ?? 'Nome não informado',
+                                especie:
+                                    pet.descricaoEspecie ?? 'Não informado',
+                                raca: pet.descricaoRaca ?? 'Não informado',
+                                idade: _calcularIdade(pet.nascimento),
+                                sexo: pet.sexo ?? 'Não informado',
+                                porte: pet.descricaoPorte ?? 'Não informado',
                                 onTap: () => showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
@@ -307,12 +335,15 @@ class _EditPetState extends State<EditPet> {
     );
   }
 
-  String _calcularIdade(String? nascimento) {
+  String _calcularIdade(DateTime? nascimento) {
     if (nascimento == null) return '0';
     try {
-      final nasc = DateTime.parse(nascimento);
       final hoje = DateTime.now();
-      final idade = hoje.year - nasc.year;
+      final idade = hoje.year - nascimento.year;
+      if (hoje.month < nascimento.month ||
+          (hoje.month == nascimento.month && hoje.day < nascimento.day)) {
+        return (idade - 1).toString();
+      }
       return idade.toString();
     } catch (e) {
       return '0';

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/providers/pet/pet_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/pet_template.dart';
-import 'package:pet_family_app/repository/pet_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:pet_family_app/providers/auth_provider.dart';
 
 class ChoosePet extends StatefulWidget {
   const ChoosePet({super.key});
@@ -16,7 +19,6 @@ class ChoosePet extends StatefulWidget {
 
 class _ChoosePetState extends State<ChoosePet> {
   final Set<int> _selectedPets = {};
-  final PetRepository _petRepository = PetRepository();
   List<PetModel> _pets = [];
   bool _isLoading = true;
   String _errorMessage = '';
@@ -30,12 +32,31 @@ class _ChoosePetState extends State<ChoosePet> {
 
   Future<void> _carregarPets() async {
     try {
-      final pets = await _petRepository.lerPet();
-      setState(() {
-        _pets = pets;
-        _isLoading = false;
-        _errorMessage = '';
-      });
+      final authProvider = context.read<AuthProvider>();
+      final petProvider = context.read<PetProvider>();
+      final usuarioId = authProvider.usuarioLogado?['idusuario'];
+
+      if (usuarioId != null) {
+        await petProvider.listarPetsPorUsuario(usuarioId);
+        
+        if (petProvider.error == null) {
+          setState(() {
+            _pets = petProvider.pets;
+            _isLoading = false;
+            _errorMessage = '';
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Erro ao carregar pets: ${petProvider.error}';
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Usuário não logado';
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -93,12 +114,12 @@ class _ChoosePetState extends State<ChoosePet> {
       final prefs = await SharedPreferences.getInstance();
 
       // Salva os nomes dos pets selecionados
-      final petNames = petsSelecionados.map((pet) => pet.nome ?? '').toList();
+      final petNames = petsSelecionados.map((pet) => pet.nome!).toList();
       await prefs.setStringList('selected_pet_names', petNames);
 
       // Salva os IDs como string para facilitar o acesso
       final petIds =
-          petsSelecionados.map((pet) => pet.idpet.toString()).toList();
+          petsSelecionados.map((pet) => pet.idPet.toString()).toList();
       await prefs.setStringList('selected_pet_ids', petIds);
 
       // Salva a quantidade de pets
@@ -106,12 +127,12 @@ class _ChoosePetState extends State<ChoosePet> {
 
       // Salva informações individuais de cada pet
       for (final pet in petsSelecionados) {
-        await prefs.setString('pet_${pet.idpet}_name', pet.nome ?? '');
-        if (pet.idespecie != null) {
-          await prefs.setInt('pet_${pet.idpet}_species', pet.idespecie!);
+        await prefs.setString('pet_${pet.idPet}_name', pet.nome!);
+        if (pet.idEspecie != null) {
+          await prefs.setInt('pet_${pet.idPet}_species', pet.idEspecie!);
         }
-        if (pet.idraca != null) {
-          await prefs.setInt('pet_${pet.idpet}_breed', pet.idraca!);
+        if (pet.idRaca != null) {
+          await prefs.setInt('pet_${pet.idPet}_breed', pet.idRaca!);
         }
       }
 
@@ -145,7 +166,7 @@ class _ChoosePetState extends State<ChoosePet> {
 
   void _navigateToNext() {
     final selectedPetsList =
-        _pets.where((pet) => _selectedPets.contains(pet.idpet)).toList();
+        _pets.where((pet) => _selectedPets.contains(pet.idPet)).toList();
 
     // Salva detalhes dos pets selecionados antes de navegar
     _salvarDetalhesPetsNoCache(selectedPetsList);
@@ -166,10 +187,10 @@ class _ChoosePetState extends State<ChoosePet> {
 
       // Limpa informações individuais dos pets
       for (final pet in _pets) {
-        if (pet.idpet != null) {
-          await prefs.remove('pet_${pet.idpet}_name');
-          await prefs.remove('pet_${pet.idpet}_species');
-          await prefs.remove('pet_${pet.idpet}_breed');
+        if (pet.idPet != null) {
+          await prefs.remove('pet_${pet.idPet}_name');
+          await prefs.remove('pet_${pet.idPet}_species');
+          await prefs.remove('pet_${pet.idPet}_breed');
         }
       }
 
@@ -249,12 +270,11 @@ class _ChoosePetState extends State<ChoosePet> {
 
                   // Botão para limpar seleção
                   if (_selectedPets.isNotEmpty)
-                    TextButton(
+                  AppButton(
                       onPressed: _limparPetsSelecionados,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                      ),
-                      child: const Text('Limpar seleção'),
+                      label: 'Limpar seleção',
+                      fontSize: 18,
+                      buttonColor:Colors.redAccent ,
                     ),
 
                   if (_selectedPets.isNotEmpty) const SizedBox(height: 16),
@@ -330,10 +350,10 @@ class _ChoosePetState extends State<ChoosePet> {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: PetTemplate(
-            key: ValueKey(pet.idpet),
-            name: pet.nome ?? '',
-            isSelected: _selectedPets.contains(pet.idpet),
-            onTap: () => _togglePetSelection(pet.idpet!),
+            key: ValueKey(pet.idPet),
+            name: pet.nome!,
+            isSelected: _selectedPets.contains(pet.idPet),
+            onTap: () => _togglePetSelection(pet.idPet),
           ),
         );
       }).toList(),

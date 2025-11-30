@@ -1,83 +1,135 @@
+// data/models/pet_model.dart
 class PetModel {
-  final int? idpet;
-  final int? idusuario;
-  final int? idporte;
-  final int? idespecie;
-  final int? idraca;
+  final int? idPet;
+  final int? idUsuario;
+  final int? idPorte;
+  final int? idEspecie;
+  final int? idRaca;
   final String? nome;
   final String? sexo;
   final DateTime? nascimento;
   final String? observacoes;
-  final String? especie;
+
+  // Campos opcionais para joins
+  final String? nomeUsuario;
+  final String? descricaoPorte;
+  final String? descricaoEspecie;
+  final String? descricaoRaca;
 
   PetModel({
-    this.idpet,
-    this.idusuario,
-    this.idporte,
-    this.idespecie,
-    this.idraca,
+    this.idPet,
+    this.idUsuario,
+    this.idPorte,
+    this.idEspecie,
+    this.idRaca,
     this.nome,
     this.sexo,
     this.nascimento,
     this.observacoes,
-    this.especie,
+    this.nomeUsuario,
+    this.descricaoPorte,
+    this.descricaoEspecie,
+    this.descricaoRaca,
   });
-
-  PetModel copyWith({
-    int? idpet,
-    int? idusuario,
-    int? idporte,
-    int? idespecie,
-    int? idraca,
-    String? nome,
-    String? sexo,
-    DateTime? nascimento,
-    String? observacoes,
-    String? especie,
-  }) {
-    return PetModel(
-      idpet: idpet ?? this.idpet,
-      idusuario: idusuario ?? this.idusuario,
-      idporte: idporte ?? this.idporte,
-      idespecie: idespecie ?? this.idespecie,
-      idraca: idraca ?? this.idraca,
-      nome: nome ?? this.nome,
-      sexo: sexo ?? this.sexo,
-      nascimento: nascimento ?? this.nascimento,
-      observacoes: observacoes ?? this.observacoes,
-      especie: especie ?? this.especie,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'idpet': idpet,
-      'idusuario': idusuario,
-      'idporte': idporte,
-      'idespecie': idespecie,
-      'idraca': idraca,
-      'nome': nome,
-      'sexo': sexo,
-      'nascimento': nascimento?.toIso8601String(),
-      'observacoes': observacoes,
-      'especie': especie,
-    };
-  }
 
   factory PetModel.fromJson(Map<String, dynamic> json) {
     return PetModel(
-      idpet: json['idpet'],
-      idusuario: json['idusuario'],
-      idporte: json['idporte'],
-      idespecie: json['idespecie'],
-      idraca: json['idraca'],
+      idPet: json['idpet'] ?? json['idPet'],
+      idUsuario: json['idusuario'] ?? json['idUsuario'],
+      idPorte: json['idporte'] ?? json['idPorte'],
+      idEspecie: json['idespecie'] ?? json['idEspecie'],
+      idRaca: json['idraca'] ?? json['idRaca'],
       nome: json['nome'],
       sexo: json['sexo'],
       nascimento: json['nascimento'] != null
           ? DateTime.parse(json['nascimento'])
           : null,
       observacoes: json['observacoes'],
-      especie: json['especie'],
+      nomeUsuario: json['nomeusuario'] ?? json['nomeUsuario'],
+      descricaoPorte: json['descricaoporte'] ?? json['descricaoPorte'],
+      descricaoEspecie: json['descricaoespecie'] ?? json['descricaoEspecie'],
+      descricaoRaca: json['descricaoraca'] ?? json['descricaoRaca'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (idUsuario != null) 'idusuario': idUsuario,
+      if (idPorte != null) 'idporte': idPorte,
+      if (idEspecie != null) 'idespecie': idEspecie,
+      if (idRaca != null) 'idraca': idRaca,
+      'nome': nome,
+      'sexo': sexo,
+      if (nascimento != null) 'nascimento': nascimento!.toIso8601String(),
+      if (observacoes != null) 'observacoes': observacoes,
+    };
+  }
+
+  PetModel copyWith({
+    int? idPet,
+    int? idUsuario,
+    int? idPorte,
+    int? idEspecie,
+    int? idRaca,
+    String? nome,
+    String? sexo,
+    DateTime? nascimento,
+    String? observacoes,
+    String? nomeUsuario,
+    String? descricaoPorte,
+    String? descricaoEspecie,
+    String? descricaoRaca,
+  }) {
+    return PetModel(
+      idPet: idPet ?? this.idPet,
+      idUsuario: idUsuario ?? this.idUsuario,
+      idPorte: idPorte ?? this.idPorte,
+      idEspecie: idEspecie ?? this.idEspecie,
+      idRaca: idRaca ?? this.idRaca,
+      nome: nome ?? this.nome,
+      sexo: sexo ?? this.sexo,
+      nascimento: nascimento ?? this.nascimento,
+      observacoes: observacoes ?? this.observacoes,
+      nomeUsuario: nomeUsuario ?? this.nomeUsuario,
+      descricaoPorte: descricaoPorte ?? this.descricaoPorte,
+      descricaoEspecie: descricaoEspecie ?? this.descricaoEspecie,
+      descricaoRaca: descricaoRaca ?? this.descricaoRaca,
+    );
+  }
+
+  static PetModel fromMap(Map<String, dynamic> map) {
+    return PetModel(
+      idPet: map['idPet'],
+      nome: map['nome'],
+      descricaoEspecie: map['descricaoEspecie'],
+      idEspecie: map['idEspecie'],
+      descricaoRaca: map['descricaoRaca'],
+      idRaca: map['idRaca'],
+      nascimento: map['nascimento'] is DateTime
+          ? map['nascimento']
+          : map['nascimento'] != null
+              ? DateTime.parse(map['nascimento'])
+              : null,
+      sexo: map['sexo'],
+      descricaoPorte: map['descricaoPorte'],
+      idPorte: map['idPorte'],
+      // add other fields as needed
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'idPet': idPet,
+      'nome': nome,
+      'descricaoEspecie': descricaoEspecie,
+      'idEspecie': idEspecie,
+      'descricaoRaca': descricaoRaca,
+      'idRaca': idRaca,
+      'nascimento': nascimento?.toIso8601String(),
+      'sexo': sexo,
+      'descricaoPorte': descricaoPorte,
+      'idPorte': idPorte,
+      // add other fields as needed
+    };
   }
 }

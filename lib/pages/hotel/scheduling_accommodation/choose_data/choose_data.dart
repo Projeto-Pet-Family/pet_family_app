@@ -308,12 +308,11 @@ class _ChooseDataState extends State<ChooseData> {
                   const SizedBox(height: 16),
 
                   if (_startDate != null || _endDate != null)
-                    TextButton(
+                  AppButton(
                       onPressed: _limparDatasDoCache,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                      ),
-                      child: const Text('Limpar datas'),
+                      label: 'Limpar datas',
+                      fontSize: 18,
+                      buttonColor:Colors.redAccent ,
                     ),
 
                   if (_startDate != null || _endDate != null)

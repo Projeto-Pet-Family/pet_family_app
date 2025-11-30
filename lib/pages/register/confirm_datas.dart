@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
+import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/models/user_model.dart' hide PetModel;
+import 'package:pet_family_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import './templates/pet_data_template.dart';
 import './templates/your_data_template.dart';
-import '../../services/user_service.dart';
-import '../../services/pet/pet_service.dart';
-import '../../models/user_model.dart';
-import '../../models/pet/pet_model.dart';
 
 class ConfirmYourDatas extends StatefulWidget {
   const ConfirmYourDatas({super.key});
@@ -22,31 +21,33 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
   bool _isLoading = false;
 
   Future<void> _confirmarCadastro() async {
+    if (_isLoading) return;
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      print('🎯 ===== INICIANDO PROCESSO DE CADASTRO =====');
+      final usuarioProvider = context.read<UsuarioProvider>();
+      final usuario = await _buildUserData();
+      final petData = await _buildPetData();
 
-      // 1. Primeiro cadastra o usuário
-      final userId = await _registerUser();
+      // Cria o usuário com o provider
+      await usuarioProvider.criarUsuario(usuario);
 
-      // 2. Verifica se obteve um ID válido
-      if (userId == null) {
-        print('⚠️ Não foi possível obter o ID do usuário');
-        _showSuccessDialog(false, hasUserIdError: true);
-      } else {
-        // 3. Tenta cadastrar o pet apenas se tiver um ID válido
-        try {
-          await _registerPet(userId);
-        } catch (petError) {
-          print('⚠️ Erro ao cadastrar pet, mas usuário foi criado: $petError');
-          _showSuccessDialog(false, hasPetError: true);
+      if (usuarioProvider.success) {
+        // Se o usuário foi criado com sucesso
+        final hasPet = _hasValidPetData(petData);
+
+        if (hasPet) {
+          _showSuccessDialog(true);
+        } else {
+          _showSuccessDialog(false);
         }
+      } else {
+        _showErrorDialog(usuarioProvider.error ?? 'Erro ao cadastrar usuário');
       }
     } catch (e) {
-      print('❌ ERRO NO CADASTRO: $e');
       _showErrorDialog('Erro ao cadastrar: $e');
     } finally {
       setState(() {
@@ -55,336 +56,159 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
     }
   }
 
-  Future<String?> _registerUser() async {
-    print('👤 ===== CADASTRANDO USUÁRIO =====');
-
-    final user = await _buildUserData();
-    final userService = UserService(client: http.Client());
-
-    _debugUserData(user);
-
-    final resultado = await userService.registerUser(user);
-
-    print('✅ Resposta da API: $resultado');
-
-    // ✅ CORREÇÃO: Retorna null se não conseguir o ID, em vez de string temporária
-    String? userId;
-
-    // Tenta acessar em diferentes níveis da estrutura
-    if (resultado['data'] != null &&
-        resultado['data'] is Map<String, dynamic> &&
-        resultado['data']['usuario'] != null &&
-        resultado['data']['usuario'] is Map<String, dynamic>) {
-      final usuarioData = resultado['data']['usuario'] as Map<String, dynamic>;
-      userId = usuarioData['idusuario']?.toString();
-    }
-
-    if (userId != null) {
-      // Salva o ID do usuário no cache
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', userId);
-      print('📝 ID do usuário obtido: $userId');
-      return userId;
-    } else {
-      print('⚠️ ID do usuário não encontrado na resposta');
-      return null; // ✅ Retorna null em vez de string temporária
-    }
-  }
-
-  Future<void> _registerPet(String userId) async {
-    print('🐕 ===== CADASTRANDO PET =====');
-
-    final petData = await _prepararDadosPetParaEnvio(userId);
-    final hasPet = _hasPetData(petData);
-
-    if (hasPet) {
-      final petService = PetService(client: http.Client());
-
-      // Valida se todos os campos obrigatórios estão preenchidos
-      final camposObrigatorios = _validarCamposObrigatorios(petData);
-      if (camposObrigatorios.isNotEmpty) {
-        print('❌ Campos obrigatórios faltando: $camposObrigatorios');
-        _showWarningDialog(
-            'Campos obrigatórios do pet não preenchidos: ${camposObrigatorios.join(', ')}');
-        return;
-      }
-
-      print('📦 Dados do pet para envio:');
-      print('   👤 ID Usuário: ${petData['idusuario']}');
-      print('   🐾 Nome: ${petData['nome']}');
-      print('   ⚧️ Sexo: ${petData['sexo']}');
-      print('   🐶 Espécie ID: ${petData['idespecie']}');
-      print('   🐕 Raça ID: ${petData['idraca']}');
-      print('   📏 Porte ID: ${petData['idporte']}');
-      print('   📝 Observações: ${petData['observacoes']}');
-
-      // Cadastra o pet
-      final resultado = await petService.criarPet(petData);
-
-      if (resultado['success'] == true) {
-        print('✅ Pet cadastrado com sucesso!');
-        _showSuccessDialog(true);
-      } else {
-        print('⚠️ Pet não cadastrado: ${resultado['message']}');
-        _showSuccessDialog(false);
-      }
-    } else {
-      print('ℹ️ Nenhum pet para cadastrar');
-      _showSuccessDialog(false);
-    }
-  }
-
-  Future<Map<String, dynamic>> _prepararDadosPetParaEnvio(String userId) async {
+  Future<UsuarioModel> _buildUserData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final petData = {
-      'idusuario': userId,
-      'nome': prefs.getString('pet_name')?.trim() ?? '',
-      'sexo': prefs.getString('pet_sex')?.trim() ?? '',
-      'idespecie': prefs.getInt('pet_id_especie'),
-      'idraca': prefs.getInt('pet_id_raca'),
-      'idporte': prefs.getInt('pet_id_porte'),
-      'observacoes': prefs.getString('pet_observation')?.trim(),
-    };
-
-    if (petData['observacoes'] == null) {
-      petData.remove('observacoes');
-    }
-
-    return petData;
+    return UsuarioModel(
+      nome: prefs.getString('user_name') ?? '',
+      cpf: prefs.getString('user_cpf') ?? '',
+      email: prefs.getString('user_email') ?? '',
+      telefone: prefs.getString('user_phone') ?? '',
+      senha: prefs.getString('user_password') ?? '',
+      esqueceuSenha: false,
+      dataCadastro: DateTime.now(),
+      // Note: O endereço não está na estrutura atual do UsuarioModel
+      // Você precisará adaptar conforme sua necessidade
+    );
   }
 
-  bool _hasPetData(Map<String, dynamic> petData) {
-    final hasData = (petData['nome']?.isNotEmpty == true) &&
-        (petData['idespecie'] != null && petData['idespecie']! > 0) &&
-        (petData['idraca'] != null && petData['idraca']! > 0) &&
-        (petData['idporte'] != null && petData['idporte']! > 0);
+  Future<PetModel?> _buildPetData() async {
+    final prefs = await SharedPreferences.getInstance();
 
-    print('🔍 Verificação de dados do pet:');
-    print('   ✅ Nome preenchido: ${petData['nome']?.isNotEmpty == true}');
-    print(
-        '   ✅ Espécie ID válido: ${petData['idespecie'] != null && petData['idespecie']! > 0}');
-    print(
-        '   ✅ Raça ID válido: ${petData['idraca'] != null && petData['idraca']! > 0}');
-    print(
-        '   ✅ Porte ID válido: ${petData['idporte'] != null && petData['idporte']! > 0}');
-    print('   🔍 Pet tem dados suficientes: $hasData');
+    final nome = prefs.getString('pet_name')?.trim() ?? '';
+    final sexo = prefs.getString('pet_sex')?.trim() ?? '';
+    final especie = prefs.getInt('pet_id_especie');
+    final raca = prefs.getInt('pet_id_raca');
+    final porte = prefs.getInt('pet_id_porte');
+    final observacoes = prefs.getString('pet_observation')?.trim();
 
-    return hasData;
+    // Verifica se tem dados mínimos para criar um pet
+    if (nome.isEmpty ||
+        sexo.isEmpty ||
+        especie == null ||
+        raca == null ||
+        porte == null) {
+      return null;
+    }
+
+    return PetModel(
+      nome: nome,
+      sexo: sexo,
+      // Adicione outros campos conforme necessário
+      // idEspecie: especie,
+      // idRaca: raca,
+      // idPorte: porte,
+      // observacoes: observacoes,
+    );
   }
 
-  List<String> _validarCamposObrigatorios(Map<String, dynamic> petData) {
-    final camposFaltantes = <String>[];
+  bool _hasValidPetData(PetModel? petData) {
+    if (petData == null) return false;
 
-    // Campos obrigatórios conforme a mensagem de erro
-    if (petData['idusuario'] == null ||
-        petData['idusuario'].toString().isEmpty) {
-      camposFaltantes.add('idusuario');
-    }
-    if (petData['nome'] == null || petData['nome'].toString().isEmpty) {
-      camposFaltantes.add('nome');
-    }
-    if (petData['sexo'] == null || petData['sexo'].toString().isEmpty) {
-      camposFaltantes.add('sexo');
-    }
-    if (petData['idespecie'] == null || petData['idespecie'] <= 0) {
-      camposFaltantes.add('idespecie');
-    }
-    if (petData['idraca'] == null || petData['idraca'] <= 0) {
-      camposFaltantes.add('idraca');
-    }
-    if (petData['idporte'] == null || petData['idporte'] <= 0) {
-      camposFaltantes.add('idporte');
-    }
-
-    return camposFaltantes;
+    return petData.nome!.isNotEmpty && petData.sexo!.isNotEmpty;
+    // && petData.idEspecie != null && petData.idEspecie! > 0 &&
+    //    petData.idRaca != null && petData.idRaca! > 0 &&
+    //    petData.idPorte != null && petData.idPorte! > 0;
   }
 
-  void _showSuccessDialog(bool hasPet,
-      {bool hasUserIdError = false, bool hasPetError = false}) {
-    String message;
-    String buttonText = 'Fazer Login';
-
-    if (hasUserIdError) {
-      message = 'Usuário criado com sucesso! '
-          'Não foi possível cadastrar seu pet agora, mas você pode adicioná-lo depois no aplicativo.';
-    } else if (hasPetError) {
-      message = 'Usuário criado com sucesso! '
-          'Houve um problema ao cadastrar seu pet, mas você pode adicioná-lo depois.';
-    } else if (hasPet) {
-      message = 'Usuário e pet cadastrados com sucesso!';
-    } else {
-      message = 'Usuário criado com sucesso!';
-    }
+  void _showSuccessDialog(bool hasPet) {
+    String message = hasPet
+        ? 'Usuário e pet cadastrados com sucesso!'
+        : 'Usuário criado com sucesso!';
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Cadastro Confirmado!'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _clearCacheAndNavigate();
-              },
-              child: Text(buttonText),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('Cadastro Confirmado!'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _clearCacheAndNavigate();
+            },
+            child: const Text('Fazer Login'),
+          ),
+        ],
+      ),
     );
   }
 
   void _showWarningDialog(String message) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Atenção'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Permite que o usuário edite os dados do pet
-                context.go('/want-host-pet');
-              },
-              child: const Text('Editar Dados do Pet'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showSuccessDialog(false); // Apenas usuário criado
-              },
-              child: const Text('Continuar sem Pet'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('Atenção'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/want-host-pet');
+            },
+            child: const Text('Editar Dados do Pet'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showSuccessDialog(false);
+            },
+            child: const Text('Continuar sem Pet'),
+          ),
+        ],
+      ),
     );
   }
 
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Erro no Cadastro'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('Erro no Cadastro'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
-  }
-
-  Future<UserModel> _buildUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // DEBUG: Mostra todos os dados salvos no SharedPreferences
-    _debugSharedPreferences(prefs);
-
-    // Dados do endereço
-    final address = AddressModel(
-      cep: prefs.getString('user_cep') ?? '',
-      rua: prefs.getString('user_street') ?? '',
-      numero: prefs.getString('user_number') ?? '',
-      complemento: prefs.getString('user_complement'),
-      bairro: prefs.getString('user_neighborhood') ?? '',
-      cidade: prefs.getString('user_city') ?? '',
-      estado: prefs.getString('user_state') ?? '',
-    );
-
-    // Dados do usuário
-    return UserModel(
-      idusuario: '', // Será gerado pelo backend
-      nome: prefs.getString('user_name') ?? '',
-      cpf: prefs.getString('user_cpf') ?? '',
-      email: prefs.getString('user_email') ?? '',
-      telefone: prefs.getString('user_phone') ?? '',
-      senha: prefs.getString('user_password') ?? '',
-      ativado: false,
-      desativado: false,
-      esqueceuSenha: false,
-      dataCadastro: DateTime.now(),
-      endereco: address,
-    );
-  }
-
-  // DEBUG METHODS
-  void _debugSharedPreferences(SharedPreferences prefs) {
-    print('🔍 ===== DADOS DO SHARED PREFERENCES =====');
-    final allKeys = prefs.getKeys();
-    for (final key in allKeys) {
-      if (key.startsWith('user_') || key.startsWith('pet_')) {
-        final value = prefs.get(key);
-        print('   $key: $value');
-      }
-    }
-    print('🔍 ===== FIM DOS DADOS DO SHARED PREFERENCES =====');
-  }
-
-  void _debugUserData(UserModel user) {
-    print('🔍 ===== DADOS DO USUÁRIO PARA CADASTRO =====');
-    print('   👤 Nome: ${user.nome}');
-    print('   📧 Email: ${user.email}');
-    print('   📞 Telefone: ${user.telefone}');
-    print('   🆔 CPF: ${user.cpf}');
-    print('   🔐 Senha: ${user.senha?.isNotEmpty == true ? "***" : "vazia"}');
-    print('   📍 CEP: ${user.endereco.cep}');
-    print('   🏠 Rua: ${user.endereco.rua}');
-    print('   🏢 Número: ${user.endereco.numero}');
-    print('   🏙️ Cidade: ${user.endereco.cidade}');
-    print('   🏙️ Estado: ${user.endereco.estado}');
-    print('🔍 ===== FIM DOS DADOS DO USUÁRIO =====');
   }
 
   Future<void> _clearCacheAndNavigate() async {
     final prefs = await SharedPreferences.getInstance();
+    final keysToRemove = [
+      'user_name',
+      'user_cpf',
+      'user_phone',
+      'user_email',
+      'user_password',
+      'user_confirm_password',
+      'user_id',
+      'user_cep',
+      'user_street',
+      'user_number',
+      'user_complement',
+      'user_neighborhood',
+      'user_city',
+      'user_state',
+      'pet_name',
+      'pet_species',
+      'pet_race',
+      'pet_sex',
+      'pet_observation',
+      'pet_id_especie',
+      'pet_id_raca',
+      'pet_id_porte',
+      'has_pet_to_register',
+    ];
 
-    print('🗑️ Limpando cache do SharedPreferences...');
+    for (final key in keysToRemove) {
+      await prefs.remove(key);
+    }
 
-    // Limpa todos os dados do cache
-    await prefs.remove('user_name');
-    await prefs.remove('user_cpf');
-    await prefs.remove('user_phone');
-    await prefs.remove('user_email');
-    await prefs.remove('user_password');
-    await prefs.remove('user_confirm_password');
-    await prefs.remove('user_id');
-
-    await prefs.remove('user_cep');
-    await prefs.remove('user_street');
-    await prefs.remove('user_number');
-    await prefs.remove('user_complement');
-    await prefs.remove('user_neighborhood');
-    await prefs.remove('user_city');
-    await prefs.remove('user_state');
-
-    await prefs.remove('pet_name');
-    await prefs.remove('pet_species');
-    await prefs.remove('pet_race');
-    await prefs.remove('pet_sex');
-    await prefs.remove('pet_observation');
-
-    // Limpa os IDs do pet
-    await prefs.remove('pet_id_especie');
-    await prefs.remove('pet_id_raca');
-    await prefs.remove('pet_id_porte');
-    await prefs.remove('has_pet_to_register');
-
-    print('✅ Cache limpo com sucesso!');
-
-    // Navega para a tela inicial
     if (mounted) {
       context.go('/');
     }
@@ -407,7 +231,6 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w200,
-                    color: Colors.black,
                   ),
                 ),
               ),
@@ -418,13 +241,10 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
                   style: TextStyle(
                     fontSize: 50,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black,
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Seção Pets
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -432,48 +252,71 @@ class _ConfirmYourDatasState extends State<ConfirmYourDatas> {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w200,
-                    color: Colors.black,
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               const PetDataTemplate(),
-
               const SizedBox(height: 24),
-
-              // Seção Dados Pessoais
               const Text(
                 'Seus dados',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w200,
-                  color: Colors.black,
                 ),
               ),
               const SizedBox(height: 8),
               const YourDataTemplate(),
-
               const SizedBox(height: 30),
 
-              AppButton(
-                onPressed: _isLoading ? null : _confirmarCadastro,
-                label: _isLoading ? 'Cadastrando...' : 'Confirmar',
+              // Consumer para acessar o estado do provider
+              Consumer<UsuarioProvider>(
+                builder: (context, usuarioProvider, child) {
+                  return Column(
+                    children: [
+                      AppButton(
+                        onPressed: (_isLoading || usuarioProvider.loading)
+                            ? null
+                            : _confirmarCadastro,
+                        label: (_isLoading || usuarioProvider.loading)
+                            ? 'Cadastrando...'
+                            : 'Confirmar',
+                      ),
+
+                      // Exibir erro do provider se houver
+                      if (usuarioProvider.error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(
+                            usuarioProvider.error!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
-
-              // Botão para editar dados
               if (!_isLoading)
-                OutlinedButton(
-                  onPressed: () {
-                    context.go('/want-host-pet');
+                Consumer<UsuarioProvider>(
+                  builder: (context, usuarioProvider, child) {
+                    return OutlinedButton(
+                      onPressed: usuarioProvider.loading
+                          ? null
+                          : () => context.go('/want-host-pet'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey,
+                        side: const BorderSide(color: Colors.grey),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text('Editar Dados'),
+                    );
                   },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey,
-                    side: const BorderSide(color: Colors.grey),
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: const Text('Editar Dados'),
                 ),
             ],
           ),

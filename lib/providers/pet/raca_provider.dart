@@ -1,74 +1,113 @@
-import 'package:flutter/material.dart';
-import '../../models/pet/raca_model.dart';
-import '../../services/pet/raca_service.dart';
+// presentation/providers/raca_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:pet_family_app/models/pet/raca_model.dart';
+import 'package:pet_family_app/repository/pet/raca_repository.dart';
 
 class RacaProvider with ChangeNotifier {
-  final RacaService _racaService;
-  List<Raca> _racas = [];
-  bool _isLoading = false;
+  final RacaRepository racaRepository;
+  
+  List<RacaModel> _racas = [];
+  List<RacaModel> _racasPorEspecie = [];
+  RacaModel? _racaSelecionada;
+  bool _loading = false;
   String? _error;
-  bool _hasLoaded = false;
-  bool _isDisposed = false;
+  bool _success = false;
 
-  RacaProvider({required RacaService racaService}) 
-      : _racaService = racaService;
+  RacaProvider({required this.racaRepository});
 
-  List<Raca> get racas => _racas;
-  bool get isLoading => _isLoading;
+  // Getters
+  List<RacaModel> get racas => _racas;
+  List<RacaModel> get racasPorEspecie => _racasPorEspecie;
+  RacaModel? get racaSelecionada => _racaSelecionada;
+  bool get loading => _loading;
   String? get error => _error;
-  bool get hasLoaded => _hasLoaded;
+  bool get success => _success;
 
-  Future<void> loadRacas({bool forceRefresh = false}) async {
-    if (_hasLoaded && !forceRefresh) return;
-    
-    if (_isDisposed) return;
-    
-    _isLoading = true;
+  // Listar todas as raças
+  Future<void> listarRacas() async {
+    _loading = true;
     _error = null;
-    _safeNotifyListeners();
+    notifyListeners();
 
     try {
-      final racas = await _racaService.getRacas();
-      if (_isDisposed) return;
-      
-      _racas = racas;
-      _hasLoaded = true;
+      _racas = await racaRepository.listarRacas();
       _error = null;
     } catch (e) {
-      if (_isDisposed) return;
       _error = e.toString();
-      _hasLoaded = false;
+      _racas = [];
     } finally {
-      if (!_isDisposed) {
-        _isLoading = false;
-        _safeNotifyListeners();
-      }
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  void clearError() {
-    if (_isDisposed) return;
+  // Listar raças por espécie
+  Future<void> listarRacasPorEspecie(int idEspecie) async {
+    _loading = true;
     _error = null;
-    _safeNotifyListeners();
-  }
+    notifyListeners();
 
-  Future<void> refreshRacas() async {
-    await loadRacas(forceRefresh: true);
-  }
-
-  void _safeNotifyListeners() {
-    if (!_isDisposed && hasListeners) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_isDisposed && hasListeners) {
-          notifyListeners();
-        }
-      });
+    try {
+      _racasPorEspecie = await racaRepository.listarRacasPorEspecie(idEspecie);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      _racasPorEspecie = [];
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    super.dispose();
+  // Criar raça
+  Future<void> criarRaca(RacaModel raca) async {
+    _loading = true;
+    _error = null;
+    _success = false;
+    notifyListeners();
+
+    try {
+      final racaCriada = await racaRepository.criarRaca(raca);
+      _racas.add(racaCriada);
+      _success = true;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _success = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Selecionar raça
+  void selecionarRaca(RacaModel raca) {
+    _racaSelecionada = raca;
+    notifyListeners();
+  }
+
+  // Limpar seleção
+  void limparSelecao() {
+    _racaSelecionada = null;
+    notifyListeners();
+  }
+
+  // Limpar raças por espécie
+  void limparRacasPorEspecie() {
+    _racasPorEspecie = [];
+    notifyListeners();
+  }
+
+  // Limpar estados
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearSuccess() {
+    _success = false;
+    notifyListeners();
   }
 }

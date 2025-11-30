@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:pet_family_app/models/pet/especie_model.dart';
-import 'package:pet_family_app/models/pet/raca_model.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/models/pet/porte_model.dart';
+import 'package:pet_family_app/models/pet/raca_model.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
-import 'package:pet_family_app/providers/pet/raca_provider.dart';
 import 'package:pet_family_app/providers/pet/porte_provider.dart';
+import 'package:pet_family_app/providers/pet/raca_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:pet_family_app/widgets/app_drop_down.dart';
 
 class ModalAddPet extends StatefulWidget {
   final int idUsuario;
-  final Function(Map<String, dynamic>)? onPetAdded;
+  final Function(PetModel)? onPetAdded;
 
   const ModalAddPet({super.key, required this.idUsuario, this.onPetAdded});
 
@@ -24,9 +25,9 @@ class _ModalAddPetState extends State<ModalAddPet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nomeController = TextEditingController();
 
-  Especie? _selectedEspecie;
-  Raca? _selectedRaca;
-  Porte? _selectedPorte;
+  EspecieModel? _selectedEspecie;
+  RacaModel? _selectedRaca;
+  PorteModel? _selectedPorte;
   String _selectedSexo = 'M';
 
   bool _isLoading = true;
@@ -42,46 +43,33 @@ class _ModalAddPetState extends State<ModalAddPet> {
 
   Future<void> _carregarDados() async {
     print('ModalAddPet: _carregarDados iniciado');
-    
+
     try {
-      final especieProvider = Provider.of<EspecieProvider>(context, listen: false);
+      final especieProvider =
+          Provider.of<EspecieProvider>(context, listen: false);
       final racaProvider = Provider.of<RacaProvider>(context, listen: false);
       final porteProvider = Provider.of<PorteProvider>(context, listen: false);
 
       print('ModalAddPet: Providers obtidos');
 
-      // Verifica se já estão carregados para evitar chamadas desnecessárias
-      bool precisaCarregar = false;
+      // Usa os novos métodos do provider
+      await especieProvider.listarEspecies();
+      await racaProvider.listarRacas();
+      await porteProvider.listarPortes();
 
-      if (!especieProvider.hasLoaded && !especieProvider.isLoading) {
-        print('ModalAddPet: Carregando espécies...');
-        precisaCarregar = true;
-        await especieProvider.loadEspecies();
-        print('ModalAddPet: Espécies carregadas - ${especieProvider.especies.length} itens');
-      }
-
-      if (!racaProvider.hasLoaded && !racaProvider.isLoading) {
-        print('ModalAddPet: Carregando raças...');
-        precisaCarregar = true;
-        await racaProvider.loadRacas();
-        print('ModalAddPet: Raças carregadas - ${racaProvider.racas.length} itens');
-      }
-
-      if (!porteProvider.hasLoaded && !porteProvider.isLoading) {
-        print('ModalAddPet: Carregando portes...');
-        precisaCarregar = true;
-        await porteProvider.loadPortes();
-        print('ModalAddPet: Portes carregados - ${porteProvider.portes.length} itens');
-      }
+      print('ModalAddPet: Dados carregados com sucesso');
+      print('  - Espécies: ${especieProvider.especies.length}');
+      print('  - Raças: ${racaProvider.racas.length}');
+      print('  - Portes: ${porteProvider.portes.length}');
 
       if (mounted) {
-        print('ModalAddPet: Dados carregados com sucesso, atualizando estado...');
+        print(
+            'ModalAddPet: Dados carregados com sucesso, atualizando estado...');
         setState(() {
           _isLoading = false;
           _dadosCarregados = true;
         });
       }
-
     } catch (e) {
       print('ModalAddPet: Erro ao carregar dados: $e');
       if (mounted) {
@@ -102,8 +90,9 @@ class _ModalAddPetState extends State<ModalAddPet> {
 
   @override
   Widget build(BuildContext context) {
-    print('ModalAddPet: build chamado - isLoading: $_isLoading, error: $_errorMessage');
-    
+    print(
+        'ModalAddPet: build chamado - isLoading: $_isLoading, error: $_errorMessage');
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -138,7 +127,6 @@ class _ModalAddPetState extends State<ModalAddPet> {
               ),
             ),
             const SizedBox(height: 16),
-
             if (_isLoading) _buildLoading(),
             if (_errorMessage != null) _buildError(_errorMessage!),
             if (!_isLoading && _errorMessage == null) _buildContent(),
@@ -229,20 +217,21 @@ class _ModalAddPetState extends State<ModalAddPet> {
           // Dropdown para Espécie
           Consumer<EspecieProvider>(
             builder: (context, especieProvider, child) {
-              print('ModalAddPet: Consumer Espécie - isLoading: ${especieProvider.isLoading}, count: ${especieProvider.especies.length}');
-              
-              if (especieProvider.isLoading && especieProvider.especies.isEmpty) {
+              print(
+                  'ModalAddPet: Consumer Espécie - loading: ${especieProvider.loading}, count: ${especieProvider.especies.length}');
+
+              if (especieProvider.loading && especieProvider.especies.isEmpty) {
                 return _buildDropdownLoading('Espécie');
               }
-              
-              return AppDropDown<Especie>(
+
+              return AppDropDown<EspecieModel>(
                 value: _selectedEspecie,
                 items: especieProvider.especies,
                 label: 'Espécie',
                 hint: 'Selecione uma espécie',
                 isRequired: true,
                 errorMessage: 'Selecione uma espécie',
-                onChanged: (Especie? newEspecie) {
+                onChanged: (EspecieModel? newEspecie) {
                   setState(() {
                     _selectedEspecie = newEspecie;
                   });
@@ -257,20 +246,21 @@ class _ModalAddPetState extends State<ModalAddPet> {
           // Dropdown para Raça
           Consumer<RacaProvider>(
             builder: (context, racaProvider, child) {
-              print('ModalAddPet: Consumer Raça - isLoading: ${racaProvider.isLoading}, count: ${racaProvider.racas.length}');
-              
-              if (racaProvider.isLoading && racaProvider.racas.isEmpty) {
+              print(
+                  'ModalAddPet: Consumer Raça - loading: ${racaProvider.loading}, count: ${racaProvider.racas.length}');
+
+              if (racaProvider.loading && racaProvider.racas.isEmpty) {
                 return _buildDropdownLoading('Raça');
               }
 
-              return AppDropDown<Raca>(
+              return AppDropDown<RacaModel>(
                 value: _selectedRaca,
                 items: racaProvider.racas,
                 label: 'Raça',
                 hint: 'Selecione uma raça',
                 isRequired: true,
                 errorMessage: 'Selecione uma raça',
-                onChanged: (Raca? newRaca) {
+                onChanged: (RacaModel? newRaca) {
                   setState(() {
                     _selectedRaca = newRaca;
                   });
@@ -303,20 +293,21 @@ class _ModalAddPetState extends State<ModalAddPet> {
           // Dropdown para Porte
           Consumer<PorteProvider>(
             builder: (context, porteProvider, child) {
-              print('ModalAddPet: Consumer Porte - isLoading: ${porteProvider.isLoading}, count: ${porteProvider.portes.length}');
-              
-              if (porteProvider.isLoading && porteProvider.portes.isEmpty) {
+              print(
+                  'ModalAddPet: Consumer Porte - loading: ${porteProvider.loading}, count: ${porteProvider.portes.length}');
+
+              if (porteProvider.loading && porteProvider.portes.isEmpty) {
                 return _buildDropdownLoading('Porte');
               }
 
-              return AppDropDown<Porte>(
+              return AppDropDown<PorteModel>(
                 value: _selectedPorte,
                 items: porteProvider.portes,
                 label: 'Porte',
                 hint: 'Selecione um porte',
                 isRequired: true,
                 errorMessage: 'Selecione um porte',
-                onChanged: (Porte? newPorte) {
+                onChanged: (PorteModel? newPorte) {
                   setState(() {
                     _selectedPorte = newPorte;
                   });
@@ -391,14 +382,23 @@ class _ModalAddPetState extends State<ModalAddPet> {
         return;
       }
 
-      final novoPet = {
-        'nome': _nomeController.text.trim(),
-        'sexo': _selectedSexo,
-        'idusuario': widget.idUsuario,
-        'idespecie': _selectedEspecie!.idEspecie,
-        'idraca': _selectedRaca!.idRaca,
-        'idporte': _selectedPorte!.idPorte,
-      };
+      // Cria um PetModel em vez de Map
+      final novoPet = PetModel(
+        nome: _nomeController.text.trim(),
+        sexo: _selectedSexo,
+        idUsuario: widget.idUsuario,
+        idEspecie: _selectedEspecie!.idEspecie,
+        idRaca: _selectedRaca!.idRaca,
+        idPorte: _selectedPorte!.idPorte,
+      );
+
+      print('✅ Novo pet criado:');
+      print('   - Nome: ${novoPet.nome}');
+      print('   - Sexo: ${novoPet.sexo}');
+      print('   - Espécie ID: ${novoPet.idEspecie}');
+      print('   - Raça ID: ${novoPet.idRaca}');
+      print('   - Porte ID: ${novoPet.idPorte}');
+      print('   - Usuário ID: ${novoPet.idUsuario}');
 
       Navigator.of(context).pop();
       widget.onPetAdded?.call(novoPet);

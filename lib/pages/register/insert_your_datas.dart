@@ -230,19 +230,6 @@ class _InsertYourDatasState extends State<InsertYourDatas> {
                 
                 const SizedBox(height: 20),
                 
-                // Botão para limpar cache (opcional)
-                OutlinedButton(
-                  onPressed: _clearUserData,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey,
-                    side: const BorderSide(color: Colors.grey),
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                  child: const Text('Limpar Dados Salvos'),
-                ),
               ],
             ),
           ),

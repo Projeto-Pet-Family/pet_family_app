@@ -5,17 +5,27 @@ import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/message/message.dart';
 import 'package:pet_family_app/providers/hotel_provider.dart';
 import 'package:pet_family_app/providers/message_provider.dart';
+import 'package:pet_family_app/providers/pet/especie_provider.dart';
+import 'package:pet_family_app/providers/pet/porte_provider.dart';
+import 'package:pet_family_app/providers/pet/raca_provider.dart';
+import 'package:pet_family_app/providers/user_provider.dart';
 import 'package:pet_family_app/repository/message_repository.dart';
+import 'package:pet_family_app/repository/pet/especie_repository.dart';
+import 'package:pet_family_app/repository/pet/pet_repository.dart';
+import 'package:pet_family_app/repository/pet/porte_repository.dart';
+import 'package:pet_family_app/repository/pet/raca_repository.dart';
+import 'package:pet_family_app/repository/user_repository.dart';
 import 'package:pet_family_app/services/message_service.dart';
+import 'package:pet_family_app/services/pet/especie_service.dart';
+import 'package:pet_family_app/services/pet/pet_service.dart';
+import 'package:pet_family_app/services/pet/porte_service.dart';
+import 'package:pet_family_app/services/pet/raca_service.dart';
+import 'package:pet_family_app/services/user_service.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/providers/pet/pet_provider.dart';
-import 'package:pet_family_app/services/pet/especie_service.dart';
-import 'package:pet_family_app/services/pet/raca_service.dart';
-import 'package:pet_family_app/services/pet/porte_service.dart';
-import 'package:pet_family_app/providers/pet/especie_provider.dart';
-import 'package:pet_family_app/providers/pet/raca_provider.dart';
-import 'package:pet_family_app/providers/pet/porte_provider.dart';
+
+// Pages
 import 'package:pet_family_app/navigation/bottom_navigation.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
 import 'package:pet_family_app/pages/forgot_password/pages/forgot_password.dart';
@@ -47,32 +57,66 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // Providers principais
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PetProvider()),
+        ChangeNotifierProvider(create: (_) => HotelProvider()),
+
+        // User Provider
+        ChangeNotifierProvider<UsuarioProvider>(
+          create: (_) => UsuarioProvider(
+            usuarioRepository: UsuarioRepositoryImpl(
+              userService: UserService(client: http.Client()),
+            ),
+          ),
+        ),
+
+        // Pet Provider
+        ChangeNotifierProvider<PetProvider>(
+          create: (_) => PetProvider(
+            petRepository: PetRepositoryImpl(
+              petService: PetService(client: http.Client()),
+            ),
+          ),
+        ),
+
+        // Message Provider
         ChangeNotifierProvider<MensagemProvider>(
-          create: (context) {
-            final service = MensagemService();
-            final repository = MensagemRepository(service);
-            return MensagemProvider(repository);
-          },
+          create: (_) => MensagemProvider(
+            MensagemRepository(
+              MensagemService(),
+            ),
+          ),
         ),
-        ChangeNotifierProvider(
+
+        // Especie Provider (simplificado)
+        ChangeNotifierProvider<EspecieProvider>(
           create: (_) => EspecieProvider(
-            especieService: EspecieService(client: http.Client()),
+            especieRepository: EspecieRepositoryImpl(
+              especieService: EspecieService(client: http.Client()),
+            ),
           ),
         ),
-        ChangeNotifierProvider(
+
+        // Raca Provider (simplificado)
+        ChangeNotifierProvider<RacaProvider>(
           create: (_) => RacaProvider(
-            racaService: RacaService(client: http.Client()),
+            racaRepository: RacaRepositoryImpl(
+              racaService: RacaService(client: http.Client()),
+            ),
           ),
         ),
-        ChangeNotifierProvider(
+
+        // Porte Provider (simplificado)
+        ChangeNotifierProvider<PorteProvider>(
           create: (_) => PorteProvider(
-            porteService: PorteService(client: http.Client()),
+            porteRepository: PorteRepositoryImpl(
+              porteService: PorteService(client: http.Client()),
+            ),
           ),
         ),
       ],
       child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           fontFamily: 'Lexend',
           textTheme: const TextTheme(

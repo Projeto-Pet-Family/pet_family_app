@@ -1,133 +1,109 @@
-// services/user_service.dart
+// data/datasources/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/user_model.dart';
+import 'package:pet_family_app/models/user_model.dart';
 
 class UserService {
   static const String baseUrl = 'https://bepetfamily.onrender.com';
-
   final http.Client client;
 
   UserService({required this.client});
 
-  Future<Map<String, dynamic>> registerUser(UserModel user) async {
-    try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/usuarios'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(user.toJson()),
-      );
+  // Headers comuns
+  Map<String, String> get headers => {
+    'Content-Type': 'application/json',
+  };
 
-      print('🔍 Status Code: ${response.statusCode}');
-      print('🔍 Response Body: ${response.body}');
-
-      if (response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-
-        // ✅ CORREÇÃO: Verifica se a estrutura da resposta está correta
-        if (responseData is Map<String, dynamic>) {
-          return {
-            'success': true,
-            'data': responseData,
-            'message': 'Usuário criado com sucesso!',
-          };
-        } else {
-          // Se a resposta for diferente do esperado
-          return {
-            'success': true,
-            'data': {'idusuario': null}, // Placeholder
-            'message': 'Usuário criado, mas estrutura de resposta inesperada',
-          };
-        }
-      } else {
-        // Tratamento de erros específicos
-        final errorResponse = json.decode(response.body);
-        final errorMessage = errorResponse['message'] ?? 'Erro desconhecido';
-
-        switch (response.statusCode) {
-          case 400:
-            throw Exception('Dados inválidos: $errorMessage');
-          case 409:
-            throw Exception('Usuário já cadastrado: $errorMessage');
-          case 500:
-            throw Exception('Erro interno do servidor: $errorMessage');
-          default:
-            throw Exception('Erro ${response.statusCode}: $errorMessage');
-        }
-      }
-    } catch (e) {
-      print('❌ Erro no registerUser: $e');
-      if (e is Exception) {
-        rethrow;
-      }
-      throw Exception('Erro de conexão: $e');
+  // Tratamento de erros
+  void _handleError(http.Response response) {
+    switch (response.statusCode) {
+      case 409:
+        final error = json.decode(response.body);
+        throw Exception(error['message'] ?? 'CPF ou email já cadastrado');
+      case 404:
+        throw Exception('Usuário não encontrado');
+      case 500:
+        throw Exception('Erro interno do servidor');
+      default:
+        throw Exception('Falha na comunicação com o servidor');
     }
   }
 
-  /// Busca um usuário por ID
-  Future<UserModel?> getUserById(String userId) async {
-    try {
-      final response = await client.get(
-        Uri.parse('$baseUrl/usuario/$userId'),
-      );
+  // Criar usuário
+  Future<Map<String, dynamic>> criarUsuario(UsuarioModel usuario) async {
+    final response = await client.post(
+      Uri.parse('$baseUrl/usuarios'),
+      headers: headers,
+      body: json.encode(usuario.toJson()),
+    );
 
-      if (response.statusCode == 200) {
-        final userData = json.decode(response.body);
-        // Você precisaria criar um factory fromJson no UserModel para isso
-        // return UserModel.fromJson(userData);
-        return null; // Implemente conforme sua necessidade
-      } else if (response.statusCode == 404) {
-        return null;
-      } else {
-        throw Exception('Erro ao buscar usuário: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Erro de conexão: $e');
+    if (response.statusCode == 201) {
+      return json.decode(response.body);
+    } else {
+      _handleError(response);
+      throw Exception('Erro ao criar usuário');
     }
   }
 
-  static Future<Map<String, dynamic>> atualizarPerfil({
-    required int idUsuario,
-    required Map<String, dynamic> dadosAtualizados,
-  }) async {
-    try {
-      print('🌐 Enviando dados para API...');
-      print('🌐 ID Usuário: $idUsuario');
-      print('🌐 Dados: $dadosAtualizados');
+  // Buscar usuário por ID
+  Future<UsuarioModel> buscarUsuarioPorId(int idUsuario) async {
+    final response = await client.get(
+      Uri.parse('$baseUrl/usuarios/$idUsuario'),
+      headers: headers,
+    );
 
-      final response = await http.put(
-        Uri.parse(
-            '$baseUrl/usuarios/$idUsuario'), // Ajuste a URL conforme sua API
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(dadosAtualizados),
-      );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return UsuarioModel.fromJson(data);
+    } else {
+      _handleError(response);
+      throw Exception('Erro ao buscar usuário');
+    }
+  }
 
-      print('🌐 Status Code: ${response.statusCode}');
-      print('🌐 Response Body: ${response.body}');
+  // Listar todos os usuários
+  Future<List<UsuarioModel>> listarUsuarios() async {
+    final response = await client.get(
+      Uri.parse('$baseUrl/usuarios'),
+      headers: headers,
+    );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {
-          'success': true,
-          'usuario': data, // A API deve retornar os dados atualizados
-          'message': 'Perfil atualizado com sucesso!',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Erro ao atualizar perfil: ${response.statusCode}',
-        };
-      }
-    } catch (error) {
-      print('❌ Erro na chamada API: $error');
-      return {
-        'success': false,
-        'message': 'Erro de conexão: $error',
-      };
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((json) => UsuarioModel.fromJson(json)).toList();
+    } else {
+      _handleError(response);
+      throw Exception('Erro ao listar usuários');
+    }
+  }
+
+  // Atualizar usuário
+  Future<UsuarioModel> atualizarUsuario(int idUsuario, UsuarioModel usuario) async {
+    final response = await client.put(
+      Uri.parse('$baseUrl/usuarios/$idUsuario'),
+      headers: headers,
+      body: json.encode(usuario.toJson()),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return UsuarioModel.fromJson(data['data']);
+    } else {
+      _handleError(response);
+      throw Exception('Erro ao atualizar usuário');
+    }
+  }
+
+  // Excluir usuário
+  Future<void> excluirUsuario(int idUsuario) async {
+    final response = await client.delete(
+      Uri.parse('$baseUrl/usuarios/$idUsuario'),
+      headers: headers,
+    );
+
+    if (response.statusCode != 200) {
+      _handleError(response);
+      throw Exception('Erro ao excluir usuário');
     }
   }
 }

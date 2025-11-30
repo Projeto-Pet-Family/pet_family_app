@@ -92,7 +92,7 @@ class _FinalVerificationState extends State<FinalVerification> {
       final idhospedagem = _cachedData['idhospedagem'];
 
       final calculo = await _contratoRepository.calcularValorContrato(
-        idHospedagem: idhospedagem, 
+        idHospedagem: idhospedagem,
         dataInicio: _formatarDataParaAPI(dates['start_date'] as DateTime),
         dataFim: _formatarDataParaAPI(dates['end_date'] as DateTime),
         servicos: services != null && (services['ids'] as List).isNotEmpty
@@ -112,8 +112,9 @@ class _FinalVerificationState extends State<FinalVerification> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Erro ao calcular: $e'),
-              backgroundColor: Colors.orange),
+            content: Text('Erro ao calcular: $e'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
     }
@@ -211,20 +212,23 @@ class _FinalVerificationState extends State<FinalVerification> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Row(children: [
-          Icon(Icons.check_circle, color: Colors.green),
-          SizedBox(width: 8),
-          Text('Contrato Criado!')
-        ]),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Contrato Criado!')
+          ],
+        ),
         content: const Text(
             'Seu contrato foi criado com sucesso e está em aprovação.'),
         actions: [
           TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.go('/core-navigation');
-              },
-              child: const Text('Ver Meus Agendamentos'))
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/core-navigation');
+            },
+            child: const Text('Ver Meus Agendamentos'),
+          )
         ],
       ),
     );
@@ -242,8 +246,9 @@ class _FinalVerificationState extends State<FinalVerification> {
         content: Text('Erro ao criar contrato: $error'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'))
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          )
         ],
       ),
     );
@@ -315,17 +320,20 @@ class _FinalVerificationState extends State<FinalVerification> {
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green)),
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('💰 Resumo Financeiro',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green)),
+                  const Text(
+                    '💰 Resumo Financeiro',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green),
+                  ),
                   const SizedBox(height: 16),
                   _buildItemFinanceiro(
                       '🏠 Total da hospedagem', _formatarMoeda(valorHospedagem),
@@ -340,22 +348,27 @@ class _FinalVerificationState extends State<FinalVerification> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green)),
+                      color: Colors.green[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('💳 Total do contrato:',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green)),
-                        Text(_formatarMoeda(valorTotal),
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green)),
+                        const Text(
+                          '💳 Total do contrato:',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green),
+                        ),
+                        Text(
+                          _formatarMoeda(valorTotal),
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green),
+                        ),
                       ],
                     ),
                   ),
@@ -373,18 +386,20 @@ class _FinalVerificationState extends State<FinalVerification> {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(titulo,
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  fontWeight:
-                      isSubtotal ? FontWeight.w600 : FontWeight.normal)),
-          Text(valor,
-              style: TextStyle(
-                  fontSize: 14,
-                  color: isSubtotal ? Colors.blue : Colors.black,
-                  fontWeight:
-                      isSubtotal ? FontWeight.w600 : FontWeight.normal)),
+          Text(
+            titulo,
+            style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                fontWeight: isSubtotal ? FontWeight.w600 : FontWeight.normal),
+          ),
+          Text(
+            valor,
+            style: TextStyle(
+                fontSize: 14,
+                color: isSubtotal ? Colors.blue : Colors.black,
+                fontWeight: isSubtotal ? FontWeight.w600 : FontWeight.normal),
+          ),
         ],
       );
 
@@ -392,33 +407,46 @@ class _FinalVerificationState extends State<FinalVerification> {
         SizedBox(height: 20),
         Center(child: CircularProgressIndicator()),
         SizedBox(height: 10),
-        Text('Carregando...',
-            style: TextStyle(fontSize: 16, color: Colors.grey))
+        Text(
+          'Carregando...',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        )
       ]);
 
   Widget _buildCalculating() => Column(children: [
         const CircularProgressIndicator(),
         const SizedBox(height: 16),
-        const Text('Calculando...',
-            style: TextStyle(fontSize: 16, color: Colors.grey)),
+        const Text(
+          'Calculando...',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
         const SizedBox(height: 20)
       ]);
 
-  Widget _buildEmptyState() => Column(children: [
-        Icon(Icons.error_outline, size: 60, color: Colors.orange[300]),
-        const SizedBox(height: 16),
-        const Text('Dados incompletos',
+  Widget _buildEmptyState() => Column(
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 60,
+            color: Colors.orange[300],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Dados incompletos',
             style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey)),
-        const SizedBox(height: 8),
-        const Text('Selecione pets e datas para continuar',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey)),
-        const SizedBox(height: 20),
-        ElevatedButton(
+                fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          const Text('Selecione pets e datas para continuar',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey)),
+          const SizedBox(height: 20),
+          ElevatedButton(
             onPressed: () => context.go('/choose-pet'),
-            child: const Text('Voltar para Pets'))
-      ]);
+            child: const Text('Voltar para Pets'),
+          )
+        ],
+      );
 
   Widget _buildDataSummary() =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -437,62 +465,74 @@ class _FinalVerificationState extends State<FinalVerification> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-        child: Column(children: [
-          const AppBarReturn(route: '/choose-service'),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const SizedBox(height: 60),
-              const Align(
-                  alignment: Alignment.center,
-                  child: Text('Verificação final',
+        child: Column(
+          children: [
+            const AppBarReturn(route: '/choose-service'),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 60),
+                  const Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Verificação final',
                       style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w200,
-                          color: Colors.black))),
-              const SizedBox(height: 10),
-              const Align(
-                  alignment: Alignment.center,
-                  child: Text('Confirme todos os dados da sua reserva',
-                      style: TextStyle(fontSize: 14, color: Colors.grey))),
-              const SizedBox(height: 40),
-              if (_isLoading)
-                _buildLoading()
-              else if (!_hasData)
-                _buildEmptyState()
-              else if (_isCalculating)
-                _buildCalculating()
-              else
-                _buildDataSummary(),
-              const SizedBox(height: 40),
-              if (_isCreatingContract)
-                Column(children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  const Text('Criando contrato...',
-                      style: TextStyle(fontSize: 16, color: Colors.grey)),
-                  const SizedBox(height: 20)
-                ]),
-              if (_hasData &&
-                  !_isLoading &&
-                  !_isCreatingContract &&
-                  !_isCalculating)
-                Column(children: [
-                  AppButton(
-                      onPressed: _criarContrato,
-                      label: 'Confirmar e Criar Contrato',
-                      fontSize: 18),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => context.go('/choose-service'),
-                    child: const Text('Voltar para Serviços'),
+                          color: Colors.black),
+                    ),
                   ),
-                ]),
-              const SizedBox(height: 40),
-            ]),
-          ),
-        ]),
+                  const SizedBox(height: 10),
+                  const Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Confirme todos os dados da sua reserva',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  if (_isLoading)
+                    _buildLoading()
+                  else if (!_hasData)
+                    _buildEmptyState()
+                  else if (_isCalculating)
+                    _buildCalculating()
+                  else
+                    _buildDataSummary(),
+                  const SizedBox(height: 40),
+                  if (_isCreatingContract)
+                    Column(
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Criando contrato...',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 20)
+                      ],
+                    ),
+                  if (_hasData &&
+                      !_isLoading &&
+                      !_isCreatingContract &&
+                      !_isCalculating)
+                    Column(
+                      children: [
+                        AppButton(
+                            onPressed: _criarContrato,
+                            label: 'Confirmar e Criar Contrato',
+                            fontSize: 18),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

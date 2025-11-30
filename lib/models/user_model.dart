@@ -1,30 +1,49 @@
-// models/user_model.dart
-class UserModel {
-  final String idusuario;
+// data/models/usuario_model.dart
+import 'package:pet_family_app/models/pet/pet_model.dart';
+
+class UsuarioModel {
+  final int? idUsuario;
   final String nome;
   final String cpf;
   final String email;
   final String telefone;
-  final String senha; // Senha em texto puro
-  final bool ativado;
-  final bool desativado;
-  final bool esqueceuSenha;
-  final DateTime dataCadastro;
-  final AddressModel endereco;
+  final String senha;
+  final bool? esqueceuSenha;
+  final DateTime? dataCadastro;
+  final int? idCargo;
+  final PetModel? petCriado;
 
-  UserModel({
-    required this.idusuario,
+  UsuarioModel({
+    this.idUsuario,
     required this.nome,
     required this.cpf,
     required this.email,
     required this.telefone,
     required this.senha,
-    this.ativado = false,
-    this.desativado = false,
     this.esqueceuSenha = false,
-    required this.dataCadastro,
-    required this.endereco,
+    this.dataCadastro,
+    this.idCargo,
+    this.petCriado,
   });
+
+  factory UsuarioModel.fromJson(Map<String, dynamic> json) {
+    return UsuarioModel(
+      idUsuario: json['idusuario'] ?? json['idUsuario'],
+      nome: json['nome'],
+      cpf: json['cpf'],
+      email: json['email'],
+      telefone: json['telefone'],
+      senha: json['senha'] ?? '', // Não vem na resposta normalmente
+      esqueceuSenha: json['esqueceusenha'] ?? json['esqueceuSenha'] ?? false,
+      dataCadastro: json['datacadastro'] != null
+          ? DateTime.parse(json['datacadastro'])
+          : null,
+      idCargo: json['idcargo'] ?? json['idCargo'],
+      petCriado: json['petCriado'] != null
+          ? PetModel.fromJson(json['petCriado'])
+          : null,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -33,68 +52,36 @@ class UserModel {
       'email': email,
       'telefone': telefone,
       'senha': senha,
-      'ativado': ativado,
-      'desativado': desativado,
-      'esqueceuSenha': esqueceuSenha,
-      'dataCadastro': dataCadastro.toIso8601String(),
-      'endereco': endereco.toJson(),
+      'esqueceuSenha': esqueceuSenha ?? false,
+      'dataCadastro': dataCadastro?.toIso8601String(),
+      'idCargo': idCargo,
+      if (petCriado != null) 'petData': petCriado!.toJson(),
     };
   }
 
-  // Método factory para criar a partir do cache
-  factory UserModel.fromCache({
-    required String idusuario,
-    required String nome,
-    required String cpf,
-    required String email,
-    required String telefone,
-    required String senha,
-    required AddressModel endereco,
+  UsuarioModel copyWith({
+    int? idUsuario,
+    String? nome,
+    String? cpf,
+    String? email,
+    String? telefone,
+    String? senha,
+    bool? esqueceuSenha,
+    DateTime? dataCadastro,
+    int? idCargo,
+    PetModel? petCriado,
   }) {
-    return UserModel(
-      idusuario: idusuario,
-      nome: nome,
-      cpf: cpf,
-      email: email,
-      telefone: telefone,
-      senha: senha,
-      ativado: false,
-      desativado: false,
-      esqueceuSenha: false,
-      dataCadastro: DateTime.now(), // Data atual do cadastro
-      endereco: endereco,
+    return UsuarioModel(
+      idUsuario: idUsuario ?? this.idUsuario,
+      nome: nome ?? this.nome,
+      cpf: cpf ?? this.cpf,
+      email: email ?? this.email,
+      telefone: telefone ?? this.telefone,
+      senha: senha ?? this.senha,
+      esqueceuSenha: esqueceuSenha ?? this.esqueceuSenha,
+      dataCadastro: dataCadastro ?? this.dataCadastro,
+      idCargo: idCargo ?? this.idCargo,
+      petCriado: petCriado ?? this.petCriado,
     );
-  }
-}
-
-class AddressModel {
-  final String cep;
-  final String rua;
-  final String numero;
-  final String? complemento;
-  final String bairro;
-  final String cidade;
-  final String estado;
-
-  AddressModel({
-    required this.cep,
-    required this.rua,
-    required this.numero,
-    this.complemento,
-    required this.bairro,
-    required this.cidade,
-    required this.estado,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'cep': cep,
-      'rua': rua,
-      'numero': numero,
-      'complemento': complemento,
-      'bairro': bairro,
-      'cidade': cidade,
-      'estado': estado,
-    };
   }
 }

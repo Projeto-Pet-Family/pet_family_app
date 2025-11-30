@@ -1,77 +1,106 @@
-import 'package:flutter/material.dart';
-import '../../models/pet/especie_model.dart';
-import '../../services/pet/especie_service.dart';
+// presentation/providers/especie_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:pet_family_app/models/pet/especie_model.dart';
+import 'package:pet_family_app/repository/pet/especie_repository.dart';
 
 class EspecieProvider with ChangeNotifier {
-  final EspecieService _especieService;
-  List<Especie> _especies = [];
-  bool _isLoading = false;
+  final EspecieRepository especieRepository;
+
+  List<EspecieModel> _especies = [];
+  EspecieModel? _especieSelecionada;
+  bool _loading = false;
   String? _error;
-  bool _hasLoaded = false;
-  bool _isDisposed = false;
+  bool _success = false;
 
-  EspecieProvider({required EspecieService especieService}) 
-      : _especieService = especieService;
+  EspecieProvider({required this.especieRepository});
 
-  List<Especie> get especies => _especies;
-  bool get isLoading => _isLoading;
+  // Getters
+  List<EspecieModel> get especies => _especies;
+  EspecieModel? get especieSelecionada => _especieSelecionada;
+  bool get loading => _loading;
   String? get error => _error;
-  bool get hasLoaded => _hasLoaded;
+  bool get success => _success;
 
-  Future<void> loadEspecies({bool forceRefresh = false}) async {
-    // Se já carregou e não é um refresh forçado, não carrega novamente
-    if (_hasLoaded && !forceRefresh) return;
-    
-    if (_isDisposed) return;
-    
-    _isLoading = true;
+  // Listar espécies
+  Future<void> listarEspecies() async {
+    _loading = true;
     _error = null;
-    _safeNotifyListeners();
+    notifyListeners();
 
     try {
-      final especies = await _especieService.getEspecies();
-      if (_isDisposed) return;
-      
-      _especies = especies;
-      _hasLoaded = true;
+      _especies = await especieRepository.listarEspecies();
       _error = null;
     } catch (e) {
-      if (_isDisposed) return;
       _error = e.toString();
-      _hasLoaded = false;
+      _especies = [];
     } finally {
-      if (!_isDisposed) {
-        _isLoading = false;
-        _safeNotifyListeners();
-      }
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  void clearError() {
-    if (_isDisposed) return;
+  // Buscar espécie por ID
+  Future<void> buscarEspeciePorId(int idEspecie) async {
+    _loading = true;
     _error = null;
-    _safeNotifyListeners();
-  }
+    notifyListeners();
 
-  // Método para forçar recarregamento
-  Future<void> refreshEspecies() async {
-    await loadEspecies(forceRefresh: true);
-  }
-
-  // Método seguro para notificar listeners
-  void _safeNotifyListeners() {
-    if (!_isDisposed && hasListeners) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_isDisposed && hasListeners) {
-          notifyListeners();
-        }
-      });
+    try {
+      _especieSelecionada =
+          await especieRepository.buscarEspeciePorId(idEspecie);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      _especieSelecionada = null;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    super.dispose();
+  // Criar espécie
+  Future<void> criarEspecie(EspecieModel especie) async {
+    _loading = true;
+    _error = null;
+    _success = false;
+    notifyListeners();
+
+    try {
+      final especieCriada = await especieRepository.criarEspecie(especie);
+      _especies.add(especieCriada);
+      _success = true;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _success = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Selecionar espécie
+  void selecionarEspecie(EspecieModel especie) {
+    _especieSelecionada = especie;
+    notifyListeners();
+  }
+
+  // Limpar seleção
+  void limparSelecao() {
+    _especieSelecionada = null;
+    notifyListeners();
+  }
+
+  // Limpar estados
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearSuccess() {
+    _success = false;
+    notifyListeners();
   }
 }

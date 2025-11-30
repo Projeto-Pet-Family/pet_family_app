@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:pet_family_app/models/pet/especie_model.dart';
-import 'package:pet_family_app/models/pet/raca_model.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/models/pet/porte_model.dart';
+import 'package:pet_family_app/models/pet/raca_model.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
-import 'package:pet_family_app/providers/pet/raca_provider.dart';
 import 'package:pet_family_app/providers/pet/porte_provider.dart';
+import 'package:pet_family_app/providers/pet/raca_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:pet_family_app/widgets/app_drop_down.dart';
 
 class ModalEditPet extends StatefulWidget {
-  final Map<String, dynamic> petData;
-  final Function(Map<String, dynamic>)? onPetEdited;
+  final PetModel petData;
+  final Function(PetModel)? onPetEdited;
   final Function()? onPetDeleted;
 
   const ModalEditPet({
@@ -30,9 +31,9 @@ class _ModalEditPetState extends State<ModalEditPet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nomeController = TextEditingController();
 
-  Especie? _selectedEspecie;
-  Raca? _selectedRaca;
-  Porte? _selectedPorte;
+  EspecieModel? _selectedEspecie;
+  RacaModel? _selectedRaca;
+  PorteModel? _selectedPorte;
   String _selectedSexo = 'M';
 
   bool _isLoading = true;
@@ -41,7 +42,9 @@ class _ModalEditPetState extends State<ModalEditPet> {
   @override
   void initState() {
     super.initState();
-    _carregarDados();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _carregarDados();
+    });
   }
 
   Future<void> _carregarDados() async {
@@ -51,16 +54,10 @@ class _ModalEditPetState extends State<ModalEditPet> {
       final racaProvider = Provider.of<RacaProvider>(context, listen: false);
       final porteProvider = Provider.of<PorteProvider>(context, listen: false);
 
-      // Carrega os dados se necessário
-      if (!especieProvider.hasLoaded && !especieProvider.isLoading) {
-        await especieProvider.loadEspecies();
-      }
-      if (!racaProvider.hasLoaded && !racaProvider.isLoading) {
-        await racaProvider.loadRacas();
-      }
-      if (!porteProvider.hasLoaded && !porteProvider.isLoading) {
-        await porteProvider.loadPortes();
-      }
+      // Carrega os dados usando os novos métodos do provider
+      await especieProvider.listarEspecies();
+      await racaProvider.listarRacas();
+      await porteProvider.listarPortes();
 
       if (mounted) {
         // Preenche os dados atuais do pet
@@ -84,102 +81,83 @@ class _ModalEditPetState extends State<ModalEditPet> {
     RacaProvider racaProvider,
     PorteProvider porteProvider,
   ) {
-    // Preenche o nome
-    _nomeController.text = widget.petData['nome'] ?? '';
+    // Preenche o nome com fallback
+    _nomeController.text = widget.petData.nome ?? 'Pet sem nome';
 
     // DEBUG: Verificar quais dados estão chegando
-    print('🐶 Dados do pet recebidos: ${widget.petData}');
+    print('🐶 Dados do pet recebidos:');
+    print('   - ID: ${widget.petData.idPet}');
+    print('   - Nome: ${widget.petData.nome}');
+    print('   - Sexo: ${widget.petData.sexo}');
+    print('   - Espécie ID: ${widget.petData.idEspecie}');
+    print('   - Raça ID: ${widget.petData.idRaca}');
+    print('   - Porte ID: ${widget.petData.idPorte}');
 
-    // Preenche a espécie - busca por diferentes chaves possíveis
-    final idEspecie = widget.petData['idespecie'] ??
-        widget.petData['idEspecie'] ??
-        widget.petData['idespecie'];
-    print('🔍 Buscando espécie com ID: $idEspecie');
+    // Preenche a espécie com fallback
+    _selectedEspecie = _findEspecie(especieProvider, widget.petData.idEspecie);
 
-    if (idEspecie != null && idEspecie != 'null') {
-      try {
-        _selectedEspecie = especieProvider.especies.firstWhere(
-          (especie) => especie.idEspecie == idEspecie,
-        );
-        print('✅ Espécie encontrada: ${_selectedEspecie?.descricao}');
-      } catch (e) {
-        print('❌ Espécie não encontrada, usando primeira da lista');
-        _selectedEspecie = especieProvider.especies.isNotEmpty
-            ? especieProvider.especies.first
-            : null;
-      }
-    } else {
-      print('⚠️ ID de espécie não fornecido ou é null');
-      _selectedEspecie = especieProvider.especies.isNotEmpty
-          ? especieProvider.especies.first
-          : null;
-    }
+    // Preenche a raça com fallback
+    _selectedRaca = _findRaca(racaProvider, widget.petData.idRaca);
 
-    // Preenche a raça
-    final idRaca = widget.petData['idraca'] ??
-        widget.petData['idRaca'] ??
-        widget.petData['idraca'];
-    print('🔍 Buscando raça com ID: $idRaca');
+    // Preenche o porte com fallback (pode ser null)
+    _selectedPorte = _findPorte(porteProvider, widget.petData.idPorte);
 
-    if (idRaca != null && idRaca != 'null') {
-      try {
-        _selectedRaca = racaProvider.racas.firstWhere(
-          (raca) => raca.idRaca == idRaca,
-        );
-        print('✅ Raça encontrada: ${_selectedRaca?.descricao}');
-      } catch (e) {
-        print('❌ Raça não encontrada, usando primeira da lista');
-        _selectedRaca =
-            racaProvider.racas.isNotEmpty ? racaProvider.racas.first : null;
-      }
-    } else {
-      print('⚠️ ID de raça não fornecido ou é null');
-      _selectedRaca =
-          racaProvider.racas.isNotEmpty ? racaProvider.racas.first : null;
-    }
-
-    // Preenche o porte
-    final idPorte = widget.petData['idporte'] ??
-        widget.petData['idPorte'] ??
-        widget.petData['idporte'];
-    print('🔍 Buscando porte com ID: $idPorte');
-
-    if (idPorte != null && idPorte != 'null') {
-      try {
-        _selectedPorte = porteProvider.portes.firstWhere(
-          (porte) => porte.idPorte == idPorte,
-        );
-        print('✅ Porte encontrado: ${_selectedPorte?.descricao}');
-      } catch (e) {
-        print('❌ Porte não encontrado, usando primeiro da lista');
-        _selectedPorte =
-            porteProvider.portes.isNotEmpty ? porteProvider.portes.first : null;
-      }
-    } else {
-      print('⚠️ ID de porte não fornecido ou é null');
-      _selectedPorte =
-          porteProvider.portes.isNotEmpty ? porteProvider.portes.first : null;
-    }
-
-    // Preenche o sexo
-    final sexo = widget.petData['sexo'];
-    print('🔍 Sexo atual: $sexo');
-
-    if (sexo != null) {
-      _selectedSexo = sexo.toString().toUpperCase() == 'F' ? 'F' : 'M';
-    } else {
-      _selectedSexo = 'M'; // Valor padrão
-    }
+    // Preenche o sexo com fallback para 'M'
+    _selectedSexo = _getSexoWithFallback(widget.petData.sexo);
 
     print('✅ Configuração final:');
     print('   - Nome: ${_nomeController.text}');
-    print(
-        '   - Espécie: ${_selectedEspecie?.descricao} (ID: ${_selectedEspecie?.idEspecie})');
-    print(
-        '   - Raça: ${_selectedRaca?.descricao} (ID: ${_selectedRaca?.idRaca})');
-    print(
-        '   - Porte: ${_selectedPorte?.descricao} (ID: ${_selectedPorte?.idPorte})');
+    print('   - Espécie: ${_selectedEspecie?.descricao}');
+    print('   - Raça: ${_selectedRaca?.descricao}');
+    print('   - Porte: ${_selectedPorte?.descricao}');
     print('   - Sexo: $_selectedSexo');
+  }
+
+  EspecieModel? _findEspecie(EspecieProvider provider, int? idEspecie) {
+    if (idEspecie != null) {
+      try {
+        return provider.especies.firstWhere(
+          (especie) => especie.idEspecie == idEspecie,
+        );
+      } catch (e) {
+        print('❌ Espécie $idEspecie não encontrada');
+      }
+    }
+    return provider.especies.isNotEmpty ? provider.especies.first : null;
+  }
+
+  RacaModel? _findRaca(RacaProvider provider, int? idRaca) {
+    if (idRaca != null) {
+      try {
+        return provider.racas.firstWhere(
+          (raca) => raca.idRaca == idRaca,
+        );
+      } catch (e) {
+        print('❌ Raça $idRaca não encontrada');
+      }
+    }
+    return provider.racas.isNotEmpty ? provider.racas.first : null;
+  }
+
+  PorteModel? _findPorte(PorteProvider provider, int? idPorte) {
+    if (idPorte != null) {
+      try {
+        return provider.portes.firstWhere(
+          (porte) => porte.idPorte == idPorte,
+        );
+      } catch (e) {
+        print('❌ Porte $idPorte não encontrado');
+      }
+    }
+    // Porte pode ser null, então retornamos null se não encontrar
+    return provider.portes.isNotEmpty ? provider.portes.first : null;
+  }
+
+  String _getSexoWithFallback(String? sexo) {
+    if (sexo == null || sexo.isEmpty) return 'M';
+
+    final upperSexo = sexo.toUpperCase();
+    return (upperSexo == 'F' || upperSexo == 'FÊMEA') ? 'F' : 'M';
   }
 
   @override
@@ -312,19 +290,18 @@ class _ModalEditPetState extends State<ModalEditPet> {
           // Dropdown para Espécie
           Consumer<EspecieProvider>(
             builder: (context, especieProvider, child) {
-              if (especieProvider.isLoading &&
-                  especieProvider.especies.isEmpty) {
+              if (especieProvider.loading && especieProvider.especies.isEmpty) {
                 return _buildDropdownLoading('Espécie');
               }
 
-              return AppDropDown<Especie>(
+              return AppDropDown<EspecieModel>(
                 value: _selectedEspecie,
                 items: especieProvider.especies,
                 label: 'Espécie',
                 hint: 'Selecione uma espécie',
                 isRequired: true,
                 errorMessage: 'Selecione uma espécie',
-                onChanged: (Especie? newEspecie) {
+                onChanged: (EspecieModel? newEspecie) {
                   setState(() {
                     _selectedEspecie = newEspecie;
                   });
@@ -339,18 +316,18 @@ class _ModalEditPetState extends State<ModalEditPet> {
           // Dropdown para Raça
           Consumer<RacaProvider>(
             builder: (context, racaProvider, child) {
-              if (racaProvider.isLoading && racaProvider.racas.isEmpty) {
+              if (racaProvider.loading && racaProvider.racas.isEmpty) {
                 return _buildDropdownLoading('Raça');
               }
 
-              return AppDropDown<Raca>(
+              return AppDropDown<RacaModel>(
                 value: _selectedRaca,
                 items: racaProvider.racas,
                 label: 'Raça',
                 hint: 'Selecione uma raça',
                 isRequired: true,
                 errorMessage: 'Selecione uma raça',
-                onChanged: (Raca? newRaca) {
+                onChanged: (RacaModel? newRaca) {
                   setState(() {
                     _selectedRaca = newRaca;
                   });
@@ -383,18 +360,18 @@ class _ModalEditPetState extends State<ModalEditPet> {
           // Dropdown para Porte
           Consumer<PorteProvider>(
             builder: (context, porteProvider, child) {
-              if (porteProvider.isLoading && porteProvider.portes.isEmpty) {
+              if (porteProvider.loading && porteProvider.portes.isEmpty) {
                 return _buildDropdownLoading('Porte');
               }
 
-              return AppDropDown<Porte>(
+              return AppDropDown<PorteModel>(
                 value: _selectedPorte,
                 items: porteProvider.portes,
                 label: 'Porte',
                 hint: 'Selecione um porte',
                 isRequired: true,
                 errorMessage: 'Selecione um porte',
-                onChanged: (Porte? newPorte) {
+                onChanged: (PorteModel? newPorte) {
                   setState(() {
                     _selectedPorte = newPorte;
                   });
@@ -502,37 +479,34 @@ class _ModalEditPetState extends State<ModalEditPet> {
 
   void _salvarEdicoes() {
     if (_formKey.currentState!.validate()) {
-      if (_selectedEspecie == null ||
-          _selectedRaca == null ||
-          _selectedPorte == null) {
+      if (_selectedEspecie == null || _selectedRaca == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Por favor, preencha todos os campos obrigatórios'),
+            content: Text('Por favor, preencha espécie e raça'),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
 
-      final petEditado = {
-        'idpet': widget.petData['idpet'] ?? widget.petData['idPet'],
-        'nome': _nomeController.text.trim(),
-        'sexo': _selectedSexo,
-        'idespecie': _selectedEspecie!.idEspecie,
-        'idraca': _selectedRaca!.idRaca,
-        'idporte': _selectedPorte!.idPorte,
-        // Manter o idUsuario original se existir
-        'idUsuario': widget.petData['idusuario'] ?? widget.petData['idUsuario'],
-      };
+      final petEditado = PetModel(
+        idPet: widget.petData.idPet,
+        nome: _nomeController.text.trim(),
+        sexo: _selectedSexo,
+        idEspecie: _selectedEspecie!.idEspecie,
+        idRaca: _selectedRaca!.idRaca,
+        idPorte: _selectedPorte?.idPorte,
+        idUsuario: widget.petData.idUsuario,
+        nascimento: widget.petData.nascimento,
+        observacoes: widget.petData.observacoes,
+      );
 
       print('💾 Salvando alterações do pet:');
-      print('   - ID: ${petEditado['idpet']}');
-      print('   - Nome: ${petEditado['nome']}');
-      print('   - Sexo: ${petEditado['sexo']}');
-      print('   - Espécie ID: ${petEditado['idespecie']}');
-      print('   - Raça ID: ${petEditado['idraca']}');
-      print('   - Porte ID: ${petEditado['idporte']}');
-      print('   - Usuário ID: ${petEditado['idUsuario']}');
+      print('   - Nome: ${petEditado.nome}');
+      print('   - Sexo: ${petEditado.sexo}');
+      print('   - Espécie ID: ${petEditado.idEspecie}');
+      print('   - Raça ID: ${petEditado.idRaca}');
+      print('   - Porte ID: ${petEditado.idPorte}');
 
       Navigator.of(context).pop();
       widget.onPetEdited?.call(petEditado);

@@ -1,189 +1,180 @@
+// presentation/providers/pet_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import '../../services/pet/pet_service.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/repository/pet/pet_repository.dart';
 
 class PetProvider with ChangeNotifier {
-  List<dynamic> _pets = [];
-  bool _isLoading = false;
-  String _errorMessage = '';
+  final PetRepository petRepository;
 
-  // Crie uma instância do PetService
-  final PetService _petService = PetService(client: http.Client());
+  List<PetModel> _pets = [];
+  PetModel? _petSelecionado;
+  bool _loading = false;
+  String? _error;
+  bool _success = false;
 
-  List<dynamic> get pets => _pets;
-  bool get isLoading => _isLoading;
-  String get errorMessage => _errorMessage;
+  PetProvider({required this.petRepository});
 
-  // Buscar pets por usuário - ajustado para String
-  Future<void> buscarPetsPorUsuario(String usuarioId) async {
-    if (_isLoading) return; // Evita múltiplas chamadas simultâneas
+  // Getters
+  List<PetModel> get pets => _pets;
+  PetModel? get petSelecionado => _petSelecionado;
+  bool get loading => _loading;
+  String? get error => _error;
+  bool get success => _success;
 
-    _isLoading = true;
-    _errorMessage = '';
+  // Criar pet
+  Future<void> criarPet(PetModel pet) async {
+    _loading = true;
+    _error = null;
+    _success = false;
     notifyListeners();
 
     try {
-      final petsData = await _petService.buscarPetsPorUsuario(usuarioId);
-      _pets = petsData;
-      _errorMessage = '';
-    } catch (error) {
-      _errorMessage = error.toString();
-      _pets = [];
-      print('❌ Erro ao buscar pets: $error');
+      final response = await petRepository.criarPet(pet);
+      final petCriado = PetModel.fromJson(response['data']);
+
+      _pets.add(petCriado);
+      _success = true;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _success = false;
+      notifyListeners();
+      rethrow;
     } finally {
-      _isLoading = false;
+      _loading = false;
       notifyListeners();
-    }
-  }
-
-  // Adicionar pet
-  Future<bool> adicionarPet(Map<String, dynamic> petData) async {
-    _isLoading = true;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      final result = await _petService.adicionarPet(petData);
-
-      if (result['success'] == true) {
-        // Recarrega a lista de pets após adicionar
-        final usuarioId = petData['idusuario'];
-        if (usuarioId != null) {
-          await buscarPetsPorUsuario(usuarioId.toString());
-        }
-        return true;
-      } else {
-        _errorMessage = result['message'] ?? 'Erro ao adicionar pet';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (error) {
-      _errorMessage = error.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Atualizar pet
-  Future<bool> atualizarPet(int petId, Map<String, dynamic> petData) async {
-    _isLoading = true;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      final result = await _petService.atualizarPet(petId, petData);
-
-      if (result['success'] == true) {
-        // Recarrega a lista de pets após atualizar
-        final usuarioId = petData['idusuario'];
-        if (usuarioId != null) {
-          await buscarPetsPorUsuario(usuarioId.toString());
-        }
-        return true;
-      } else {
-        _errorMessage = result['message'] ?? 'Erro ao atualizar pet';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (error) {
-      _errorMessage = error.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Remover pet
-  Future<bool> removerPet(int petId, String usuarioId) async {
-    _isLoading = true;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      final result = await _petService.removerPet(petId);
-
-      if (result['success'] == true) {
-        // Remove localmente e recarrega a lista
-        _pets.removeWhere((pet) => pet['idpet'] == petId);
-
-        // Recarrega a lista completa para garantir sincronização
-        await buscarPetsPorUsuario(usuarioId);
-
-        return true;
-      } else {
-        _errorMessage = result['message'] ?? 'Erro ao remover pet';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (error) {
-      _errorMessage = error.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
     }
   }
 
   // Buscar pet por ID
-  Future<Map<String, dynamic>?> buscarPetPorId(int petId) async {
-    try {
-      final result = await _petService.buscarPetPorId(petId);
-
-      if (result['success'] == true) {
-        return result['pet'];
-      } else {
-        _errorMessage = 'Pet não encontrado';
-        return null;
-      }
-    } catch (error) {
-      _errorMessage = error.toString();
-      return null;
-    }
-  }
-
-  // Buscar raça por ID
-  Future<Map<String, dynamic>?> buscarRacaPorId(int idRaca) async {
-    try {
-      return await _petService.buscarRacaPorId(idRaca);
-    } catch (error) {
-      _errorMessage = error.toString();
-      return null;
-    }
-  }
-
-  // Limpar erro
-  void clearError() {
-    _errorMessage = '';
+  Future<void> buscarPetPorId(int idPet) async {
+    _loading = true;
+    _error = null;
     notifyListeners();
-  }
 
-  // Limpar lista de pets
-  void clearPets() {
-    _pets = [];
-    notifyListeners();
-  }
-
-  // Buscar pet localmente por ID
-  Map<String, dynamic>? getPetPorId(int petId) {
     try {
-      return _pets.firstWhere(
-        (pet) => pet['idpet'] == petId,
-        orElse: () => null,
-      );
+      _petSelecionado = await petRepository.buscarPetPorId(idPet);
+      _error = null;
     } catch (e) {
-      return null;
-    }
-  }
-
-  // Atualizar pet localmente (para otimização)
-  void atualizarPetLocalmente(int petId, Map<String, dynamic> novosDados) {
-    final index = _pets.indexWhere((pet) => pet['idpet'] == petId);
-    if (index != -1) {
-      _pets[index] = {..._pets[index], ...novosDados};
+      _error = e.toString();
+      _petSelecionado = null;
+    } finally {
+      _loading = false;
       notifyListeners();
     }
+  }
+
+  // Listar todos os pets
+  Future<void> listarPets() async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _pets = await petRepository.listarPets();
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      _pets = [];
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Listar pets por usuário
+  Future<void> listarPetsPorUsuario(int idUsuario) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _pets = await petRepository.listarPetsPorUsuario(idUsuario);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      _pets = [];
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Atualizar pet
+  Future<void> atualizarPet(int idPet, PetModel pet) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final petAtualizado = await petRepository.atualizarPet(idPet, pet);
+
+      // Atualiza na lista local
+      final index = _pets.indexWhere((p) => p.idPet == idPet);
+      if (index != -1) {
+        _pets[index] = petAtualizado;
+      }
+
+      // Atualiza pet selecionado se for o mesmo
+      if (_petSelecionado?.idPet == idPet) {
+        _petSelecionado = petAtualizado;
+      }
+
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Excluir pet
+  Future<void> excluirPet(int idPet) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await petRepository.excluirPet(idPet);
+
+      // Remove da lista local
+      _pets.removeWhere((p) => p.idPet == idPet);
+
+      // Limpa pet selecionado se for o mesmo
+      if (_petSelecionado?.idPet == idPet) {
+        _petSelecionado = null;
+      }
+
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Selecionar pet
+  void selecionarPet(PetModel pet) {
+    _petSelecionado = pet;
+    notifyListeners();
+  }
+
+  // Limpar seleção
+  void limparSelecao() {
+    _petSelecionado = null;
+    notifyListeners();
+  }
+
+  // Limpar estados
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearSuccess() {
+    _success = false;
+    notifyListeners();
   }
 }
