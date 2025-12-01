@@ -30,7 +30,7 @@ class PetService {
   // Criar pet
   Future<Map<String, dynamic>> criarPet(PetModel pet) async {
     final response = await client.post(
-      Uri.parse('$baseUrl/pets'),
+      Uri.parse('$baseUrl/pet'),
       headers: headers,
       body: json.encode(pet.toJson()),
     );

@@ -39,7 +39,7 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
       _isLoadingPortes = false;
   String? _errorMessage;
 
-  static const String _nameKey = 'pet_name',
+  static const String _namePetKey = 'pet_name',
       _speciesKey = 'pet_species',
       _raceKey = 'pet_race';
   static const String _porteKey = 'pet_porte',
@@ -196,7 +196,7 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
 
   Future<void> _savePetData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_nameKey, nameController.text);
+    await prefs.setString(_namePetKey, nameController.text);
     await prefs.setString(_speciesKey, _speciesAnimalsType ?? '');
     await prefs.setString(_raceKey, _raceAnimalType ?? '');
     await prefs.setString(_porteKey, _porteAnimalType ?? '');
@@ -211,7 +211,7 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
   Future<void> _loadPetData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      nameController.text = prefs.getString(_nameKey) ?? '';
+      nameController.text = prefs.getString(_namePetKey) ?? '';
       _speciesAnimalsType = _getValidPref(prefs, _speciesKey);
       _raceAnimalType = _getValidPref(prefs, _raceKey);
       _porteAnimalType = _getValidPref(prefs, _porteKey);

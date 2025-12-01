@@ -1,6 +1,7 @@
 // data/datasources/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/models/user_model.dart';
 
 class UserService {
@@ -11,8 +12,8 @@ class UserService {
 
   // Headers comuns
   Map<String, String> get headers => {
-    'Content-Type': 'application/json',
-  };
+        'Content-Type': 'application/json',
+      };
 
   // Tratamento de erros
   void _handleError(http.Response response) {
@@ -78,7 +79,8 @@ class UserService {
   }
 
   // Atualizar usuário
-  Future<UsuarioModel> atualizarUsuario(int idUsuario, UsuarioModel usuario) async {
+  Future<UsuarioModel> atualizarUsuario(
+      int idUsuario, UsuarioModel usuario) async {
     final response = await client.put(
       Uri.parse('$baseUrl/usuarios/$idUsuario'),
       headers: headers,
@@ -104,6 +106,27 @@ class UserService {
     if (response.statusCode != 200) {
       _handleError(response);
       throw Exception('Erro ao excluir usuário');
+    }
+  }
+
+  Future<Map<String, dynamic>> criarUsuarioComPet(
+      UsuarioModel usuario, PetModel? petData) async {
+    final payload = {
+      ...usuario.toJson(),
+      if (petData != null) 'petData': petData.toJson(),
+    };
+
+    final response = await client.post(
+      Uri.parse('$baseUrl/usuarios'),
+      headers: headers,
+      body: json.encode(payload),
+    );
+
+    if (response.statusCode == 201) {
+      return json.decode(response.body);
+    } else {
+      _handleError(response);
+      throw Exception('Erro ao criar usuário com pet');
     }
   }
 }

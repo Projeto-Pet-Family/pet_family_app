@@ -1,13 +1,17 @@
 // domain/repositories/usuario_repository.dart
+import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/models/user_model.dart';
 import 'package:pet_family_app/services/user_service.dart';
 
 abstract class UserRepository {
-  Future<Map<String, dynamic>> criarUsuario(UsuarioModel usuario);
+  Future<Map<String, dynamic>> criarUsuario(UsuarioModel usuario,
+      {Map<String, dynamic>? petData});
   Future<UsuarioModel> buscarUsuarioPorId(int idUsuario);
   Future<List<UsuarioModel>> listarUsuarios();
   Future<UsuarioModel> atualizarUsuario(int idUsuario, UsuarioModel usuario);
   Future<void> excluirUsuario(int idUsuario);
+  Future<Map<String, dynamic>> criarUsuarioComPet(
+      UsuarioModel usuario, PetModel? petData);
 }
 
 // data/repositories/usuario_repository_impl.dart
@@ -17,7 +21,8 @@ class UsuarioRepositoryImpl implements UserRepository {
   UsuarioRepositoryImpl({required this.userService});
 
   @override
-  Future<Map<String, dynamic>> criarUsuario(UsuarioModel usuario) async {
+  Future<Map<String, dynamic>> criarUsuario(UsuarioModel usuario,
+      {Map<String, dynamic>? petData}) async {
     try {
       return await userService.criarUsuario(usuario);
     } catch (e) {
@@ -44,7 +49,8 @@ class UsuarioRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<UsuarioModel> atualizarUsuario(int idUsuario, UsuarioModel usuario) async {
+  Future<UsuarioModel> atualizarUsuario(
+      int idUsuario, UsuarioModel usuario) async {
     try {
       return await userService.atualizarUsuario(idUsuario, usuario);
     } catch (e) {
@@ -58,6 +64,16 @@ class UsuarioRepositoryImpl implements UserRepository {
       await userService.excluirUsuario(idUsuario);
     } catch (e) {
       throw Exception('Erro ao excluir usuário: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> criarUsuarioComPet(
+      UsuarioModel usuario, PetModel? petData) async {
+    try {
+      return await userService.criarUsuarioComPet(usuario, petData);
+    } catch (e) {
+      throw Exception('Erro ao adicioner pet: ${e.toString()}');
     }
   }
 }
