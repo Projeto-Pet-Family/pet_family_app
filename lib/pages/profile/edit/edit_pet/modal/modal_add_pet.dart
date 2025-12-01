@@ -6,7 +6,6 @@ import 'package:pet_family_app/models/pet/raca_model.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
 import 'package:pet_family_app/providers/pet/porte_provider.dart';
 import 'package:pet_family_app/providers/pet/raca_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:pet_family_app/widgets/app_drop_down.dart';
@@ -14,8 +13,18 @@ import 'package:pet_family_app/widgets/app_drop_down.dart';
 class ModalAddPet extends StatefulWidget {
   final int idUsuario;
   final Function(PetModel)? onPetAdded;
+  final EspecieProvider especieProvider;
+  final RacaProvider racaProvider;
+  final PorteProvider porteProvider;
 
-  const ModalAddPet({super.key, required this.idUsuario, this.onPetAdded});
+  const ModalAddPet({
+    super.key,
+    required this.idUsuario,
+    this.onPetAdded,
+    required this.especieProvider,
+    required this.racaProvider,
+    required this.porteProvider,
+  });
 
   @override
   State<ModalAddPet> createState() => _ModalAddPetState();
@@ -45,22 +54,17 @@ class _ModalAddPetState extends State<ModalAddPet> {
     print('ModalAddPet: _carregarDados iniciado');
 
     try {
-      final especieProvider =
-          Provider.of<EspecieProvider>(context, listen: false);
-      final racaProvider = Provider.of<RacaProvider>(context, listen: false);
-      final porteProvider = Provider.of<PorteProvider>(context, listen: false);
+      print('ModalAddPet: Usando providers passados como parâmetro');
 
-      print('ModalAddPet: Providers obtidos');
-
-      // Usa os novos métodos do provider
-      await especieProvider.listarEspecies();
-      await racaProvider.listarRacas();
-      await porteProvider.listarPortes();
+      // Usa os métodos do provider passados como parâmetro
+      await widget.especieProvider.listarEspecies();
+      await widget.racaProvider.listarRacas();
+      await widget.porteProvider.listarPortes();
 
       print('ModalAddPet: Dados carregados com sucesso');
-      print('  - Espécies: ${especieProvider.especies.length}');
-      print('  - Raças: ${racaProvider.racas.length}');
-      print('  - Portes: ${porteProvider.portes.length}');
+      print('  - Espécies: ${widget.especieProvider.especies.length}');
+      print('  - Raças: ${widget.racaProvider.racas.length}');
+      print('  - Portes: ${widget.porteProvider.portes.length}');
 
       if (mounted) {
         print(
@@ -215,18 +219,19 @@ class _ModalAddPetState extends State<ModalAddPet> {
           const SizedBox(height: 16),
 
           // Dropdown para Espécie
-          Consumer<EspecieProvider>(
-            builder: (context, especieProvider, child) {
+          Builder(
+            builder: (context) {
               print(
-                  'ModalAddPet: Consumer Espécie - loading: ${especieProvider.loading}, count: ${especieProvider.especies.length}');
+                  'ModalAddPet: Builder Espécie - count: ${widget.especieProvider.especies.length}');
 
-              if (especieProvider.loading && especieProvider.especies.isEmpty) {
+              if (widget.especieProvider.loading &&
+                  widget.especieProvider.especies.isEmpty) {
                 return _buildDropdownLoading('Espécie');
               }
 
               return AppDropDown<EspecieModel>(
                 value: _selectedEspecie,
-                items: especieProvider.especies,
+                items: widget.especieProvider.especies,
                 label: 'Espécie',
                 hint: 'Selecione uma espécie',
                 isRequired: true,
@@ -244,18 +249,19 @@ class _ModalAddPetState extends State<ModalAddPet> {
           const SizedBox(height: 16),
 
           // Dropdown para Raça
-          Consumer<RacaProvider>(
-            builder: (context, racaProvider, child) {
+          Builder(
+            builder: (context) {
               print(
-                  'ModalAddPet: Consumer Raça - loading: ${racaProvider.loading}, count: ${racaProvider.racas.length}');
+                  'ModalAddPet: Builder Raça - count: ${widget.racaProvider.racas.length}');
 
-              if (racaProvider.loading && racaProvider.racas.isEmpty) {
+              if (widget.racaProvider.loading &&
+                  widget.racaProvider.racas.isEmpty) {
                 return _buildDropdownLoading('Raça');
               }
 
               return AppDropDown<RacaModel>(
                 value: _selectedRaca,
-                items: racaProvider.racas,
+                items: widget.racaProvider.racas,
                 label: 'Raça',
                 hint: 'Selecione uma raça',
                 isRequired: true,
@@ -291,18 +297,19 @@ class _ModalAddPetState extends State<ModalAddPet> {
           const SizedBox(height: 16),
 
           // Dropdown para Porte
-          Consumer<PorteProvider>(
-            builder: (context, porteProvider, child) {
+          Builder(
+            builder: (context) {
               print(
-                  'ModalAddPet: Consumer Porte - loading: ${porteProvider.loading}, count: ${porteProvider.portes.length}');
+                  'ModalAddPet: Builder Porte - count: ${widget.porteProvider.portes.length}');
 
-              if (porteProvider.loading && porteProvider.portes.isEmpty) {
+              if (widget.porteProvider.loading &&
+                  widget.porteProvider.portes.isEmpty) {
                 return _buildDropdownLoading('Porte');
               }
 
               return AppDropDown<PorteModel>(
                 value: _selectedPorte,
-                items: porteProvider.portes,
+                items: widget.porteProvider.portes,
                 label: 'Porte',
                 hint: 'Selecione um porte',
                 isRequired: true,

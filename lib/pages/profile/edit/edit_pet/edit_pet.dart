@@ -190,31 +190,29 @@ class _EditPetState extends State<EditPet> {
                         onPressed: usuarioId == null || petProvider.loading
                             ? null
                             : () {
+                                // Busque os providers antes de abrir o modal
+                                final especieProvider =
+                                    Provider.of<EspecieProvider>(context,
+                                        listen: false);
+                                final racaProvider = Provider.of<RacaProvider>(
+                                    context,
+                                    listen: false);
+                                final porteProvider =
+                                    Provider.of<PorteProvider>(context,
+                                        listen: false);
+
                                 showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
                                   builder: (BuildContext context) =>
-                                      MultiProvider(
-                                    providers: [
-                                      Provider<EspecieProvider>.value(
-                                        value: Provider.of<EspecieProvider>(
-                                            context),
-                                      ),
-                                      Provider<RacaProvider>.value(
-                                        value:
-                                            Provider.of<RacaProvider>(context),
-                                      ),
-                                      Provider<PorteProvider>.value(
-                                        value:
-                                            Provider.of<PorteProvider>(context),
-                                      ),
-                                    ],
-                                    child: ModalAddPet(
-                                      idUsuario: usuarioId,
-                                      onPetAdded: (petData) {
-                                        _adicionarNovoPet(petData);
-                                      },
-                                    ),
+                                      ModalAddPet(
+                                    idUsuario: usuarioId,
+                                    especieProvider: especieProvider,
+                                    racaProvider: racaProvider,
+                                    porteProvider: porteProvider,
+                                    onPetAdded: (petData) {
+                                      _adicionarNovoPet(petData);
+                                    },
                                   ),
                                 );
                               },
