@@ -1,552 +1,189 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../services/auth_service.dart';
+import 'package:pet_family_app/models/user_model.dart';
+import 'package:pet_family_app/repository/auth_repository.dart';
 
-class AuthProvider with ChangeNotifier {
+class AuthenticationProvider extends ChangeNotifier {
+  final AuthRepository _repository = AuthRepository();
+  
+  UsuarioModel? _usuario;
   bool _isLoading = false;
-  String? _errorMessage;
-  Map<String, dynamic>? _usuarioLogado;
+  bool _isAuthenticated = false;
+  String? _error;
 
+  UsuarioModel? get usuario => _usuario;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  Map<String, dynamic>? get usuarioLogado => _usuarioLogado;
-  bool get isLoggedIn => _usuarioLogado != null;
+  bool get isAuthenticated => _isAuthenticated;
+  String? get error => _error;
 
-  AuthProvider() {
-    _carregarUsuarioDoCache();
+  AuthenticationProvider() {
+    _loadCurrentUser();
   }
 
-  // ✅ MÉTODO UNIFICADO: Carregar usuário do cache
-  Future<void> _carregarUsuarioDoCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Tenta carregar do formato JSON unificado
-      final usuarioJson = prefs.getString('usuario_atual');
-      if (usuarioJson != null && usuarioJson.isNotEmpty) {
-        _usuarioLogado = jsonDecode(usuarioJson);
-        print('✅ Usuário carregado do cache: ${_usuarioLogado?['nome']}');
-        notifyListeners();
-        return;
-      }
-
-      // Fallback: carrega dados individuais (formato antigo)
-      final idUsuario = prefs.getInt('idUsuario');
-      final email = prefs.getString('email');
-      final nome = prefs.getString('nome');
-      final telefone = prefs.getString('telefone');
-
-      if (idUsuario != null && email != null && nome != null) {
-        _usuarioLogado = {
-          'idusuario': idUsuario,
-          'idUsuario': idUsuario,
-          'email': email,
-          'nome': nome,
-          if (telefone != null && telefone.isNotEmpty) 'telefone': telefone,
-        };
-
-        // Migra para o formato JSON unificado
-        await _salvarUsuarioNoCache(_usuarioLogado!);
-        notifyListeners();
-      }
-    } catch (e) {
-      print('❌ Erro ao carregar usuário do cache: $e');
-    }
-  }
-
-  // ✅ MÉTODO UNIFICADO: Salvar usuário no cache
-  Future<void> _salvarUsuarioNoCache(Map<String, dynamic> usuario) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Salva como JSON unificado
-      await prefs.setString('usuario_atual', jsonEncode(usuario));
-
-      // Também salva individualmente para compatibilidade
-      final idUsuario = usuario['idusuario'] ?? usuario['idUsuario'];
-      if (idUsuario != null) {
-        await prefs.setInt(
-            'idUsuario', int.tryParse(idUsuario.toString()) ?? 0);
-      }
-
-      await prefs.setString('email', usuario['email']?.toString() ?? '');
-      await prefs.setString('nome', usuario['nome']?.toString() ?? '');
-
-      if (usuario.containsKey('telefone')) {
-        await prefs.setString(
-            'telefone', usuario['telefone']?.toString() ?? '');
-      }
-
-      print('✅ Usuário salvo no cache: ${usuario['nome']}');
-    } catch (e) {
-      print('❌ Erro ao salvar usuário no cache: $e');
-      rethrow;
-    }
-  }
-
-  // ✅ MÉTODO: Armazenar idhospedagem no cache
-  static Future<void> setIdHospedagem(int idHospedagem) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('idhospedagem', idHospedagem);
-      print('✅ idhospedagem salvo no cache: $idHospedagem');
-    } catch (e) {
-      print('❌ Erro ao salvar idhospedagem no cache: $e');
-      rethrow;
-    }
-  }
-
-  // ✅ MÉTODO: Obter idhospedagem do cache
-  static Future<int?> getIdHospedagem() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt('idhospedagem');
-    } catch (e) {
-      print('❌ Erro ao obter idhospedagem do cache: $e');
-      return null;
-    }
-  }
-
-  // ✅ MÉTODO: Limpar idhospedagem do cache
-  static Future<void> limparIdHospedagem() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('idhospedagem');
-      print('✅ idhospedagem removido do cache');
-    } catch (e) {
-      print('❌ Erro ao remover idhospedagem do cache: $e');
-    }
-  }
-
-  // ✅ MÉTODO: Armazenar informações do anfitrião no cache
-  static Future<void> setInfoAnfitriao(
-      int idAnfitriao, String nomeAnfitriao) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('id_anfitriao', idAnfitriao);
-      await prefs.setString('nome_anfitriao', nomeAnfitriao);
-      print(
-          '✅ Informações do anfitrião salvas no cache: $nomeAnfitriao (ID: $idAnfitriao)');
-    } catch (e) {
-      print('❌ Erro ao salvar informações do anfitrião no cache: $e');
-      rethrow;
-    }
-  }
-
-  // ✅ MÉTODO: Obter informações do anfitrião do cache
-  static Future<Map<String, dynamic>?> getInfoAnfitriao() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final idAnfitriao = prefs.getInt('id_anfitriao');
-      final nomeAnfitriao = prefs.getString('nome_anfitriao');
-
-      if (idAnfitriao != null && nomeAnfitriao != null) {
-        return {
-          'idAnfitriao': idAnfitriao,
-          'nomeAnfitriao': nomeAnfitriao,
-        };
-      }
-      return null;
-    } catch (e) {
-      print('❌ Erro ao obter informações do anfitrião do cache: $e');
-      return null;
-    }
-  }
-
-  // ✅ MÉTODO: Limpar informações do anfitrião do cache
-  static Future<void> limparInfoAnfitriao() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('id_anfitriao');
-      await prefs.remove('nome_anfitriao');
-      print('✅ Informações do anfitrião removidas do cache');
-    } catch (e) {
-      print('❌ Erro ao remover informações do anfitrião do cache: $e');
-    }
-  }
-
-  // ✅ MÉTODO: Limpar todo o cache relacionado a mensagens
-  static Future<void> limparCacheMensagens() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('idhospedagem');
-      await prefs.remove('id_anfitriao');
-      await prefs.remove('nome_anfitriao');
-      print('✅ Cache de mensagens limpo completamente');
-    } catch (e) {
-      print('❌ Erro ao limpar cache de mensagens: $e');
-    }
-  }
-
-  // ✅ MÉTODO: Verificar se há informações de hospedagem no cache
-  static Future<bool> temHospedagemNoCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final idHospedagem = prefs.getInt('idhospedagem');
-      final idAnfitriao = prefs.getInt('id_anfitriao');
-
-      return idHospedagem != null && idAnfitriao != null;
-    } catch (e) {
-      print('❌ Erro ao verificar cache de hospedagem: $e');
-      return false;
-    }
-  }
-
-  // ✅ MÉTODO: Obter todas as informações da hospedagem do cache
-  static Future<Map<String, dynamic>?> getInfoHospedagemCompleta() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final idHospedagem = prefs.getInt('idhospedagem');
-      final idAnfitriao = prefs.getInt('id_anfitriao');
-      final nomeAnfitriao = prefs.getString('nome_anfitriao');
-
-      if (idHospedagem != null && idAnfitriao != null) {
-        return {
-          'idHospedagem': idHospedagem,
-          'idAnfitriao': idAnfitriao,
-          'nomeAnfitriao': nomeAnfitriao ?? 'Anfitrião',
-        };
-      }
-      return null;
-    } catch (e) {
-      print('❌ Erro ao obter informações completas da hospedagem: $e');
-      return null;
-    }
-  }
-
-  // ✅ MÉTODO PRINCIPAL: Atualizar perfil na API e cache
-  Future<bool> atualizarPerfil(Map<String, dynamic> dadosAtualizados) async {
+  Future<void> _loadCurrentUser() async {
     try {
       _isLoading = true;
-      _errorMessage = null;
-      notifyListeners(); // ✅ Notifica imediatamente o loading
-
-      print('🌐 Iniciando atualização do perfil na API...');
-
-      if (_usuarioLogado == null) {
-        _errorMessage = 'Usuário não encontrado';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      final idUsuario =
-          _usuarioLogado!['idusuario'] ?? _usuarioLogado!['idUsuario'];
-      if (idUsuario == null) {
-        _errorMessage = 'ID do usuário não encontrado';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      print('🔑 ID do usuário: $idUsuario');
-      print('📤 Dados para enviar: $dadosAtualizados');
-
-      // ✅ CHAMA A API
-      final resultado = await AuthService.atualizarPerfil(
-        idUsuario: int.parse(idUsuario.toString()),
-        dadosAtualizados: dadosAtualizados,
-      );
-
-      if (resultado['success'] == true) {
-        // ✅ ATUALIZA OS DADOS LOCAIS
-        if (resultado['usuario'] != null) {
-          _usuarioLogado = {
-            ..._usuarioLogado!,
-            ...resultado['usuario'],
-          };
-        } else {
-          _usuarioLogado = {
-            ..._usuarioLogado!,
-            ...dadosAtualizados,
-          };
-        }
-
-        // ✅ SALVA NO CACHE
-        await _salvarUsuarioNoCache(_usuarioLogado!);
-
-        print('✅ Perfil atualizado com sucesso na API e cache!');
-
-        _isLoading = false;
-        _errorMessage = null;
-        notifyListeners(); // ✅ NOTIFICA AS MUDANÇAS
-
-        return true;
-      } else {
-        _errorMessage = resultado['message'];
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'Erro ao atualizar perfil: $e';
       notifyListeners();
-      return false;
-    }
-  }
 
-  // ✅ MÉTODO: Login com tratamento correto
-  Future<bool> login(String email, String senha) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final result = await AuthService.login(
-        email: email,
-        senha: senha,
-      );
-
-      _isLoading = false;
-
-      if (result['success'] == true) {
-        _usuarioLogado = result['usuario'];
-        _errorMessage = null;
-
-        // Garante compatibilidade de IDs
-        if (_usuarioLogado != null) {
-          final id =
-              _usuarioLogado!['idusuario'] ?? _usuarioLogado!['idUsuario'];
-          if (id != null) {
-            _usuarioLogado!['idusuario'] = id;
-            _usuarioLogado!['idUsuario'] = id;
-          }
-        }
-
-        // Salva no cache
-        await _salvarUsuarioNoCache(_usuarioLogado!);
-
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['message'];
-        notifyListeners();
-        return false;
+      final user = await _repository.getCurrentUser();
+      if (user != null) {
+        _usuario = user;
+        _isAuthenticated = true;
       }
     } catch (error) {
+      _error = 'Erro ao carregar usuário: $error';
+    } finally {
       _isLoading = false;
-      _errorMessage = 'Erro inesperado: $error';
       notifyListeners();
-      return false;
     }
   }
 
-  // ✅ MÉTODO: Logout com limpeza completa
+  Future<void> login(String email, String senha) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final result = await _repository.login(email, senha);
+      
+      if (result['success'] == true) {
+        _usuario = result['usuario'];
+        _isAuthenticated = true;
+        _error = null;
+      } else {
+        _error = result['message'];
+        _isAuthenticated = false;
+      }
+    } catch (error) {
+      _error = 'Erro: $error';
+      _isAuthenticated = false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> alterarSenha(
+    String senhaAtual, 
+    String novaSenha
+  ) async {
+    try {
+      if (_usuario == null || _usuario!.idUsuario == null) {
+        throw Exception('Usuário não encontrado');
+      }
+
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final result = await _repository.alterarSenha(
+        _usuario!.idUsuario!,
+        senhaAtual,
+        novaSenha,
+      );
+      
+      if (result['success'] == true) {
+        // Recarregar dados do usuário se necessário
+        final updatedUser = await _repository.getCurrentUser();
+        if (updatedUser != null) {
+          _usuario = updatedUser;
+        }
+        _error = null;
+      } else {
+        _error = result['message'];
+      }
+    } catch (error) {
+      _error = 'Erro: $error';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> solicitarRecuperacaoSenha(String email) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final result = await _repository.solicitarRecuperacaoSenha(email);
+      
+      if (result['success'] != true) {
+        _error = result['message'];
+      }
+    } catch (error) {
+      _error = 'Erro: $error';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> redefinirSenha(String email, String novaSenha) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final result = await _repository.redefinirSenha(email, novaSenha);
+      
+      if (result['success'] != true) {
+        _error = result['message'];
+      }
+    } catch (error) {
+      _error = 'Erro: $error';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Limpa dados do usuário
-      await prefs.remove('usuario_atual');
-      await prefs.remove('idUsuario');
-      await prefs.remove('email');
-      await prefs.remove('nome');
-      await prefs.remove('telefone');
-
-      // Limpa dados de mensagens/hospedagem
-      await limparCacheMensagens();
-
-      _usuarioLogado = null;
-      _errorMessage = null;
-      _isLoading = false;
-
-      print('✅ Logout realizado - cache completamente limpo');
+      _isLoading = true;
       notifyListeners();
-    } catch (e) {
-      print('❌ Erro ao fazer logout: $e');
-    }
-  }
 
-  // ✅ MÉTODO: Forçar recarregamento do cache
-  Future<void> recarregarUsuario() async {
-    print('🔄 Forçando recarregamento do usuário...');
-    await _carregarUsuarioDoCache();
-  }
-
-  // ✅ MÉTODO: Verificar se usuário está logado
-  Future<bool> checkIfUserIsLoggedIn() async {
-    if (_usuarioLogado != null) {
-      return true;
-    }
-
-    await _carregarUsuarioDoCache();
-    return _usuarioLogado != null;
-  }
-
-  // ✅ MÉTODO: Atualizar dados localmente (sem API)
-  Future<void> updateUserData(Map<String, dynamic> newData) async {
-    if (_usuarioLogado != null) {
-      _usuarioLogado!.addAll(newData);
-      await _salvarUsuarioNoCache(_usuarioLogado!);
+      await _repository.logout();
+      
+      _usuario = null;
+      _isAuthenticated = false;
+      _error = null;
+    } catch (error) {
+      _error = 'Erro ao fazer logout: $error';
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ✅ MÉTODOS ESTÁTICOS PARA ACESSO AO CACHE
-  static Future<int?> getUserIdFromCache() async {
+  Future<void> checkAuthentication() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      _isLoading = true;
+      notifyListeners();
 
-      // Tenta carregar do JSON unificado
-      final usuarioJson = prefs.getString('usuario_atual');
-      if (usuarioJson != null) {
-        final usuario = jsonDecode(usuarioJson);
-        final idUsuario = usuario['idusuario'] ?? usuario['idUsuario'];
-        return int.tryParse(idUsuario?.toString() ?? '');
-      }
-
-      // Fallback para formato antigo
-      return prefs.getInt('idUsuario');
-    } catch (e) {
-      print('❌ Erro ao obter ID do usuário do cache: $e');
-      return null;
-    }
-  }
-
-  static Future<Map<String, dynamic>?> getUserFromCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Tenta carregar do JSON unificado
-      final usuarioJson = prefs.getString('usuario_atual');
-      if (usuarioJson != null) {
-        return jsonDecode(usuarioJson);
-      }
-
-      // Fallback para formato antigo
-      final idUsuario = prefs.getInt('idUsuario');
-      final email = prefs.getString('email');
-      final nome = prefs.getString('nome');
-      final telefone = prefs.getString('telefone');
-
-      if (idUsuario != null && email != null && nome != null) {
-        return {
-          'idusuario': idUsuario,
-          'idUsuario': idUsuario,
-          'email': email,
-          'nome': nome,
-          if (telefone != null && telefone.isNotEmpty) 'telefone': telefone,
-        };
-      }
-      return null;
-    } catch (e) {
-      print('❌ Erro ao obter usuário do cache: $e');
-      return null;
-    }
-  }
-
-  // ✅ MÉTODO: Debug do cache
-  static Future<void> debugCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final usuarioJson = prefs.getString('usuario_atual');
-      final idUsuario = prefs.getInt('idUsuario');
-      final email = prefs.getString('email');
-      final nome = prefs.getString('nome');
-      final telefone = prefs.getString('telefone');
-      final idHospedagem = prefs.getInt('idhospedagem');
-      final idAnfitriao = prefs.getInt('id_anfitriao');
-      final nomeAnfitriao = prefs.getString('nome_anfitriao');
-
-      print('\n🔍 === DEBUG CACHE COMPLETO ===');
-      print('🔍 usuario_atual (JSON): $usuarioJson');
-      print('🔍 idUsuario: $idUsuario');
-      print('🔍 email: $email');
-      print('🔍 nome: $nome');
-      print('🔍 telefone: $telefone');
-      print('🔍 idhospedagem: $idHospedagem');
-      print('🔍 id_anfitriao: $idAnfitriao');
-      print('🔍 nome_anfitriao: $nomeAnfitriao');
-      print('🔍 Todas as chaves: ${prefs.getKeys()}');
-
-      if (usuarioJson != null) {
-        try {
-          final usuario = jsonDecode(usuarioJson);
-          print('🔍 Usuário decodificado: $usuario');
-        } catch (e) {
-          print('❌ Erro ao decodificar JSON: $e');
-        }
-      }
-      print('🔍 === FIM DEBUG ===\n');
-    } catch (e) {
-      print('❌ Erro ao debug cache: $e');
-    }
-  }
-
-  // ✅ MÉTODO: Verificar email
-  Future<bool> verificarEmail(String email) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final result = await AuthService.verificarEmail(email: email);
-
-      _isLoading = false;
-
-      if (result['success'] == true) {
-        _errorMessage = null;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['message'];
-        notifyListeners();
-        return false;
+      final isLoggedIn = await _repository.isLoggedIn();
+      _isAuthenticated = isLoggedIn;
+      
+      if (isLoggedIn) {
+        final user = await _repository.getCurrentUser();
+        _usuario = user;
       }
     } catch (error) {
+      _error = 'Erro ao verificar autenticação: $error';
+      _isAuthenticated = false;
+    } finally {
       _isLoading = false;
-      _errorMessage = 'Erro ao verificar email: $error';
       notifyListeners();
-      return false;
     }
   }
 
-  // ✅ MÉTODO: Redefinir senha
-  Future<bool> redefinirSenhaComEmail(String email, String novaSenha) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final result = await AuthService.redefinirSenhaComEmail(
-        email: email,
-        novaSenha: novaSenha,
-      );
-
-      _isLoading = false;
-
-      if (result['success'] == true) {
-        _errorMessage = null;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['message'];
-        notifyListeners();
-        return false;
-      }
-    } catch (error) {
-      _isLoading = false;
-      _errorMessage = 'Erro ao redefinir senha: $error';
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // ✅ MÉTODO: Limpar erros
   void clearError() {
-    _errorMessage = null;
+    _error = null;
     notifyListeners();
   }
 
-  // ✅ MÉTODO: Verificar estado atual
-  void debugEstadoAtual() {
-    print('\n🔍 === ESTADO ATUAL ===');
-    print('🔍 isLoading: $_isLoading');
-    print('🔍 errorMessage: $_errorMessage');
-    print('🔍 usuarioLogado: $_usuarioLogado');
-    print('🔍 isLoggedIn: $isLoggedIn');
-    print('🔍 === FIM ESTADO ===\n');
+  void setUsuario(UsuarioModel usuario) {
+    _usuario = usuario;
+    _isAuthenticated = true;
+    notifyListeners();
   }
 }

@@ -5,7 +5,7 @@ import 'package:pet_family_app/pages/hotel/template/employee/employee_template.d
 import 'package:pet_family_app/pages/hotel/template/service_template.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
-import 'package:pet_family_app/providers/hotel_provider.dart';
+import 'package:pet_family_app/providers/hospedagem_provider.dart';
 import 'package:pet_family_app/pages/message/message.dart'; // ADICIONAR ESTE IMPORT
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -1,66 +1,124 @@
-import 'package:pet_family_app/services/api_service.dart';
-import 'package:pet_family_app/models/hospedagem_model.dart';
+import '../models/hospedagem_model.dart';
+import '../services/hospedagem_service.dart';
 
 class HospedagemRepository {
-  final ApiService _api = ApiService();
+  final HospedagemService _service = HospedagemService();
 
-  Future<List<HospedagemModel>> lerHospedagem() async {
+  Future<List<HospedagemModel>> getHospedagens() async {
     try {
-      final response = await _api.get('/hospedagens');
-
-      // DEBUG para ver a estrutura dos dados
-      print('📦 Dados brutos da API: ${response.data}');
-
-      if (response.data is List) {
-        final List<HospedagemModel> hospedagens = (response.data as List)
-            .map((json) => HospedagemModel.fromJson(json))
-            .toList();
-
-        // Debug final
-        print('✅ Hospedagens mapeadas:');
-        for (var h in hospedagens) {
-          print('   - ${h.nome} (ID: ${h.idHospedagem})');
-        }
-
-        return hospedagens;
-      } else {
-        // Se não for lista, cria uma lista com um único item
-        return [HospedagemModel.fromJson(response.data)];
-      }
-    } catch (e) {
-      print('❌ Erro no repositório: $e');
-      throw Exception('Erro ao carregar hospedagens: $e');
+      return await _service.getHospedagens();
+    } catch (error) {
+      print('❌ Repository - Erro ao buscar hospedagens: $error');
+      throw Exception('Erro ao buscar hospedagens: ${error.toString()}');
     }
   }
 
-  Future<HospedagemModel> criarHospedagem(HospedagemModel hospedagem) async {
+  Future<HospedagemModel> getHospedagemById(int idHospedagem) async {
     try {
-      final response = await _api.post('/hospedagens', hospedagem.toJson());
-      return HospedagemModel.fromJson(response.data);
-    } catch (e) {
-      print('❌ Erro ao criar hospedagem: $e');
-      throw Exception('Erro ao criar hospedagem: $e');
+      return await _service.getHospedagemById(idHospedagem);
+    } catch (error) {
+      print('❌ Repository - Erro ao buscar hospedagem por ID: $error');
+      throw Exception('Erro ao buscar hospedagem: ${error.toString()}');
     }
   }
 
-  Future<void> atualizarHospedagem(HospedagemModel hospedagem) async {
+  Future<Map<String, dynamic>> createHospedagem(HospedagemModel hospedagem) async {
     try {
-      // ✅ CORREÇÃO: URL corrigida (hospedagem no singular)
-      await _api.put(
-          '/hospedagem/${hospedagem.idHospedagem}', hospedagem.toJson());
-    } catch (e) {
-      print('❌ Erro ao atualizar hospedagem: $e');
-      throw Exception('Erro ao atualizar hospedagem: $e');
+      return await _service.createHospedagem(hospedagem);
+    } catch (error) {
+      print('❌ Repository - Erro ao criar hospedagem: $error');
+      return {
+        'success': false,
+        'message': 'Erro ao criar hospedagem: ${error.toString()}',
+      };
     }
   }
 
-  Future<void> deletarHospedagem(int id) async {
+  Future<Map<String, dynamic>> updateHospedagem(int idHospedagem, HospedagemModel hospedagem) async {
     try {
-      // ✅ CORREÇÃO: URL corrigida (hospedagem no singular)
-      await _api.delete('/hospedagem/$id');
-    } catch (e) {
-      print('❌ Erro ao deletar hospedagem: $e');
-      throw Exception('Erro ao deletar hospedagem: $e');
+      return await _service.updateHospedagem(idHospedagem, hospedagem);
+    } catch (error) {
+      print('❌ Repository - Erro ao atualizar hospedagem: $error');
+      return {
+        'success': false,
+        'message': 'Erro ao atualizar hospedagem: ${error.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteHospedagem(int idHospedagem) async {
+    try {
+      return await _service.deleteHospedagem(idHospedagem);
+    } catch (error) {
+      print('❌ Repository - Erro ao excluir hospedagem: $error');
+      return {
+        'success': false,
+        'message': 'Erro ao excluir hospedagem: ${error.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> loginHospedagem(String email, String senha) async {
+    try {
+      return await _service.loginHospedagem(email, senha);
+    } catch (error) {
+      print('❌ Repository - Erro no login: $error');
+      return {
+        'success': false,
+        'message': 'Erro no login: ${error.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> alterarSenhaHospedagem(
+    int idHospedagem, 
+    String senhaAtual, 
+    String novaSenha
+  ) async {
+    try {
+      return await _service.alterarSenhaHospedagem(idHospedagem, senhaAtual, novaSenha);
+    } catch (error) {
+      print('❌ Repository - Erro ao alterar senha: $error');
+      return {
+        'success': false,
+        'message': 'Erro ao alterar senha: ${error.toString()}',
+      };
+    }
+  }
+
+  Future<HospedagemModel?> getCurrentHospedagem() async {
+    try {
+      return await _service.getCurrentHospedagem();
+    } catch (error) {
+      print('❌ Repository - Erro ao obter hospedagem atual: $error');
+      return null;
+    }
+  }
+
+  Future<bool> isHospedagemLoggedIn() async {
+    try {
+      return await _service.isHospedagemLoggedIn();
+    } catch (error) {
+      print('❌ Repository - Erro ao verificar login: $error');
+      return false;
+    }
+  }
+
+  Future<void> logoutHospedagem() async {
+    try {
+      await _service.logoutHospedagem();
+    } catch (error) {
+      print('❌ Repository - Erro ao fazer logout: $error');
+      throw Exception('Erro ao fazer logout: ${error.toString()}');
+    }
+  }
+
+  Future<String?> getHospedagemToken() async {
+    try {
+      return await _service.getHospedagemToken();
+    } catch (error) {
+      print('❌ Repository - Erro ao obter token: $error');
+      return null;
     }
   }
 }

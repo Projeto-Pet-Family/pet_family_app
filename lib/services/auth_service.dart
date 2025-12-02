@@ -1,196 +1,230 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:pet_family_app/models/user_model.dart';
 
 class AuthService {
-  static const String baseUrl = 'https://bepetfamily.onrender.com';
+  static const String baseUrl = 'http://seuservidor.com/api';
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
-  static Future<Map<String, dynamic>> verificarEmail({
-    required String email,
-  }) async {
+  Future<Map<String, dynamic>> login(String email, String senha) async {
     try {
+      final url = Uri.parse('$baseUrl/autenticacao/login');
+      
       final response = await http.post(
-        Uri.parse('$baseUrl/solicitar-recuperacao-senha'),
+        url,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'email': email,
-        }),
-      );
-
-      print('🔍 Verificar Email - Status: ${response.statusCode}');
-      print('🔍 Verificar Email - Body: ${response.body}');
-
-      final data = jsonDecode(response.body);
-
-      return {
-        'success': data['success'] ?? false,
-        'message': data['message'],
-      };
-    } catch (error) {
-      print('❌ Erro ao verificar email: $error');
-      return {
-        'success': false,
-        'message': 'Erro de conexão com o servidor',
-      };
-    }
-  }
-
-  // ✅ REDEFINIR SENHA (usando redefinir-senha)
-  static Future<Map<String, dynamic>> redefinirSenhaComEmail({
-    required String email,
-    required String novaSenha,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/redefinir-senha'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'email': email,
-          'novaSenha': novaSenha,
-        }),
-      );
-
-      print('🔍 Redefinir Senha - Status: ${response.statusCode}');
-      print('🔍 Redefinir Senha - Body: ${response.body}');
-
-      final data = jsonDecode(response.body);
-
-      return {
-        'success': data['success'] ?? false,
-        'message': data['message'],
-      };
-    } catch (error) {
-      print('❌ Erro ao redefinir senha: $error');
-      return {
-        'success': false,
-        'message': 'Erro de conexão com o servidor',
-      };
-    }
-  }
-
-  // Login do usuário
-  static Future<Map<String, dynamic>> login({
-    required String email,
-    required String senha,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'email': email,
+        body: json.encode({
+          'email': email.trim().toLowerCase(),
           'senha': senha,
         }),
       );
 
-      print('🔍 Status Code: ${response.statusCode}');
-      print('🔍 Response Body: ${response.body}');
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        return {
-          'success': true,
-          'message': data['message'],
-          'usuario': data['usuario'],
-        };
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
+        
+        if (responseData['success'] == true) {
+          // Converter resposta para UsuarioModel
+          final usuario = UsuarioModel.fromJson(responseData['usuario']);
+          
+          // Salvar token se existir
+          if (responseData['token'] != null) {
+            await _secureStorage.write(key: 'auth_token', value: responseData['token']);
+          }
+          
+          // Salvar dados do usuário
+          await _secureStorage.write(
+            key: 'usuario_data', 
+            value: json.encode(usuario.toJson())
+          );
+          
+          return {
+            'success': true,
+            'message': responseData['message'],
+            'usuario': usuario,
+          };
+        } else {
+          return {
+            'success': false,
+            'message': responseData['message'] ?? 'Erro no login',
+          };
+        }
       } else {
+        final errorData = json.decode(utf8.decode(response.bodyBytes));
         return {
           'success': false,
-          'message': data['message'] ?? 'Erro desconhecido',
+          'message': errorData['message'] ?? 'Erro na conexão',
         };
       }
     } catch (error) {
-      print('❌ Erro detalhado: $error');
       return {
         'success': false,
-        'message': 'Erro de conexão com o servidor',
+        'message': 'Erro: ${error.toString()}',
       };
     }
   }
 
-  // Outros métodos mantidos para compatibilidade
-  static Future<Map<String, dynamic>> solicitarRecuperacaoSenha({
-    required String email,
-  }) async {
+  Future<Map<String, dynamic>> alterarSenha(
+    int idUsuario, 
+    String senhaAtual, 
+    String novaSenha
+  ) async {
     try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      final url = Uri.parse('$baseUrl/autenticacao/usuarios/$idUsuario/alterar-senha');
+      
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'senhaAtual': senhaAtual,
+          'novaSenha': novaSenha,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
+        
+        if (responseData['success'] == true) {
+          // Atualizar dados do usuário se retornado
+          if (responseData['usuario'] != null) {
+            final usuario = UsuarioModel.fromJson(responseData['usuario']);
+            await _secureStorage.write(
+              key: 'usuario_data', 
+              value: json.encode(usuario.toJson())
+            );
+          }
+          
+          return {
+            'success': true,
+            'message': responseData['message'],
+          };
+        } else {
+          return {
+            'success': false,
+            'message': responseData['message'] ?? 'Erro ao alterar senha',
+          };
+        }
+      } else {
+        final errorData = json.decode(utf8.decode(response.bodyBytes));
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Erro na conexão',
+        };
+      }
+    } catch (error) {
+      return {
+        'success': false,
+        'message': 'Erro: ${error.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> solicitarRecuperacaoSenha(String email) async {
+    try {
+      final url = Uri.parse('$baseUrl/autenticacao/solicitar-recuperacao-senha');
+      
       final response = await http.post(
-        Uri.parse('$baseUrl/solicitar-recuperacao-senha'),
+        url,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'email': email,
+        body: json.encode({
+          'email': email.trim().toLowerCase(),
         }),
       );
 
-      final data = jsonDecode(response.body);
-
-      return {
-        'success': data['success'] ?? false,
-        'message': data['message'],
-      };
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
+        return {
+          'success': responseData['success'] ?? false,
+          'message': responseData['message'],
+        };
+      } else {
+        final errorData = json.decode(utf8.decode(response.bodyBytes));
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Erro na conexão',
+        };
+      }
     } catch (error) {
       return {
         'success': false,
-        'message': 'Erro de conexão com o servidor',
+        'message': 'Erro: ${error.toString()}',
       };
     }
   }
 
-  static Future<Map<String, dynamic>> atualizarPerfil({
-    required int idUsuario,
-    required Map<String, dynamic> dadosAtualizados,
-  }) async {
+  Future<Map<String, dynamic>> redefinirSenha(String email, String novaSenha) async {
     try {
-      print('🌐 Enviando atualização para API...');
-      print('🌐 URL: $baseUrl/usuarios/$idUsuario');
-      print('🌐 Dados: $dadosAtualizados');
-
-      final response = await http.put(
-        Uri.parse('$baseUrl/usuarios/$idUsuario'),
+      final url = Uri.parse('$baseUrl/autenticacao/redefinir-senha');
+      
+      final response = await http.post(
+        url,
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: jsonEncode(dadosAtualizados),
+        body: json.encode({
+          'email': email.trim().toLowerCase(),
+          'novaSenha': novaSenha,
+        }),
       );
 
-      print('🌐 Status Code: ${response.statusCode}');
-      print('🌐 Response: ${response.body}');
-
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
         return {
-          'success': true,
-          'usuario': data, // A API deve retornar os dados atualizados
-          'message': 'Perfil atualizado com sucesso!',
-        };
-      } else if (response.statusCode == 404) {
-        return {
-          'success': false,
-          'message': 'Usuário não encontrado',
+          'success': responseData['success'] ?? false,
+          'message': responseData['message'],
         };
       } else {
+        final errorData = json.decode(utf8.decode(response.bodyBytes));
         return {
           'success': false,
-          'message': 'Erro ao atualizar perfil: ${response.statusCode}',
+          'message': errorData['message'] ?? 'Erro na conexão',
         };
       }
     } catch (error) {
-      print('❌ Erro na chamada API: $error');
       return {
         'success': false,
-        'message': 'Erro de conexão: $error',
+        'message': 'Erro: ${error.toString()}',
       };
     }
+  }
+
+  Future<void> logout() async {
+    await _secureStorage.delete(key: 'auth_token');
+    await _secureStorage.delete(key: 'usuario_data');
+  }
+
+  Future<bool> isLoggedIn() async {
+    final token = await _secureStorage.read(key: 'auth_token');
+    final userData = await _secureStorage.read(key: 'usuario_data');
+    return token != null && userData != null;
+  }
+
+  Future<UsuarioModel?> getCurrentUser() async {
+    try {
+      final userData = await _secureStorage.read(key: 'usuario_data');
+      if (userData != null) {
+        final Map<String, dynamic> userMap = json.decode(userData);
+        return UsuarioModel.fromJson(userMap);
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  Future<String?> getToken() async {
+    return await _secureStorage.read(key: 'auth_token');
   }
 }

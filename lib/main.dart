@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/message/message.dart';
-import 'package:pet_family_app/providers/hotel_provider.dart';
+import 'package:pet_family_app/providers/hospedagem_provider.dart';
 import 'package:pet_family_app/providers/message_provider.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
 import 'package:pet_family_app/providers/pet/porte_provider.dart';

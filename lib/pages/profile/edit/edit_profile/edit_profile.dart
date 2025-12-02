@@ -1,8 +1,9 @@
+// lib/screens/edit_profile/edit_profile.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/pages/profile/edit/edit_profile/edited_profile_modal.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
-import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:provider/provider.dart';
+import 'edit_profile_view.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -12,10 +13,11 @@ class EditProfile extends StatefulWidget {
 }
 
 class _EditProfileState extends State<EditProfile> {
-  final _formKey = GlobalKey<FormState>();
   late TextEditingController _nomeController;
   late TextEditingController _emailController;
   late TextEditingController _telefoneController;
+  late TextEditingController _cpfController;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -23,67 +25,91 @@ class _EditProfileState extends State<EditProfile> {
     _nomeController = TextEditingController();
     _emailController = TextEditingController();
     _telefoneController = TextEditingController();
-
-    // Carrega os dados após um pequeno delay para garantir que o widget está montado
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _carregarDadosUsuario();
-    });
+    _cpfController = TextEditingController();
   }
 
-  void _carregarDadosUsuario() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final usuario = authProvider.usuarioLogado;
+  void _carregarDadosParaEdicao(Map<String, dynamic> usuario) {
+    _nomeController.text = usuario['nome']?.toString() ?? '';
+    _emailController.text = usuario['email']?.toString() ?? '';
+    _telefoneController.text = usuario['telefone']?.toString() ?? '';
+    _cpfController.text = usuario['cpf']?.toString() ?? '';
+  }
 
-    if (usuario != null) {
-      _nomeController.text = usuario['nome']?.toString() ?? '';
-      _emailController.text = usuario['email']?.toString() ?? '';
-      _telefoneController.text = usuario['telefone']?.toString() ?? '';
+  Future<void> _abrirModalEdicao(
+      BuildContext context, Map<String, dynamic> usuario) async {
+    _carregarDadosParaEdicao(usuario);
 
-      print('✅ Dados carregados no EditProfile:');
-      print('✅ Nome: ${_nomeController.text}');
-      print('✅ Email: ${_emailController.text}');
-      print('✅ Telefone: ${_telefoneController.text}');
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: EditProfileModal(
+              nomeController: _nomeController,
+              emailController: _emailController,
+              telefoneController: _telefoneController,
+              cpfController: _cpfController,
+              onSalvar: () => _salvarAlteracoes(context),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (result == true) {
+      _mostrarLoadingEAtualizar();
     }
   }
 
-  void _salvarAlteracoes() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  void _mostrarLoadingEAtualizar() {
+    setState(() {
+      _isRefreshing = true;
+    });
 
-      final dadosAtualizados = {
-        'nome': _nomeController.text.trim(),
-        'email': _emailController.text.trim(),
-        'telefone': _telefoneController.text.trim(),
-      };
-
-      print('💾 Salvando alterações...');
-
-      final sucesso = await authProvider.atualizarPerfil(dadosAtualizados);
-
-      if (sucesso) {
-        // ✅ OS DADOS JÁ FORAM ATUALIZADOS NO PROVIDER
-        // O Consumer vai reconstruir automaticamente
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Perfil atualizado com sucesso!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Volta para a tela anterior - os dados já estarão atualizados
-        if (context.mounted) {
-          context.pop();
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro: ${authProvider.errorMessage}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
       }
+    });
+  }
+
+  Future<void> _salvarAlteracoes(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final dadosAtualizados = {
+      'nome': _nomeController.text.trim(),
+      'email': _emailController.text.trim(),
+      'telefone': _telefoneController.text.trim(),
+      'cpf': _cpfController.text.trim(),
+    };
+
+    final sucesso = await authProvider.atualizarPerfil(dadosAtualizados);
+
+    if (sucesso && context.mounted) {
+      Navigator.pop(context, true);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Perfil atualizado com sucesso!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro: ${authProvider.errorMessage}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -92,6 +118,7 @@ class _EditProfileState extends State<EditProfile> {
     _nomeController.dispose();
     _emailController.dispose();
     _telefoneController.dispose();
+    _cpfController.dispose();
     super.dispose();
   }
 
@@ -102,253 +129,51 @@ class _EditProfileState extends State<EditProfile> {
         final usuario = authProvider.usuarioLogado;
 
         if (usuario == null) {
-          return Scaffold(
-            body: Column(
-              children: [
-                const AppBarReturn(route: '/profile'),
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 20),
-                        Text('Carregando dados...'),
-                        SizedBox(height: 10),
-                        TextButton(
-                          onPressed: _carregarDadosUsuario,
-                          child: Text('Tentar novamente'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
             ),
           );
         }
 
-        // ✅ ATUALIZA OS CONTROLADORES SEMPRE QUE OS DADOS MUDAREM
-        if (_nomeController.text != usuario['nome']?.toString() ||
-            _emailController.text != usuario['email']?.toString() ||
-            _telefoneController.text != usuario['telefone']?.toString()) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _nomeController.text = usuario['nome']?.toString() ?? '';
-            _emailController.text = usuario['email']?.toString() ?? '';
-            _telefoneController.text = usuario['telefone']?.toString() ?? '';
-          });
-        }
-
-        return Scaffold(
-          body: Column(
+        if (_isRefreshing) {
+          return Stack(
             children: [
-              const AppBarReturn(route: '/core-navigation'),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: SingleChildScrollView(
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 20),
-                          const Text(
-                            'editar',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w100,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const Text(
-                            'seu perfil',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-
-                          // Foto de perfil
-                          Center(
-                            child: Stack(
-                              children: [
-                                Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.grey[300],
-                                  ),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Color(0xFFC0C9FF),
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 3,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.camera_alt,
-                                      size: 20,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-
-                          // Campo Nome
-                          Text(
-                            'Nome',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _nomeController,
-                            decoration: InputDecoration(
-                              hintText: 'Digite seu nome',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor, digite seu nome';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Campo Email
-                          Text(
-                            'Email',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              hintText: 'Digite seu email',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor, digite seu email';
-                              }
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                  .hasMatch(value)) {
-                                return 'Por favor, digite um email válido';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Campo Telefone
-                          Text(
-                            'Telefone',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _telefoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: InputDecoration(
-                              hintText: 'Digite seu telefone',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-
-                          // Botão Salvar
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: authProvider.isLoading
-                                  ? null
-                                  : _salvarAlteracoes,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFFC0C9FF),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: authProvider.isLoading
-                                  ? SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.black,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Salvar Alterações',
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
+              EditProfileView(
+                usuario: usuario,
+                onEditarPressed: () => _abrirModalEdicao(context, usuario),
+                isLoading: true,
+              ),
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
-                    ),
+                      SizedBox(height: 20),
+                      Text(
+                        'Atualizando perfil...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
-          ),
+          );
+        }
+
+        return EditProfileView(
+          usuario: usuario,
+          onEditarPressed: () => _abrirModalEdicao(context, usuario),
+          isLoading: false,
         );
       },
     );

@@ -48,8 +48,7 @@ class _ProfileState extends State<Profile> {
           }
 
           final nome = usuario['nome'] ?? 'Usuário';
-          final email = usuario['email'] ?? '';
-          final telefone = usuario['telefone'] ?? '';
+
 
           return Padding(
             padding: const EdgeInsets.all(20),
@@ -114,24 +113,6 @@ class _ProfileState extends State<Profile> {
                                   color: Colors.black,
                                 ),
                               ),
-                              SizedBox(height: 4),
-                              Text(
-                                email,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              if (telefone != null && telefone.isNotEmpty) ...[
-                                SizedBox(height: 4),
-                                Text(
-                                  telefone,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                         ),
