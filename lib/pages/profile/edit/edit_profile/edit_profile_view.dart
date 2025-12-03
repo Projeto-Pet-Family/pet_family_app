@@ -1,10 +1,11 @@
 // lib/screens/edit_profile/edit_profile_view.dart
 import 'package:flutter/material.dart';
+import 'package:pet_family_app/models/user_model.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'profile_info_item.dart';
 
 class EditProfileView extends StatelessWidget {
-  final Map<String, dynamic> usuario;
+  final UsuarioModel usuario; // Mudar de Map<String, dynamic> para UsuarioModel
   final VoidCallback onEditarPressed;
   final bool isLoading;
 
@@ -100,7 +101,7 @@ class EditProfileView extends StatelessWidget {
                     // Informações do usuário
                     ProfileInfoItem(
                       label: 'Nome',
-                      value: usuario['nome']?.toString() ?? '',
+                      value: usuario.nome,
                       isLoading: isLoading,
                       icon: Icons.person_outline,
                     ),
@@ -108,7 +109,7 @@ class EditProfileView extends StatelessWidget {
 
                     ProfileInfoItem(
                       label: 'CPF',
-                      value: usuario['cpf']?.toString() ?? '',
+                      value: usuario.cpf,
                       isLoading: isLoading,
                       icon: Icons.badge_outlined,
                     ),
@@ -116,7 +117,7 @@ class EditProfileView extends StatelessWidget {
 
                     ProfileInfoItem(
                       label: 'Email',
-                      value: usuario['email']?.toString() ?? '',
+                      value: usuario.email,
                       isLoading: isLoading,
                       icon: Icons.email_outlined,
                     ),
@@ -124,18 +125,18 @@ class EditProfileView extends StatelessWidget {
 
                     ProfileInfoItem(
                       label: 'Telefone',
-                      value: usuario['telefone']?.toString() ?? '',
+                      value: usuario.telefone,
                       isLoading: isLoading,
                       icon: Icons.phone_outlined,
                     ),
                     const SizedBox(height: 16),
 
-                    if (usuario['datacadastro'] != null)
+                    if (usuario.dataCadastro != null)
                       Column(
                         children: [
                           ProfileInfoItem(
                             label: 'Data de Cadastro',
-                            value: usuario['datacadastro']?.toString() ?? '',
+                            value: usuario.dataCadastro?.toString() ?? '',
                             isLoading: isLoading,
                             icon: Icons.calendar_today_outlined,
                           ),

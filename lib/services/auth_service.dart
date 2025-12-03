@@ -161,7 +161,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> solicitarRecuperacaoSenha(String email) async {
     try {
-      final url = Uri.parse('$baseUrl/autenticacao/solicitar-recuperacao-senha');
+      final url = Uri.parse('$baseUrl/solicitar-recuperacao-senha');
       
       final response = await http.post(
         url,
@@ -197,7 +197,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> redefinirSenha(String email, String novaSenha) async {
     try {
-      final url = Uri.parse('$baseUrl/autenticacao/redefinir-senha');
+      final url = Uri.parse('$baseUrl/redefinir-senha');
       
       final response = await http.post(
         url,

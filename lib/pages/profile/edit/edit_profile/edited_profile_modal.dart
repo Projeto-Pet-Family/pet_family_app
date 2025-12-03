@@ -1,7 +1,5 @@
 // lib/screens/edit_profile/edit_profile_modal.dart
 import 'package:flutter/material.dart';
-import 'package:pet_family_app/providers/auth_provider.dart';
-import 'package:provider/provider.dart';
 
 class EditProfileModal extends StatelessWidget {
   final TextEditingController nomeController;
@@ -9,6 +7,7 @@ class EditProfileModal extends StatelessWidget {
   final TextEditingController telefoneController;
   final TextEditingController cpfController;
   final Future<void> Function() onSalvar;
+  final bool isSalvando;
 
   const EditProfileModal({
     super.key,
@@ -17,6 +16,7 @@ class EditProfileModal extends StatelessWidget {
     required this.telefoneController,
     required this.cpfController,
     required this.onSalvar,
+    required this.isSalvando,
   });
 
   @override
@@ -67,6 +67,7 @@ class EditProfileModal extends StatelessWidget {
           const SizedBox(height: 8),
           TextFormField(
             controller: nomeController,
+            enabled: !isSalvando,
             decoration: InputDecoration(
               hintText: 'Digite seu nome',
               border: OutlineInputBorder(
@@ -101,6 +102,7 @@ class EditProfileModal extends StatelessWidget {
           const SizedBox(height: 8),
           TextFormField(
             controller: cpfController,
+            enabled: !isSalvando,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               hintText: 'Digite seu CPF',
@@ -136,6 +138,7 @@ class EditProfileModal extends StatelessWidget {
           const SizedBox(height: 8),
           TextFormField(
             controller: emailController,
+            enabled: !isSalvando,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
               hintText: 'Digite seu email',
@@ -171,6 +174,7 @@ class EditProfileModal extends StatelessWidget {
           const SizedBox(height: 8),
           TextFormField(
             controller: telefoneController,
+            enabled: !isSalvando,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
               hintText: 'Digite seu telefone',
@@ -195,70 +199,63 @@ class EditProfileModal extends StatelessWidget {
           const SizedBox(height: 30),
 
           // Botões do Modal
-          Consumer<AuthProvider>(
-            builder: (context, authProvider, child) {
-              final isLoading = authProvider.isLoading;
-
-              return Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed:
-                          isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      child: Text(
-                        'Cancelar',
-                        style: TextStyle(
-                          color: isLoading ? Colors.grey : Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: isSalvando ? null : () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  child: Text(
+                    'Cancelar',
+                    style: TextStyle(
+                      color: isSalvando ? Colors.grey : Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              await onSalvar();
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC0C9FF),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: isLoading
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black,
-                              ),
-                            )
-                          : const Text(
-                              'Salvar',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: isSalvando
+                      ? null
+                      : () async {
+                          await onSalvar();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC0C9FF),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                ],
-              );
-            },
+                  child: isSalvando
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Text(
+                          'Salvar',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
         ],

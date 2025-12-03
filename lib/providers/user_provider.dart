@@ -90,7 +90,6 @@ class UsuarioProvider with ChangeNotifier {
 
       // 3. Criar pet com o ID do usuário
 
-
       _success = true;
       notifyListeners();
     } catch (e) {
@@ -116,9 +115,9 @@ class UsuarioProvider with ChangeNotifier {
       idUsuario: idUsuario,
       nome: nome ?? 'Usuário Teste',
       email: email ?? 'teste@email.com',
-      dataCadastro: DateTime.now(), 
-      cpf: '', 
-      telefone: '', 
+      dataCadastro: DateTime.now(),
+      cpf: '',
+      telefone: '',
       senha: '',
     );
     notifyListeners();
@@ -170,32 +169,55 @@ class UsuarioProvider with ChangeNotifier {
     }
   }
 
-  // Atualizar usuário
-  Future<void> atualizarUsuario(int idUsuario, UsuarioModel usuario) async {
+  Future<bool> atualizarPerfil(Map<String, dynamic> dados) async {
     _loading = true;
     _error = null;
     notifyListeners();
 
+    print('🔄 Iniciando atualização do perfil...');
+    print('📝 Dados recebidos: $dados');
+
     try {
-      final usuarioAtualizado =
-          await usuarioRepository.atualizarUsuario(idUsuario, usuario);
-
-      // Atualiza na lista local se existir
-      final index = _usuarios.indexWhere((u) => u.idUsuario == idUsuario);
-      if (index != -1) {
-        _usuarios[index] = usuarioAtualizado;
+      if (_usuarioLogado == null || _usuarioLogado!.idUsuario == null) {
+        _error = 'Usuário não está logado';
+        _loading = false;
+        notifyListeners();
+        print('❌ Erro: Usuário não está logado');
+        return false;
       }
 
-      // Atualiza usuário logado se for o mesmo
-      if (_usuarioLogado?.idUsuario == idUsuario) {
-        _usuarioLogado = usuarioAtualizado;
-      }
+      final idUsuario = _usuarioLogado!.idUsuario!;
 
+      // Cria um UsuarioModel com os dados atualizados
+      final usuarioAtualizado = UsuarioModel(
+        idUsuario: idUsuario,
+        nome: dados['nome'] ?? _usuarioLogado!.nome,
+        cpf: dados['cpf'] ?? _usuarioLogado!.cpf,
+        email: dados['email'] ?? _usuarioLogado!.email,
+        telefone: dados['telefone'] ?? _usuarioLogado!.telefone,
+        senha: _usuarioLogado!.senha,
+        esqueceuSenha: _usuarioLogado!.esqueceuSenha,
+        dataCadastro: _usuarioLogado!.dataCadastro,
+      );
+
+      print('🎯 Enviando para API: ${usuarioAtualizado.toJson()}');
+
+      // Chama o método do repository
+      final usuario = await usuarioRepository.atualizarUsuario(
+          idUsuario, usuarioAtualizado);
+
+      // Atualiza o usuário logado
+      _usuarioLogado = usuario;
       _error = null;
-      print('✅ Usuário ID $idUsuario atualizado');
+
+      print('✅ Perfil atualizado com sucesso!');
+      print('👤 Dados atualizados: ${usuario.toJson()}');
+
+      return true;
     } catch (e) {
-      _error = e.toString();
-      print('❌ Erro ao atualizar usuário: $e');
+      _error = 'Erro ao atualizar perfil: $e';
+      print('❌ Erro ao atualizar perfil: $e');
+      return false;
     } finally {
       _loading = false;
       notifyListeners();

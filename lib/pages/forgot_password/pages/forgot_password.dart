@@ -290,7 +290,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                           if (success) {
                                             _mostrarSucesso('Senha redefinida com sucesso!');
                                             await Future.delayed(Duration(seconds: 2));
-                                            GoRouter.of(context).go('/login');
+                                            GoRouter.of(context).go('/');
                                           } else {
                                             _mostrarErro(
                                                 authProvider.errorMessage ?? 'Erro ao redefinir senha');
