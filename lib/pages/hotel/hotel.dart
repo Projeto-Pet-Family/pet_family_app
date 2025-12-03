@@ -1,12 +1,14 @@
+// pages/hotel/hotel.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/models/service_model.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/pages/hotel/template/employee/employee_template.dart';
 import 'package:pet_family_app/pages/hotel/template/service_template.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/providers/hospedagem_provider.dart';
-import 'package:pet_family_app/pages/message/message.dart'; // ADICIONAR ESTE IMPORT
+import 'package:pet_family_app/pages/message/message.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Hotel extends StatefulWidget {
@@ -18,9 +20,55 @@ class Hotel extends StatefulWidget {
 }
 
 class _HotelState extends State<Hotel> {
-  late HotelProvider _hotelProvider;
+  late HospedagemProvider _hospedagemProvider;
+  bool _isInitialized = false;
 
-  // ADICIONAR MÉTODO PARA ABRIR MENSAGENS
+  @override
+  void initState() {
+    super.initState();
+    _isInitialized = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
+    });
+  }
+
+  Future<void> _salvarHotelNoCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      if (widget.hotelData != null && widget.hotelData!['idhospedagem'] != null) {
+        final hotelId = widget.hotelData!['idhospedagem'] as int;
+
+        await prefs.setInt('id_hospedagem_selecionada', hotelId);
+        await prefs.setString('hotel_nome', widget.hotelData!['nome'] ?? '');
+        await prefs.setString('hotel_logradouro', widget.hotelData!['logradouro'] ?? '');
+        await prefs.setString('hotel_cidade', widget.hotelData!['cidade'] ?? '');
+        await prefs.setString('hotel_estado', widget.hotelData!['estado'] ?? '');
+        await prefs.setString('hotel_valor_diaria', 
+            widget.hotelData!['valor_diaria']?.toString() ?? '0.00');
+
+        print('✅ Hotel salvo no cache - ID: $hotelId');
+      }
+    } catch (e) {
+      print('❌ Erro ao salvar hotel no cache: $e');
+    }
+  }
+
+  void _initializeData() {
+    if (_isInitialized || widget.hotelData == null) return;
+    
+    final hotelId = widget.hotelData!['idhospedagem'];
+    if (hotelId != null) {
+      _salvarHotelNoCache();
+      
+      final provider = Provider.of<HospedagemProvider>(context, listen: false);
+      provider.setHotelData(widget.hotelData!);
+      provider.carregarServicos(hotelId);
+      
+      _isInitialized = true;
+    }
+  }
+
   void _abrirTelaMensagem(BuildContext context) {
     if (widget.hotelData == null || widget.hotelData?['idhospedagem'] == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -29,7 +77,6 @@ class _HotelState extends State<Hotel> {
       return;
     }
 
-    // Obter ID do usuário logado do cache
     _obterIdUsuarioLogado().then((idUsuario) {
       if (idUsuario == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,41 +98,13 @@ class _HotelState extends State<Hotel> {
     });
   }
 
-  // MÉTODO PARA OBTER ID DO USUÁRIO DO CACHE
   Future<int?> _obterIdUsuarioLogado() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt('idUsuario'); // Supondo que 'user_id' seja a chave
+      return prefs.getInt('idUsuario');
     } catch (e) {
       print('❌ Erro ao obter ID do usuário: $e');
       return null;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _hotelProvider = HotelProvider();
-    _initializeData();
-  }
-
-  void _initializeData() {
-    if (widget.hotelData != null) {
-      final hotelId = widget.hotelData?['idhospedagem'];
-      if (hotelId != null) {
-        _salvarHotelIdNoCache(hotelId);
-        _hotelProvider.fetchServicos(hotelId);
-      }
-    }
-  }
-
-  Future<void> _salvarHotelIdNoCache(int hotelId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('current_hotel_id', hotelId);
-      print('💾 Hotel ID salvo no cache: $hotelId');
-    } catch (e) {
-      print('❌ Erro ao salvar hotel ID: $e');
     }
   }
 
@@ -103,22 +122,26 @@ class _HotelState extends State<Hotel> {
   Widget build(BuildContext context) {
     if (widget.hotelData == null) return _buildErrorScreen();
 
-    return ChangeNotifierProvider.value(
-      value: _hotelProvider,
-      child: Scaffold(
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              const AppBarReturn(route: '/core-navigation'),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Consumer<HotelProvider>(
-                  builder: (context, hotelProvider, child) =>
-                      _buildHotelContent(hotelProvider),
-                ),
+    return Scaffold(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const AppBarReturn(route: '/core-navigation'),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Consumer<HospedagemProvider>(
+                builder: (context, hospedagemProvider, child) {
+                  if (!_isInitialized) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _initializeData();
+                    });
+                  }
+                  
+                  return _buildHotelContent(hospedagemProvider);
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -151,8 +174,7 @@ class _HotelState extends State<Hotel> {
                 ElevatedButton(
                   onPressed: () => context.go('/core-navigation'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                   ),
                   child: const Text('Voltar para Home'),
                 ),
@@ -162,134 +184,236 @@ class _HotelState extends State<Hotel> {
         ),
       );
 
-  Widget _buildHotelContent(HotelProvider hotelProvider) {
+  Widget _buildHotelContent(HospedagemProvider hospedagemProvider) {
     final hotel = widget.hotelData!;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _buildHotelHeader(hotel),
-      _buildServicesSection(hotelProvider),
-      _buildDivider(),
-      _buildEmployeesSection(),
-      _buildActionButtons(),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHotelHeader(hotel),
+        _buildServicesSection(hospedagemProvider),
+        _buildDivider(),
+        _buildEmployeesSection(),
+        _buildActionButtons(),
+      ],
+    );
   }
 
   Widget _buildHotelHeader(Map<String, dynamic> hotel) {
     final String nome = hotel['nome'] ?? 'Nome não disponível';
-    final String valorDiaria =
-        _formatarPreco(hotel['valor_diaria']?.toString() ?? '0.00');
+    final String valorDiaria = _formatarPreco(hotel['valor_diaria']?.toString() ?? '0.00');
     final enderecoCompleto = _buildEnderecoCompleto(hotel);
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Column(children: [
-          const Icon(Icons.house, size: 80),
-          Text(nome,
-              style: const TextStyle(
-                  fontSize: 50,
-                  fontWeight: FontWeight.w200,
-                  color: Colors.black))
-        ]),
-        Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-                color: const Color(0xFF159800),
-                borderRadius: BorderRadius.circular(8)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text('$valorDiaria / dia',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              children: [
+                const Icon(Icons.house, size: 80),
+                Text(
+                  nome,
                   style: const TextStyle(
+                    fontSize: 50,
+                    fontWeight: FontWeight.w200,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF159800),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$valorDiaria / dia',
+                    style: const TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white))
-            ])),
-      ]),
-      Padding(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Expanded(
-                child: Text(enderecoCompleto,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w100,
-                        color: Colors.black,
-                        fontSize: 15)))
-          ])),
-      const Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
-          child: Divider(color: Color(0xFFCCCCCC), thickness: 1)),
-    ]);
-  }
-
-  Widget _buildServicesSection(HotelProvider hotelProvider) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Serviços extras',
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w200,
-                color: Colors.black)),
-        const SizedBox(height: 20),
-        if (hotelProvider.isLoading)
-          const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(
-                  child: Column(children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 10),
-                Text('Carregando serviços...',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w100, color: Colors.grey))
-              ]))),
-        if (hotelProvider.errorMessage.isNotEmpty)
-          _buildErrorSection(hotelProvider),
-        if (!hotelProvider.isLoading && hotelProvider.errorMessage.isEmpty)
-          Column(
-              children: hotelProvider.servicos
-                  .map((servico) => ServiceTemplate(
-                      service:
-                          servico['nome'] ?? servico['descricao'] ?? 'Serviço',
-                      price: _formatarPreco(
-                          servico['preco']?.toString() ?? '0.00')))
-                  .toList()),
-        if (!hotelProvider.isLoading &&
-            hotelProvider.errorMessage.isEmpty &&
-            hotelProvider.servicos.isEmpty)
-          const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(
-                  child: Text('Nenhum serviço disponível',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w100,
-                          color: Colors.grey,
-                          fontSize: 16)))),
-      ]);
-
-  Widget _buildErrorSection(HotelProvider hotelProvider) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.error_outline, size: 50, color: Colors.red),
-              const SizedBox(height: 10),
-              Text(hotelProvider.errorMessage,
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 15),
-              ElevatedButton(
-                onPressed: () {
-                  final hotelId = widget.hotelData?['idhospedagem'];
-                  if (hotelId != null) hotelProvider.fetchServicos(hotelId);
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red, foregroundColor: Colors.white),
-                child: const Text('Tentar Novamente'),
+              Expanded(
+                child: Text(
+                  enderecoCompleto,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w100,
+                    color: Colors.black,
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      );
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Divider(color: Color(0xFFCCCCCC), thickness: 1),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServicesSection(HospedagemProvider hospedagemProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Serviços extras',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w200,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        if (hospedagemProvider.isLoading)
+          _buildLoadingWidget(),
+
+        if (hospedagemProvider.error != null && !hospedagemProvider.isLoading)
+          _buildErrorWidget(hospedagemProvider.error!),
+
+        if (hospedagemProvider.servicos.isEmpty && 
+            !hospedagemProvider.isLoading && 
+            hospedagemProvider.error == null)
+          _buildEmptyServicesWidget(),
+
+        if (hospedagemProvider.servicos.isNotEmpty)
+          _buildServicesList(hospedagemProvider.servicos),
+      ],
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return const Padding(
+      padding: EdgeInsets.all(20),
+      child: Center(
+        child: Column(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 10),
+            Text(
+              'Carregando serviços...',
+              style: TextStyle(
+                fontWeight: FontWeight.w100,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(String error) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline, size: 50, color: Colors.red),
+            const SizedBox(height: 10),
+            const Text(
+              'Erro ao carregar serviços',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              error.length > 50 ? '${error.substring(0, 50)}...' : error,
+              style: const TextStyle(
+                fontWeight: FontWeight.w100,
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                final hotelId = widget.hotelData!['idhospedagem'];
+                if (hotelId != null) {
+                  Provider.of<HospedagemProvider>(context, listen: false)
+                      .carregarServicos(hotelId);
+                }
+              },
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyServicesWidget() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(Icons.construction, size: 50, color: Colors.grey),
+            const SizedBox(height: 10),
+            const Text(
+              'Nenhum serviço extra disponível',
+              style: TextStyle(
+                fontWeight: FontWeight.w100,
+                color: Colors.grey,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Esta hospedagem ainda não cadastrou serviços extras',
+              style: TextStyle(
+                fontWeight: FontWeight.w100,
+                color: Colors.grey[400],
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServicesList(List<ServiceModel> servicos) {
+    return Column(
+      children: servicos.map((servico) {
+        return ServiceTemplate(
+          service: servico.descricao,
+          price: 'R\$ ${servico.preco.toStringAsFixed(2)}',
+        );
+      }).toList(),
+    );
+  }
 
   Widget _buildDivider() => const Padding(
-      padding: EdgeInsets.symmetric(vertical: 20),
-      child: Divider(thickness: 1, color: Color(0xFFCCCCCC)));
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Divider(
+          thickness: 1,
+          color: Color(0xFFCCCCCC),
+        ),
+      );
 
   Widget _buildEmployeesSection() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +421,10 @@ class _HotelState extends State<Hotel> {
           const Text(
             'Funcionários',
             style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w100, color: Colors.black),
+              fontSize: 20,
+              fontWeight: FontWeight.w100,
+              color: Colors.black,
+            ),
           ),
           const SizedBox(height: 10),
           SingleChildScrollView(
@@ -308,7 +435,7 @@ class _HotelState extends State<Hotel> {
                 EmployeeTemplate(),
                 EmployeeTemplate(),
                 EmployeeTemplate(),
-                EmployeeTemplate()
+                EmployeeTemplate(),
               ],
             ),
           ),
@@ -322,11 +449,11 @@ class _HotelState extends State<Hotel> {
             alignment: Alignment.center,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              onPressed: () => _abrirTelaMensagem(context), // CORRIGIDO AQUI
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => _abrirTelaMensagem(context),
               child: IntrinsicWidth(
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -349,9 +476,10 @@ class _HotelState extends State<Hotel> {
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 50, 0, 40),
             child: AppButton(
-                onPressed: _navigateToSchedule,
-                label: 'Agendar aqui',
-                fontSize: 25),
+              onPressed: _navigateToSchedule,
+              label: 'Agendar aqui',
+              fontSize: 25,
+            ),
           ),
         ],
       );
@@ -363,10 +491,8 @@ class _HotelState extends State<Hotel> {
       hotel['complemento'],
       hotel['bairro'],
       hotel['cidade'],
-      hotel['estado']
-    ]
-        .where((element) => element != null && element.toString().isNotEmpty)
-        .toList();
+      hotel['estado'],
+    ].where((element) => element != null && element.toString().isNotEmpty).toList();
     return parts.join(', ');
   }
 
@@ -374,8 +500,6 @@ class _HotelState extends State<Hotel> {
     final valor = double.tryParse(preco) ?? 0.0;
     return 'R\$${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
-
-  // REMOVER _showMessageDialog ANTIGO E SUBSTITUIR POR _abrirTelaMensagem
 
   void _navigateToSchedule() {
     final hotelId = widget.hotelData?['idhospedagem'];
@@ -396,7 +520,7 @@ class _HotelState extends State<Hotel> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('OK'),
-            )
+            ),
           ],
         ),
       );

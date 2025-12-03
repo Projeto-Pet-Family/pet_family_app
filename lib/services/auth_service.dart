@@ -1,15 +1,15 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pet_family_app/models/user_model.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://seuservidor.com/api';
+  static const String baseUrl = 'https://bepetfamily.onrender.com';
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   Future<Map<String, dynamic>> login(String email, String senha) async {
     try {
-      final url = Uri.parse('$baseUrl/autenticacao/login');
+      final url = Uri.parse('$baseUrl/login');
       
       final response = await http.post(
         url,
@@ -23,23 +23,29 @@ class AuthService {
         }),
       );
 
+      print('🔐 Login - Status: ${response.statusCode}');
+      
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
         
         if (responseData['success'] == true) {
-          // Converter resposta para UsuarioModel
           final usuario = UsuarioModel.fromJson(responseData['usuario']);
+          
+          // ✅ SALVAR ID DO USUÁRIO NO ARMAZENAMENTO
+          await _saveUsuarioId(usuario.idUsuario ?? 0);
           
           // Salvar token se existir
           if (responseData['token'] != null) {
             await _secureStorage.write(key: 'auth_token', value: responseData['token']);
           }
           
-          // Salvar dados do usuário
+          // Salvar dados completos do usuário
           await _secureStorage.write(
             key: 'usuario_data', 
             value: json.encode(usuario.toJson())
           );
+          
+          print('✅ Login realizado - ID Usuário: ${usuario.idUsuario}');
           
           return {
             'success': true,
@@ -60,10 +66,37 @@ class AuthService {
         };
       }
     } catch (error) {
+      print('❌ Erro no login: $error');
       return {
         'success': false,
         'message': 'Erro: ${error.toString()}',
       };
+    }
+  }
+
+  // ✅ MÉTODO PARA SALVAR ID DO USUÁRIO
+  Future<void> _saveUsuarioId(int idUsuario) async {
+    try {
+      await _secureStorage.write(key: 'usuario_id', value: idUsuario.toString());
+      print('💾 ID Usuário salvo: $idUsuario');
+    } catch (error) {
+      print('❌ Erro ao salvar ID usuário: $error');
+    }
+  }
+
+  // ✅ MÉTODO PARA OBTER ID DO USUÁRIO DO CACHE
+  Future<int?> getUserIdFromCache() async {
+    try {
+      final idString = await _secureStorage.read(key: 'usuario_id');
+      if (idString != null) {
+        final id = int.tryParse(idString);
+        print('📖 ID Usuário lido do cache: $id');
+        return id;
+      }
+      return null;
+    } catch (error) {
+      print('❌ Erro ao ler ID usuário do cache: $error');
+      return null;
     }
   }
 
@@ -93,7 +126,6 @@ class AuthService {
         final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
         
         if (responseData['success'] == true) {
-          // Atualizar dados do usuário se retornado
           if (responseData['usuario'] != null) {
             final usuario = UsuarioModel.fromJson(responseData['usuario']);
             await _secureStorage.write(
@@ -201,14 +233,19 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    print('🚪 Logout usuário');
     await _secureStorage.delete(key: 'auth_token');
     await _secureStorage.delete(key: 'usuario_data');
+    await _secureStorage.delete(key: 'usuario_id');
   }
 
   Future<bool> isLoggedIn() async {
     final token = await _secureStorage.read(key: 'auth_token');
     final userData = await _secureStorage.read(key: 'usuario_data');
-    return token != null && userData != null;
+    final usuarioId = await getUserIdFromCache();
+    
+    print('🔍 Verificando login - Token: ${token != null}, Dados: ${userData != null}, ID: $usuarioId');
+    return token != null && userData != null && usuarioId != null;
   }
 
   Future<UsuarioModel?> getCurrentUser() async {

@@ -14,6 +14,7 @@ import 'package:pet_family_app/repository/pet/especie_repository.dart';
 import 'package:pet_family_app/repository/pet/pet_repository.dart';
 import 'package:pet_family_app/repository/pet/porte_repository.dart';
 import 'package:pet_family_app/repository/pet/raca_repository.dart';
+import 'package:pet_family_app/repository/service_repository.dart';
 import 'package:pet_family_app/repository/user_repository.dart';
 import 'package:pet_family_app/services/message_service.dart';
 import 'package:pet_family_app/services/pet/especie_service.dart';
@@ -59,7 +60,9 @@ class MyApp extends StatelessWidget {
       providers: [
         // Providers principais
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => HotelProvider()),
+        ChangeNotifierProvider<HospedagemProvider>(
+          create: (_) => HospedagemProvider(),
+        ),
 
         // User Provider
         ChangeNotifierProvider<UsuarioProvider>(

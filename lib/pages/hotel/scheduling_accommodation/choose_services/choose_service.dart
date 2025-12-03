@@ -15,7 +15,7 @@ class ChooseService extends StatefulWidget {
 }
 
 class _ChooseServiceState extends State<ChooseService> {
-  final ServiceRepository _serviceRepository = ServiceRepository();
+  late ServiceRepository _serviceRepository;
   List<ServiceModel> _services = [];
   final Set<int> _selectedServices = {};
   bool _isLoading = true;
@@ -28,9 +28,23 @@ class _ChooseServiceState extends State<ChooseService> {
     _carregarServicosSelecionadosDoCache();
   }
 
+  Future<int?> getIdHospedagemSelecionada() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('id_hospedagem_selecionada');
+    } catch (e) {
+      print('❌ Erro ao pegar ID da hospedagem do cache: $e');
+      return null;
+    }
+  }
+
+  final _idHospedagemFuture = SharedPreferences.getInstance()
+      .then((prefs) => prefs.getInt('id_hospedagem_selecionada'));
+
   Future<void> _carregarServicos() async {
     try {
-      final servicos = await _serviceRepository.lerServico();
+      final servicos = await _serviceRepository
+          .listarServicosPorHospedagem(_idHospedagemFuture as int);
 
       // Filtra serviços com preço válido
       final servicosValidos = servicos.where((s) => s.preco > 0).toList();
@@ -361,7 +375,6 @@ class _ChooseServiceState extends State<ChooseService> {
                   if (_selectedServices.isNotEmpty) const SizedBox(height: 16),
 
                   // Botão próximo
-                  
                 ],
               ),
             ),

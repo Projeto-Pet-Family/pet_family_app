@@ -34,7 +34,7 @@ class _ChoosePetState extends State<ChoosePet> {
     try {
       final authProvider = context.read<AuthProvider>();
       final petProvider = context.read<PetProvider>();
-      final usuarioId = authProvider.usuarioLogado?['idusuario'];
+      final usuarioId = authProvider.usuario?.idUsuario;
 
       if (usuarioId != null) {
         await petProvider.listarPetsPorUsuario(usuarioId);

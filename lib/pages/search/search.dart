@@ -24,7 +24,7 @@ class _SearchState extends State<Search> {
 
   Future<void> _carregarHospedagens() async {
     try {
-      final hospedagens = await _hospedagemRepository.lerHospedagem();
+      final hospedagens = await _hospedagemRepository.getHospedagens();
       setState(() {
         _hospedagens = hospedagens;
         _isLoading = false;

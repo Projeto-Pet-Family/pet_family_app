@@ -121,4 +121,14 @@ class HospedagemRepository {
       return null;
     }
   }
+
+  // ✅ MÉTODO PARA OBTER ID DA HOSPEDAGEM DO CACHE
+  Future<int?> getHospedagemIdFromCache() async {
+    try {
+      return await _service.getHospedagemIdFromCache();
+    } catch (error) {
+      print('❌ Repository - Erro ao obter ID hospedagem do cache: $error');
+      return null;
+    }
+  }
 }

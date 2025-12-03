@@ -1,304 +1,84 @@
+// presentation/providers/hospedagem_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:pet_family_app/repository/hospedagem_repository.dart';
-import '../models/hospedagem_model.dart';
+import 'package:pet_family_app/models/service_model.dart';
+import 'package:pet_family_app/repository/service_repository.dart';
+import 'package:pet_family_app/services/service_service.dart';
+import 'package:http/http.dart' as http;
 
-class HospedagemProvider extends ChangeNotifier {
-  final HospedagemRepository _repository = HospedagemRepository();
-
-  List<HospedagemModel> _hospedagens = [];
-  HospedagemModel? _currentHospedagem;
-  bool _isLoading = false;
-  bool _isHospedagemAuthenticated = false;
+class HospedagemProvider with ChangeNotifier {
+  List<ServiceModel> _servicos = [];
+  bool _loading = false;
   String? _error;
+  Map<String, dynamic>? _hotelData;
 
-  List<HospedagemModel> get hospedagens => _hospedagens;
-  HospedagemModel? get currentHospedagem => _currentHospedagem;
-  bool get isLoading => _isLoading;
-  bool get isHospedagemAuthenticated => _isHospedagemAuthenticated;
+  HospedagemProvider();
+
+  // Getters
+  List<ServiceModel> get servicos => _servicos;
+  bool get isLoading => _loading;
   String? get error => _error;
+  Map<String, dynamic>? get hotelData => _hotelData;
 
-  HospedagemProvider() {
-    print('🏨 HospedagemProvider iniciado');
-    _loadCurrentHospedagem();
-  }
-
-  Future<void> _loadCurrentHospedagem() async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      print('🔄 Carregando hospedagem atual do storage...');
-      final hospedagem = await _repository.getCurrentHospedagem();
-
-      if (hospedagem != null) {
-        _currentHospedagem = hospedagem;
-        _isHospedagemAuthenticated = true;
-        print(
-            '✅ Hospedagem carregada: ${hospedagem.nome} (ID: ${hospedagem.idHospedagem})');
-      } else {
-        print('ℹ️ Nenhuma hospedagem encontrada no storage');
-      }
-    } catch (error) {
-      _error = 'Erro ao carregar hospedagem: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadHospedagens() async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      print('🔄 Carregando lista de hospedagens...');
-      _hospedagens = await _repository.getHospedagens();
-      print('✅ ${_hospedagens.length} hospedagens carregadas');
-    } catch (error) {
-      _error = 'Erro ao carregar hospedagens: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadHospedagemById(int idHospedagem) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      print('🔄 Carregando hospedagem por ID: $idHospedagem');
-      final hospedagem = await _repository.getHospedagemById(idHospedagem);
-      _currentHospedagem = hospedagem;
-      print('✅ Hospedagem carregada: ${hospedagem.nome}');
-    } catch (error) {
-      _error = 'Erro ao carregar hospedagem: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> createHospedagem(HospedagemModel hospedagem) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      print('➕ Criando nova hospedagem: ${hospedagem.nome}');
-      final result = await _repository.createHospedagem(hospedagem);
-
-      if (result['success'] == true) {
-        print('✅ Hospedagem criada com sucesso');
-        await loadHospedagens();
-        _error = null;
-      } else {
-        _error = result['message'];
-        print('❌ Erro ao criar hospedagem: $_error');
-      }
-    } catch (error) {
-      _error = 'Erro: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateHospedagem(
-      int idHospedagem, HospedagemModel hospedagem) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      print('✏️ Atualizando hospedagem ID: $idHospedagem');
-      final result =
-          await _repository.updateHospedagem(idHospedagem, hospedagem);
-
-      if (result['success'] == true) {
-        if (_currentHospedagem != null &&
-            _currentHospedagem!.idHospedagem == idHospedagem) {
-          _currentHospedagem = result['hospedagem'];
-          print('✅ Hospedagem atual atualizada');
-        }
-
-        await loadHospedagens();
-        _error = null;
-        print('✅ Hospedagem atualizada com sucesso');
-      } else {
-        _error = result['message'];
-        print('❌ Erro ao atualizar hospedagem: $_error');
-      }
-    } catch (error) {
-      _error = 'Erro: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> deleteHospedagem(int idHospedagem) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      print('🗑️ Excluindo hospedagem ID: $idHospedagem');
-      final result = await _repository.deleteHospedagem(idHospedagem);
-
-      if (result['success'] == true) {
-        _hospedagens.removeWhere(
-            (hospedagem) => hospedagem.idHospedagem == idHospedagem);
-
-        if (_currentHospedagem != null &&
-            _currentHospedagem!.idHospedagem == idHospedagem) {
-          await logoutHospedagem();
-        }
-
-        _error = null;
-        print('✅ Hospedagem excluída com sucesso');
-      } else {
-        _error = result['message'];
-        print('❌ Erro ao excluir hospedagem: $_error');
-      }
-    } catch (error) {
-      _error = 'Erro: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loginHospedagem(String email, String senha) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      print('🔐 Tentando login hospedagem: $email');
-      final result = await _repository.loginHospedagem(email, senha);
-
-      if (result['success'] == true) {
-        _currentHospedagem = result['hospedagem'];
-        _isHospedagemAuthenticated = true;
-        _error = null;
-        print('✅ Login realizado com sucesso');
-      } else {
-        _error = result['message'];
-        _isHospedagemAuthenticated = false;
-        print('❌ Login falhou: $_error');
-      }
-    } catch (error) {
-      _error = 'Erro: $error';
-      _isHospedagemAuthenticated = false;
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> alterarSenhaHospedagem(
-      String senhaAtual, String novaSenha) async {
-    try {
-      if (_currentHospedagem == null ||
-          _currentHospedagem!.idHospedagem == null) {
-        throw Exception('Hospedagem não encontrada');
-      }
-
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final idHospedagem = _currentHospedagem!.idHospedagem;
-      print('🔐 Alterando senha hospedagem ID: $idHospedagem');
-
-      final result = await _repository.alterarSenhaHospedagem(
-        idHospedagem,
-        senhaAtual,
-        novaSenha,
-      );
-
-      if (result['success'] == true) {
-        _error = null;
-        print('✅ Senha alterada com sucesso');
-      } else {
-        _error = result['message'];
-        print('❌ Erro ao alterar senha: $_error');
-      }
-    } catch (error) {
-      _error = 'Erro: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> logoutHospedagem() async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      print('🚪 Fazendo logout da hospedagem...');
-      await _repository.logoutHospedagem();
-
-      _currentHospedagem = null;
-      _isHospedagemAuthenticated = false;
-      _error = null;
-      print('✅ Logout realizado com sucesso');
-    } catch (error) {
-      _error = 'Erro ao fazer logout: $error';
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> checkHospedagemAuthentication() async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      print('🔍 Verificando autenticação da hospedagem...');
-      final isLoggedIn = await _repository.isHospedagemLoggedIn();
-      _isHospedagemAuthenticated = isLoggedIn;
-
-      if (isLoggedIn) {
-        final hospedagem = await _repository.getCurrentHospedagem();
-        _currentHospedagem = hospedagem;
-        print('✅ Hospedagem autenticada');
-      } else {
-        print('ℹ️ Hospedagem não autenticada');
-      }
-    } catch (error) {
-      _error = 'Erro ao verificar autenticação: $error';
-      _isHospedagemAuthenticated = false;
-      print('❌ $_error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void clearError() {
-    _error = null;
+  // Set hotel data
+  void setHotelData(Map<String, dynamic> hotelData) {
+    _hotelData = hotelData;
     notifyListeners();
   }
 
-  void setCurrentHospedagem(HospedagemModel hospedagem) {
-    _currentHospedagem = hospedagem;
-    _isHospedagemAuthenticated = true;
-    print('🏨 Hospedagem definida manualmente: ${hospedagem.nome}');
+  // Carregar serviços da hospedagem
+  Future<void> carregarServicos(int idHospedagem) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      print('🔄 HospedagemProvider: Carregando serviços para ID $idHospedagem');
+      
+      final serviceService = ServiceService(client: http.Client());
+      final servicosCarregados = await serviceService.listarServicosPorHospedagem(idHospedagem);
+      
+      // Filtra serviços válidos
+      _servicos = servicosCarregados.where((servico) {
+        return servico.descricao.isNotEmpty && servico.preco > 0;
+      }).toList();
+      
+      _error = null;
+      
+      print('✅ ${_servicos.length} serviços carregados para hospedagem $idHospedagem');
+      
+    } catch (e) {
+      _error = 'Erro ao carregar serviços: ${e.toString()}';
+      _servicos = [];
+      print('❌ Erro ao carregar serviços: $e');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Carregar serviços automaticamente baseado no hotelData
+  Future<void> carregarServicosDoHotel() async {
+    if (_hotelData == null || _hotelData!['idhospedagem'] == null) {
+      _error = 'Hotel não selecionado';
+      notifyListeners();
+      return;
+    }
+    
+    final hotelId = _hotelData!['idhospedagem'] as int;
+    await carregarServicos(hotelId);
+  }
+
+  // Limpar serviços
+  void limparServicos() {
+    _servicos.clear();
+    notifyListeners();
+  }
+
+  // Limpar todos os dados
+  void limparDados() {
+    _servicos.clear();
+    _hotelData = null;
+    _error = null;
     notifyListeners();
   }
 }

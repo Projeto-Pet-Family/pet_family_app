@@ -115,8 +115,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                     // ✅ LIMPA ERROS ANTES DE VERIFICAR
                                     authProvider.clearError();
 
-                                    final success =
-                                        await authProvider.verificarEmail(
+                                    // ✅ CORREÇÃO: Use o método EXISTENTE solicitarRecuperacaoSenha
+                                    final success = await authProvider.solicitarRecuperacaoSenha(
                                       _emailController.text.trim(),
                                     );
 
@@ -129,7 +129,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                       });
                                     } else {
                                       // ✅ SE NÃO FOR VÁLIDO, MANTÉM NA MESMA TELA E MOSTRA ERRO
-                                      // O erro já foi definido no authProvider
                                       print(
                                           '❌ Email não verificado: ${authProvider.errorMessage}');
                                     }
@@ -282,14 +281,16 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                   : AppButton(
                                       onPressed: () async {
                                         if (_formSenhaKey.currentState!.validate()) {
-                                          final success = await authProvider
-                                              .redefinirSenhaComEmail(
-                                                _emailUsuario!,
-                                                _novaSenhaController.text,
-                                              );
+                                          // ✅ CORREÇÃO: Use o método EXISTENTE redefinirSenha
+                                          final success = await authProvider.redefinirSenha(
+                                            _emailUsuario!,
+                                            _novaSenhaController.text,
+                                          );
 
                                           if (success) {
-                                            GoRouter.of(context).go('/');
+                                            _mostrarSucesso('Senha redefinida com sucesso!');
+                                            await Future.delayed(Duration(seconds: 2));
+                                            GoRouter.of(context).go('/login');
                                           } else {
                                             _mostrarErro(
                                                 authProvider.errorMessage ?? 'Erro ao redefinir senha');
@@ -338,7 +339,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     );
   }
 
-// ✅ Método para mostrar mensagem de erro
   void _mostrarErro(String mensagem) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

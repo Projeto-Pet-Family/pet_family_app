@@ -10,8 +10,6 @@ class UsuarioModel {
   final String senha;
   final bool? esqueceuSenha;
   final DateTime? dataCadastro;
-  final int? idCargo;
-  final PetModel? petCriado;
 
   UsuarioModel({
     this.idUsuario,
@@ -22,8 +20,6 @@ class UsuarioModel {
     required this.senha,
     this.esqueceuSenha = false,
     this.dataCadastro,
-    this.idCargo,
-    this.petCriado,
   });
 
   factory UsuarioModel.fromJson(Map<String, dynamic> json) {
@@ -38,10 +34,6 @@ class UsuarioModel {
       dataCadastro: json['datacadastro'] != null
           ? DateTime.parse(json['datacadastro'])
           : null,
-      idCargo: json['idcargo'] ?? json['idCargo'],
-      petCriado: json['petCriado'] != null
-          ? PetModel.fromJson(json['petCriado'])
-          : null,
     );
   }
 
@@ -54,8 +46,6 @@ class UsuarioModel {
       'senha': senha,
       'esqueceuSenha': esqueceuSenha ?? false,
       'dataCadastro': dataCadastro?.toIso8601String(),
-      'idCargo': idCargo,
-      if (petCriado != null) 'petData': petCriado!.toJson(),
     };
   }
 
@@ -80,8 +70,6 @@ class UsuarioModel {
       senha: senha ?? this.senha,
       esqueceuSenha: esqueceuSenha ?? this.esqueceuSenha,
       dataCadastro: dataCadastro ?? this.dataCadastro,
-      idCargo: idCargo ?? this.idCargo,
-      petCriado: petCriado ?? this.petCriado,
     );
   }
 }

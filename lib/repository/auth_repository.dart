@@ -1,5 +1,6 @@
 import 'package:pet_family_app/models/user_model.dart';
-import 'package:pet_family_app/services/auth_service.dart';
+
+import '../services/auth_service.dart';
 
 class AuthRepository {
   final AuthService _service = AuthService();
@@ -38,5 +39,10 @@ class AuthRepository {
 
   Future<String?> getToken() async {
     return await _service.getToken();
+  }
+
+  // ✅ MÉTODO PARA OBTER ID DO USUÁRIO DO CACHE
+  Future<int?> getUserIdFromCache() async {
+    return await _service.getUserIdFromCache();
   }
 }

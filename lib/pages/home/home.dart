@@ -43,7 +43,7 @@ class Home extends StatelessWidget {
               Selector<AuthProvider, String>(
                 selector: (context, authProvider) {
                   final nomeCompleto =
-                      authProvider.usuarioLogado?['nome'] ?? 'Tutor';
+                      authProvider.usuario?.nome ?? 'Tutor';
                   return _extrairPrimeiroNome(nomeCompleto);
                 },
                 builder: (context, primeiroNome, child) {

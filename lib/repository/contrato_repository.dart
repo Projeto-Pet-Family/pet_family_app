@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/services/api_service.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
+import 'package:pet_family_app/providers/auth_provider.dart';
 
 class ContratoRepository {
   final ApiService _api = ApiService();
@@ -16,7 +17,8 @@ class ContratoRepository {
     List<Map<String, dynamic>>? servicos,
   }) async {
     try {
-      final idUsuario = await AuthProvider.getUserIdFromCache();
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
 
       if (idUsuario == null) {
         throw Exception('Usuário não autenticado. Faça login novamente.');
@@ -137,7 +139,8 @@ class ContratoRepository {
   /// Busca contratos por status
   Future<List<ContratoModel>> buscarContratosPorStatus(String status) async {
     try {
-      final idUsuario = await AuthProvider.getUserIdFromCache();
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
       if (idUsuario == null) throw Exception('Usuário não autenticado');
 
       final response = await _api.get('/contrato?status=$status');
@@ -523,7 +526,8 @@ class ContratoRepository {
   /// Busca estatísticas de contratos do usuário
   Future<Map<String, dynamic>> buscarEstatisticasUsuario() async {
     try {
-      final idUsuario = await AuthProvider.getUserIdFromCache();
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
       if (idUsuario == null) throw Exception('Usuário não autenticado');
 
       final response =
@@ -633,6 +637,4 @@ class ContratoRepository {
       // Não lança exceção para não quebrar o fluxo principal
     }
   }
-
-  
 }

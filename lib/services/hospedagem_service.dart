@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/hospedagem_model.dart';
 
 class HospedagemService {
-  static const String baseUrl = 'http://seuservidor.com/api';
+  static const String baseUrl = 'https://bepetfamily.onrender.com';
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   Future<Map<String, String>> getHeaders() async {
@@ -21,7 +21,7 @@ class HospedagemService {
   Future<List<HospedagemModel>> getHospedagens() async {
     try {
       final headers = await getHeaders();
-      final url = Uri.parse('$baseUrl/hospedagem/hospedagens');
+      final url = Uri.parse('$baseUrl/hospedagens');
       
       final response = await http.get(url, headers: headers);
 
@@ -100,10 +100,14 @@ class HospedagemService {
         final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
         print('✅ Hospedagem criada com sucesso');
         
+        // ✅ SALVAR ID DA HOSPEDAGEM NO ARMAZENAMENTO
+        final hospedagemCriada = HospedagemModel.fromJson(data['data'] ?? data);
+        await _saveHospedagemId(hospedagemCriada.idHospedagem);
+        
         return {
           'success': true,
           'message': data['message'],
-          'hospedagem': HospedagemModel.fromJson(data['data'] ?? data),
+          'hospedagem': hospedagemCriada,
         };
       } else {
         final errorData = json.decode(utf8.decode(response.bodyBytes));
@@ -149,6 +153,9 @@ class HospedagemService {
         final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
         print('✅ Hospedagem atualizada com sucesso');
         
+        // ✅ ATUALIZAR ID DA HOSPEDAGEM NO ARMAZENAMENTO
+        await _saveHospedagemId(idHospedagem);
+        
         return {
           'success': true,
           'message': data['message'],
@@ -187,6 +194,12 @@ class HospedagemService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
         print('✅ Hospedagem excluída com sucesso');
+        
+        // ✅ REMOVER ID DA HOSPEDAGEM DO ARMAZENAMENTO SE FOR A MESMA
+        final currentId = await getHospedagemIdFromCache();
+        if (currentId == idHospedagem) {
+          await _removeHospedagemId();
+        }
         
         return {
           'success': true,
@@ -237,12 +250,15 @@ class HospedagemService {
         if (data['message'] == 'Login realizado com sucesso' || data['success'] == true) {
           final hospedagem = HospedagemModel.fromJson(data['data'] ?? data);
           
+          // ✅ SALVAR ID DA HOSPEDAGEM NO ARMAZENAMENTO
+          await _saveHospedagemId(hospedagem.idHospedagem);
+          
           await _secureStorage.write(
             key: 'hospedagem_data', 
             value: json.encode(hospedagem.toJson())
           );
           
-          print('✅ Login realizado com sucesso - ID: ${hospedagem.idHospedagem}');
+          print('✅ Login realizado com sucesso - ID Hospedagem: ${hospedagem.idHospedagem}');
           
           return {
             'success': true,
@@ -284,7 +300,7 @@ class HospedagemService {
       final headers = await getHeaders();
       final url = Uri.parse('$baseUrl/hospedagem/hospedagens/$idHospedagem/senha');
       
-      print('🔐 Alterar Senha - ID: $idHospedagem');
+      print('🔐 Alterar Senha - ID Hospedagem: $idHospedagem');
       
       final response = await http.put(
         url,
@@ -323,7 +339,42 @@ class HospedagemService {
     }
   }
 
-  // Métodos auxiliares
+  // ✅ MÉTODO PARA SALVAR ID DA HOSPEDAGEM
+  Future<void> _saveHospedagemId(int idHospedagem) async {
+    try {
+      await _secureStorage.write(key: 'hospedagem_id', value: idHospedagem.toString());
+      print('💾 ID Hospedagem salvo: $idHospedagem');
+    } catch (error) {
+      print('❌ Erro ao salvar ID hospedagem: $error');
+    }
+  }
+
+  // ✅ MÉTODO PARA REMOVER ID DA HOSPEDAGEM
+  Future<void> _removeHospedagemId() async {
+    try {
+      await _secureStorage.delete(key: 'hospedagem_id');
+      print('🗑️ ID Hospedagem removido');
+    } catch (error) {
+      print('❌ Erro ao remover ID hospedagem: $error');
+    }
+  }
+
+  // ✅ MÉTODO PARA OBTER ID DA HOSPEDAGEM DO CACHE
+  Future<int?> getHospedagemIdFromCache() async {
+    try {
+      final idString = await _secureStorage.read(key: 'hospedagem_id');
+      if (idString != null) {
+        final id = int.tryParse(idString);
+        print('📖 ID Hospedagem lido do cache: $id');
+        return id;
+      }
+      return null;
+    } catch (error) {
+      print('❌ Erro ao ler ID hospedagem do cache: $error');
+      return null;
+    }
+  }
+
   Future<HospedagemModel?> getCurrentHospedagem() async {
     try {
       final hospedagemData = await _secureStorage.read(key: 'hospedagem_data');
@@ -342,8 +393,10 @@ class HospedagemService {
   Future<bool> isHospedagemLoggedIn() async {
     try {
       final hospedagemData = await _secureStorage.read(key: 'hospedagem_data');
-      final temDados = hospedagemData != null;
-      print('🔍 Verificando login hospedagem: $temDados');
+      final hospedagemId = await getHospedagemIdFromCache();
+      
+      final temDados = hospedagemData != null && hospedagemId != null;
+      print('🔍 Verificando login hospedagem - Dados: ${hospedagemData != null}, ID: $hospedagemId');
       return temDados;
     } catch (error) {
       return false;
@@ -354,6 +407,7 @@ class HospedagemService {
     print('🚪 Logout hospedagem');
     await _secureStorage.delete(key: 'hospedagem_data');
     await _secureStorage.delete(key: 'hospedagem_token');
+    await _removeHospedagemId();
   }
 
   Future<String?> getHospedagemToken() async {

@@ -32,7 +32,8 @@ class _ProfileState extends State<Profile> {
     return Scaffold(
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
-          final usuario = authProvider.usuarioLogado;
+          // ✅ CORREÇÃO: Use authProvider.usuario ao invés de authProvider.usuarioLogado
+          final usuario = authProvider.usuario;
 
           if (usuario == null || _carregando) {
             return Center(
@@ -43,12 +44,13 @@ class _ProfileState extends State<Profile> {
                   SizedBox(height: 20),
                   Text('Carregando perfil...'),
                 ],
-              ),
+              )
             );
           }
 
-          final nome = usuario['nome'] ?? 'Usuário';
-
+          final nome = usuario.nome;
+          final email = usuario.email;
+          final telefone = usuario.telefone;
 
           return Padding(
             padding: const EdgeInsets.all(20),
@@ -69,7 +71,10 @@ class _ProfileState extends State<Profile> {
                         ),
                       ),
                       Spacer(),
-                      SizedBox(width: 48), // Para balancear o layout
+                      IconButton(
+                        icon: Icon(Icons.refresh),
+                        onPressed: _recarregarPerfil,
+                      ),
                     ],
                   ),
 
@@ -100,7 +105,7 @@ class _ProfileState extends State<Profile> {
                         ),
                         SizedBox(width: 16),
 
-                        // Dados
+                        // Dados do usuário
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,6 +118,32 @@ class _ProfileState extends State<Profile> {
                                   color: Colors.black,
                                 ),
                               ),
+                              SizedBox(height: 4),
+                              if (email != null && email.isNotEmpty)
+                                Text(
+                                  email,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              if (telefone != null && telefone.isNotEmpty)
+                                Text(
+                                  telefone,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              SizedBox(height: 8),
+                              // Mostrar ID do usuário (opcional - para debug)
+                              Text(
+                                'ID: ${usuario.idUsuario ?? 'N/A'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -122,7 +153,7 @@ class _ProfileState extends State<Profile> {
 
                   SizedBox(height: 40),
 
-                  // Opções
+                  // Opções do perfil
                   _buildOpcoesPerfil(context, authProvider),
                 ],
               ),
@@ -150,7 +181,16 @@ class _ProfileState extends State<Profile> {
           title: 'Meus Pets',
           description: 'Gerencie seus animais de estimação',
           onTap: () {
-            context.go('/edit-pet');
+            context.go('/meus-pets');
+          },
+        ),
+        SizedBox(height: 12),
+        ButtonOptionProfileTemplate(
+          icon: Icons.lock_outline,
+          title: 'Alterar Senha',
+          description: 'Mude sua senha de acesso',
+          onTap: () {
+            context.go('/alterar-senha');
           },
         ),
         SizedBox(height: 12),

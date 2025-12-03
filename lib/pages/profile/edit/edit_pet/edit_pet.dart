@@ -32,7 +32,7 @@ class _EditPetState extends State<EditPet> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final petProvider = Provider.of<PetProvider>(context, listen: false);
-      final usuarioId = authProvider.usuarioLogado?['idusuario'];
+      final usuarioId = authProvider.usuario?.idUsuario;
 
       if (usuarioId != null) {
         await petProvider.listarPetsPorUsuario(usuarioId);
@@ -164,7 +164,7 @@ class _EditPetState extends State<EditPet> {
               padding: const EdgeInsets.all(16),
               child: Consumer2<PetProvider, AuthProvider>(
                 builder: (context, petProvider, authProvider, child) {
-                  final usuarioId = authProvider.usuarioLogado?['idusuario'];
+                  final usuarioId = authProvider.usuario?.idUsuario;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

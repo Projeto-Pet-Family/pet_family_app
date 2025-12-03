@@ -1,38 +1,52 @@
+// domain/repositories/service_repository.dart
 import 'package:pet_family_app/models/service_model.dart';
-import 'package:pet_family_app/services/api_service.dart';
+import 'package:pet_family_app/services/service_service.dart';
 
-class ServiceRepository {
-  final ApiService _api = ApiService();
+abstract class ServiceRepository {
+  Future<List<ServiceModel>> listarServicosPorHospedagem(int idHospedagem);
+  Future<ServiceModel> criarServico(int idHospedagem, ServiceModel servico);
+  Future<ServiceModel> atualizarServico(ServiceModel servico);
+  Future<void> removerServico(int idServico);
+}
 
-  Future<List<ServiceModel>> lerServico() async {
+class ServiceRepositoryImpl implements ServiceRepository {
+  final ServiceService serviceService;
+
+  ServiceRepositoryImpl({required this.serviceService});
+
+  @override
+  Future<List<ServiceModel>> listarServicosPorHospedagem(int idHospedagem) async {
     try {
-      final response = await _api.get('/hospedagens/1/servicos');
-
-      print('Resposta bruta da API: ${response.data}');
-
-      if (response.data is List) {
-        final List<dynamic> jsonList = response.data as List;
-        final List<ServiceModel> services = [];
-
-        for (int i = 0; i < jsonList.length; i++) {
-          try {
-            final service = ServiceModel.fromJson(jsonList[i]);
-            print(
-                'Serviço $i: ID=${service.idServico}, Descrição=${service.descricao}');
-            services.add(service);
-          } catch (e) {
-            print('❌ Erro ao converter serviço $i: $e');
-          }
-        }
-
-        return services;
-      } else {
-        print('❌ Response.data não é uma lista: ${response.data}');
-        return [];
-      }
+      return await serviceService.listarServicosPorHospedagem(idHospedagem);
     } catch (e) {
-      print('❌ Erro no ServiceRepository: $e');
-      throw Exception('Erro ao carregar serviços: $e');
+      throw Exception('Erro ao listar serviços: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<ServiceModel> criarServico(int idHospedagem, ServiceModel servico) async {
+    try {
+      return await serviceService.criarServico(idHospedagem, servico);
+    } catch (e) {
+      throw Exception('Erro ao criar serviço: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<ServiceModel> atualizarServico(ServiceModel servico) async {
+    try {
+      return await serviceService.atualizarServico(servico);
+    } catch (e) {
+      throw Exception('Erro ao atualizar serviço: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> removerServico(int idServico) async {
+    try {
+      await serviceService.removerServico(idServico);
+    } catch (e) {
+      throw Exception('Erro ao remover serviço: ${e.toString()}');
     }
   }
 }

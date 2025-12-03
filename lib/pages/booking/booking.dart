@@ -58,7 +58,8 @@ class _BookingState extends State<Booking> {
   Future<void> _criarContratoComCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final idUsuario = await AuthProvider.getUserIdFromCache();
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
 
       if (idUsuario == null) {
         print('❌ Usuário não autenticado');
@@ -137,7 +138,6 @@ class _BookingState extends State<Booking> {
       });
     }
   }
-
   Future<void> _carregarContratos() async {
     try {
       setState(() {
@@ -145,7 +145,8 @@ class _BookingState extends State<Booking> {
         _errorMessage = '';
       });
 
-      final idUsuario = await AuthProvider.getUserIdFromCache();
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
 
       if (idUsuario == null) {
         throw Exception('Usuário não autenticado');
