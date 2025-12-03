@@ -13,7 +13,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Hotel extends StatefulWidget {
   final Map<String, dynamic>? hotelData;
-  const Hotel({super.key, required this.hotelData});
+  const Hotel({
+    super.key,
+    required this.hotelData,
+  });
 
   @override
   State<Hotel> createState() => _HotelState();
@@ -36,15 +39,19 @@ class _HotelState extends State<Hotel> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      if (widget.hotelData != null && widget.hotelData!['idhospedagem'] != null) {
+      if (widget.hotelData != null &&
+          widget.hotelData!['idhospedagem'] != null) {
         final hotelId = widget.hotelData!['idhospedagem'] as int;
 
         await prefs.setInt('id_hospedagem_selecionada', hotelId);
         await prefs.setString('hotel_nome', widget.hotelData!['nome'] ?? '');
-        await prefs.setString('hotel_logradouro', widget.hotelData!['logradouro'] ?? '');
-        await prefs.setString('hotel_cidade', widget.hotelData!['cidade'] ?? '');
-        await prefs.setString('hotel_estado', widget.hotelData!['estado'] ?? '');
-        await prefs.setString('hotel_valor_diaria', 
+        await prefs.setString(
+            'hotel_logradouro', widget.hotelData!['logradouro'] ?? '');
+        await prefs.setString(
+            'hotel_cidade', widget.hotelData!['cidade'] ?? '');
+        await prefs.setString(
+            'hotel_estado', widget.hotelData!['estado'] ?? '');
+        await prefs.setString('hotel_valor_diaria',
             widget.hotelData!['valor_diaria']?.toString() ?? '0.00');
 
         print('✅ Hotel salvo no cache - ID: $hotelId');
@@ -56,15 +63,15 @@ class _HotelState extends State<Hotel> {
 
   void _initializeData() {
     if (_isInitialized || widget.hotelData == null) return;
-    
+
     final hotelId = widget.hotelData!['idhospedagem'];
     if (hotelId != null) {
       _salvarHotelNoCache();
-      
+
       final provider = Provider.of<HospedagemProvider>(context, listen: false);
       provider.setHotelData(widget.hotelData!);
       provider.carregarServicos(hotelId);
-      
+
       _isInitialized = true;
     }
   }
@@ -136,7 +143,7 @@ class _HotelState extends State<Hotel> {
                       _initializeData();
                     });
                   }
-                  
+
                   return _buildHotelContent(hospedagemProvider);
                 },
               ),
@@ -174,7 +181,8 @@ class _HotelState extends State<Hotel> {
                 ElevatedButton(
                   onPressed: () => context.go('/core-navigation'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 15),
                   ),
                   child: const Text('Voltar para Home'),
                 ),
@@ -200,7 +208,8 @@ class _HotelState extends State<Hotel> {
 
   Widget _buildHotelHeader(Map<String, dynamic> hotel) {
     final String nome = hotel['nome'] ?? 'Nome não disponível';
-    final String valorDiaria = _formatarPreco(hotel['valor_diaria']?.toString() ?? '0.00');
+    final String valorDiaria =
+        _formatarPreco(hotel['valor_diaria']?.toString() ?? '0.00');
     final enderecoCompleto = _buildEnderecoCompleto(hotel);
 
     return Column(
@@ -283,18 +292,13 @@ class _HotelState extends State<Hotel> {
           ),
         ),
         const SizedBox(height: 20),
-
-        if (hospedagemProvider.isLoading)
-          _buildLoadingWidget(),
-
+        if (hospedagemProvider.isLoading) _buildLoadingWidget(),
         if (hospedagemProvider.error != null && !hospedagemProvider.isLoading)
           _buildErrorWidget(hospedagemProvider.error!),
-
-        if (hospedagemProvider.servicos.isEmpty && 
-            !hospedagemProvider.isLoading && 
+        if (hospedagemProvider.servicos.isEmpty &&
+            !hospedagemProvider.isLoading &&
             hospedagemProvider.error == null)
           _buildEmptyServicesWidget(),
-
         if (hospedagemProvider.servicos.isNotEmpty)
           _buildServicesList(hospedagemProvider.servicos),
       ],
@@ -450,7 +454,8 @@ class _HotelState extends State<Hotel> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: () => _abrirTelaMensagem(context),
@@ -492,7 +497,9 @@ class _HotelState extends State<Hotel> {
       hotel['bairro'],
       hotel['cidade'],
       hotel['estado'],
-    ].where((element) => element != null && element.toString().isNotEmpty).toList();
+    ]
+        .where((element) => element != null && element.toString().isNotEmpty)
+        .toList();
     return parts.join(', ');
   }
 
@@ -507,9 +514,20 @@ class _HotelState extends State<Hotel> {
     final valorDiaria = widget.hotelData?['valor_diaria']?.toString() ?? '0.00';
 
     if (hotelId != null) {
+      // Salva os dados no cache
+      _salvarHotelNoCache();
       _salvarValorDiariaNoCache(valorDiaria);
-      context.go('/choose-pet',
-          extra: {'hotelId': hotelId, 'hotelNome': hotelNome});
+
+      // Garante que o id da hospedagem está salvo no cache
+      _salvarIdHospedagemNoCache(hotelId);
+
+      context.go(
+        '/choose-pet',
+        extra: {
+          'hotelId': hotelId,
+          'hotelNome': hotelNome,
+        },
+      );
     } else {
       showDialog(
         context: context,
@@ -524,6 +542,16 @@ class _HotelState extends State<Hotel> {
           ],
         ),
       );
+    }
+  }
+
+  Future<void> _salvarIdHospedagemNoCache(int idHospedagem) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('id_hospedagem_selecionada', idHospedagem);
+      print('💾 ID da hospedagem salvo no cache: $idHospedagem');
+    } catch (e) {
+      print('❌ Erro ao salvar ID da hospedagem no cache: $e');
     }
   }
 }

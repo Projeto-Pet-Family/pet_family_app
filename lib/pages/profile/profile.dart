@@ -32,20 +32,18 @@ class _ProfileState extends State<Profile> {
     return Scaffold(
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
-          // ✅ CORREÇÃO: Use authProvider.usuario ao invés de authProvider.usuarioLogado
           final usuario = authProvider.usuario;
 
           if (usuario == null || _carregando) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 20),
-                  Text('Carregando perfil...'),
-                ],
-              )
-            );
+                child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('Carregando perfil...'),
+              ],
+            ));
           }
 
           final nome = usuario.nome;
@@ -181,16 +179,7 @@ class _ProfileState extends State<Profile> {
           title: 'Meus Pets',
           description: 'Gerencie seus animais de estimação',
           onTap: () {
-            context.go('/meus-pets');
-          },
-        ),
-        SizedBox(height: 12),
-        ButtonOptionProfileTemplate(
-          icon: Icons.lock_outline,
-          title: 'Alterar Senha',
-          description: 'Mude sua senha de acesso',
-          onTap: () {
-            context.go('/alterar-senha');
+            context.go('/edit-pet');
           },
         ),
         SizedBox(height: 12),
@@ -219,7 +208,8 @@ class _ProfileState extends State<Profile> {
             ],
           ),
           content: Text(
-              'Tem certeza que deseja sair? Você precisará fazer login novamente.'),
+            'Tem certeza que deseja sair? Você precisará fazer login novamente.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -236,7 +226,10 @@ class _ProfileState extends State<Profile> {
                   context.go('/');
                 }
               },
-              child: Text('Sair', style: TextStyle(color: Colors.white)),
+              child: Text(
+                'Sair',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );

@@ -19,6 +19,7 @@ class BookingTemplate extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onEditar;
   final VoidCallback onCancelar;
+  final VoidCallback onExcluir;
   final Function(ContratoModel)? onContratoEditado;
   final AvaliacaoModel? avaliacaoExistente;
   final DenunciaModel? denunciaExistente;
@@ -29,6 +30,7 @@ class BookingTemplate extends StatelessWidget {
     required this.onTap,
     required this.onEditar,
     required this.onCancelar,
+    required this.onExcluir,
     this.onContratoEditado,
     this.avaliacaoExistente,
     this.denunciaExistente,

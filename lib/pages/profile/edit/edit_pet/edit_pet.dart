@@ -20,15 +20,27 @@ class EditPet extends StatefulWidget {
 }
 
 class _EditPetState extends State<EditPet> {
+  bool _initialLoad = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _carregarPets();
-    });
+    // Marcador para garantir que carregue apenas uma vez
+    _initialLoad = false;
   }
 
-  void _carregarPets() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // didChangeDependencies é chamado depois que o widget está na árvore
+    // e podemos acessar os providers com segurança
+    if (!_initialLoad) {
+      _carregarPets();
+      _initialLoad = true;
+    }
+  }
+
+  Future<void> _carregarPets() async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final petProvider = Provider.of<PetProvider>(context, listen: false);
@@ -47,13 +59,25 @@ class _EditPetState extends State<EditPet> {
             print('   - Raça: ${pet.descricaoRaca}');
             print('   - Porte: ${pet.descricaoPorte}');
           }
+        } else if (mounted && petProvider.pets.isEmpty) {
+          print('ℹ️ Nenhum pet encontrado para o usuário $usuarioId');
         }
+      } else {
+        print('❌ Usuário não autenticado');
       }
     } catch (e) {
       print('❌ Erro ao carregar pets: $e');
     }
   }
 
+  // Adicione este método para forçar recarregamento quando a tela for aberta novamente
+  @override
+  void dispose() {
+    _initialLoad = false;
+    super.dispose();
+  }
+
+  // Método atualizado para adicionar pet com recarregamento automático
   void _adicionarNovoPet(PetModel novoPet) async {
     final petProvider = Provider.of<PetProvider>(context, listen: false);
 
@@ -61,6 +85,13 @@ class _EditPetState extends State<EditPet> {
       await petProvider.criarPet(novoPet);
 
       if (petProvider.success) {
+        // Recarrega a lista após adicionar
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final usuarioId = authProvider.usuario?.idUsuario;
+        if (usuarioId != null) {
+          await petProvider.listarPetsPorUsuario(usuarioId);
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Pet adicionado com sucesso!'),
@@ -85,6 +116,7 @@ class _EditPetState extends State<EditPet> {
     }
   }
 
+  // Método atualizado para editar pet com recarregamento automático
   void _editarPet(int index, PetModel petEditado) async {
     final petProvider = Provider.of<PetProvider>(context, listen: false);
     final pet = petProvider.pets[index];
@@ -94,6 +126,14 @@ class _EditPetState extends State<EditPet> {
         await petProvider.atualizarPet(pet.idPet!, petEditado);
 
         if (petProvider.error == null) {
+          // Recarrega a lista após editar
+          final authProvider =
+              Provider.of<AuthProvider>(context, listen: false);
+          final usuarioId = authProvider.usuario?.idUsuario;
+          if (usuarioId != null) {
+            await petProvider.listarPetsPorUsuario(usuarioId);
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Pet atualizado com sucesso!'),
@@ -119,6 +159,7 @@ class _EditPetState extends State<EditPet> {
     }
   }
 
+  // Método atualizado para remover pet com recarregamento automático
   void _removerPet(int index) async {
     final petProvider = Provider.of<PetProvider>(context, listen: false);
     final pet = petProvider.pets[index];
@@ -128,6 +169,14 @@ class _EditPetState extends State<EditPet> {
         await petProvider.excluirPet(pet.idPet!);
 
         if (petProvider.error == null) {
+          // Recarrega a lista após remover
+          final authProvider =
+              Provider.of<AuthProvider>(context, listen: false);
+          final usuarioId = authProvider.usuario?.idUsuario;
+          if (usuarioId != null) {
+            await petProvider.listarPetsPorUsuario(usuarioId);
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${pet.nome} removido com sucesso!'),
@@ -166,6 +215,36 @@ class _EditPetState extends State<EditPet> {
                 builder: (context, petProvider, authProvider, child) {
                   final usuarioId = authProvider.usuario?.idUsuario;
 
+                  // Botão de recarregar em caso de erro
+                  Widget errorWidget = Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error,
+                        size: 64,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        petProvider.error ?? 'Erro desconhecido',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (usuarioId != null) {
+                            petProvider.listarPetsPorUsuario(usuarioId);
+                          }
+                        },
+                        child: const Text('Tentar Novamente'),
+                      ),
+                    ],
+                  );
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -190,7 +269,6 @@ class _EditPetState extends State<EditPet> {
                         onPressed: usuarioId == null || petProvider.loading
                             ? null
                             : () {
-                                // Busque os providers antes de abrir o modal
                                 final especieProvider =
                                     Provider.of<EspecieProvider>(context,
                                         listen: false);
@@ -221,44 +299,22 @@ class _EditPetState extends State<EditPet> {
                       const SizedBox(height: 20),
 
                       // CONTEÚDO PRINCIPAL
-                      if (petProvider.loading)
+                      if (petProvider.loading && !_initialLoad)
                         Container(
                           height: 200,
                           child: const Center(
                             child: CircularProgressIndicator(),
                           ),
                         )
-                      else if (petProvider.error != null)
+                      else if (petProvider.error != null &&
+                          !petProvider.loading)
                         Container(
                           height: 200,
                           child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.error,
-                                  size: 64,
-                                  color: Colors.red,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  petProvider.error!,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: _carregarPets,
-                                  child: const Text('Tentar Novamente'),
-                                ),
-                              ],
-                            ),
+                            child: errorWidget,
                           ),
                         )
-                      else if (petProvider.pets.isEmpty)
+                      else if (petProvider.pets.isEmpty && !petProvider.loading)
                         Container(
                           height: 200,
                           child: const Center(
@@ -292,34 +348,42 @@ class _EditPetState extends State<EditPet> {
                         )
                       else
                         Expanded(
-                          child: ListView.builder(
-                            itemCount: petProvider.pets.length,
-                            itemBuilder: (context, index) {
-                              final pet = petProvider.pets[index];
-                              return PetEditTemplate(
-                                name: pet.nome ?? 'Nome não informado',
-                                especie:
-                                    pet.descricaoEspecie ?? 'Não informado',
-                                raca: pet.descricaoRaca ?? 'Não informado',
-                                idade: _calcularIdade(pet.nascimento),
-                                sexo: pet.sexo ?? 'Não informado',
-                                porte: pet.descricaoPorte ?? 'Não informado',
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  builder: (BuildContext context) =>
-                                      ModalEditPet(
-                                    petData: pet,
-                                    onPetEdited: (petEditado) {
-                                      _editarPet(index, petEditado);
-                                    },
-                                    onPetDeleted: () {
-                                      _removerPet(index);
-                                    },
-                                  ),
-                                ),
-                              );
+                          child: RefreshIndicator(
+                            onRefresh: () async {
+                              if (usuarioId != null) {
+                                await petProvider
+                                    .listarPetsPorUsuario(usuarioId);
+                              }
                             },
+                            child: ListView.builder(
+                              itemCount: petProvider.pets.length,
+                              itemBuilder: (context, index) {
+                                final pet = petProvider.pets[index];
+                                return PetEditTemplate(
+                                  name: pet.nome ?? 'Nome não informado',
+                                  especie:
+                                      pet.descricaoEspecie ?? 'Não informado',
+                                  raca: pet.descricaoRaca ?? 'Não informado',
+                                  idade: _calcularIdade(pet.nascimento),
+                                  sexo: pet.sexo ?? 'Não informado',
+                                  porte: pet.descricaoPorte ?? 'Não informado',
+                                  onTap: () => showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    builder: (BuildContext context) =>
+                                        ModalEditPet(
+                                      petData: pet,
+                                      onPetEdited: (petEditado) {
+                                        _editarPet(index, petEditado);
+                                      },
+                                      onPetDeleted: () {
+                                        _removerPet(index);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                     ],

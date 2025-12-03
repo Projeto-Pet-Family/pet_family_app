@@ -4,9 +4,13 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verifi
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/informations/pet_informations.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/informations/services_information.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/informations/taxas_informations.dart';
+import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
+import 'package:pet_family_app/services/contrato_service.dart';
+import 'package:dio/dio.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FinalVerification extends StatefulWidget {
@@ -17,29 +21,92 @@ class FinalVerification extends StatefulWidget {
 }
 
 class _FinalVerificationState extends State<FinalVerification> {
-  final ContratoRepository _contratoRepository = ContratoRepository();
+  late final ContratoRepository _contratoRepository;
   final TextEditingController _messageController = TextEditingController();
 
   Map<String, dynamic> _cachedData = {};
   Map<String, dynamic>? _calculoContrato;
   bool _isLoading = true, _isCreatingContract = false, _isCalculating = false;
+  int? _idUsuario;
 
   // === MÉTODOS PRINCIPAIS ===
   @override
   void initState() {
     super.initState();
+    _inicializarRepository();
     _carregarDados();
+  }
+
+  void _inicializarRepository() {
+    try {
+      // Inicializar o Dio
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+      ));
+
+      // Inicializar o serviço
+      final contratoService = ContratoService(dio: dio);
+
+      // Inicializar o repository
+      _contratoRepository =
+          ContratoRepositoryImpl(contratoService: contratoService);
+
+      print('✅ ContratoRepository inicializado com sucesso');
+    } catch (e) {
+      print('❌ Erro ao inicializar ContratoRepository: $e');
+      // Fallback para evitar erro de late initialization
+      final dio = Dio();
+      final contratoService = ContratoService(dio: dio);
+      _contratoRepository =
+          ContratoRepositoryImpl(contratoService: contratoService);
+    }
   }
 
   Future<void> _carregarDados() async {
     await _carregarDadosDoCache();
+    await _obterIdUsuario();
     _calcularValorContrato();
+  }
+
+  Future<void> _obterIdUsuario() async {
+    try {
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
+
+      if (idUsuario == null) {
+        print('⚠️ Usuário não encontrado no cache do AuthProvider');
+
+        // Tentar alternativas
+        final prefs = await SharedPreferences.getInstance();
+        final cachedUserId = prefs.getInt('user_id');
+
+        if (cachedUserId != null) {
+          _idUsuario = cachedUserId;
+          print('✅ ID do usuário obtido do SharedPreferences: $_idUsuario');
+        } else {
+          print('❌ ID do usuário não encontrado em nenhum local');
+        }
+      } else {
+        _idUsuario = idUsuario;
+        print('✅ ID do usuário obtido do AuthProvider: $_idUsuario');
+      }
+    } catch (e) {
+      print('❌ Erro ao obter ID do usuário: $e');
+    }
   }
 
   Future<void> _carregarDadosDoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedData = <String, dynamic>{};
+
+      // Carregar ID da hospedagem
+      cachedData['idhospedagem'] =
+          prefs.getInt('id_hospedagem_selecionada') ?? 1;
+      print(
+          '🏨 ID da hospedagem carregado do cache: ${cachedData['idhospedagem']}');
 
       // Carregar pets
       cachedData['selected_pets'] = {
@@ -81,18 +148,17 @@ class _FinalVerificationState extends State<FinalVerification> {
   }
 
   Future<void> _calcularValorContrato() async {
-    if (!_hasData) return;
-
     try {
       setState(() => _isCalculating = true);
 
-      final pets = _cachedData['selected_pets']!;
       final dates = _cachedData['selected_dates']!;
       final services = _cachedData['selected_services'];
-      final idhospedagem = _cachedData['idhospedagem'];
+
+      final prefs = await SharedPreferences.getInstance();
+      final idHospedagem = prefs.getInt('id_hospedagem_selecionada') ?? 1;
 
       final calculo = await _contratoRepository.calcularValorContrato(
-        idHospedagem: idhospedagem,
+        idHospedagem: idHospedagem,
         dataInicio: _formatarDataParaAPI(dates['start_date'] as DateTime),
         dataFim: _formatarDataParaAPI(dates['end_date'] as DateTime),
         servicos: services != null && (services['ids'] as List).isNotEmpty
@@ -109,14 +175,7 @@ class _FinalVerificationState extends State<FinalVerification> {
     } catch (e) {
       print('❌ Erro no cálculo: $e');
       setState(() => _isCalculating = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao calcular: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      // Usar fallback se necessário
     }
   }
 
@@ -124,16 +183,33 @@ class _FinalVerificationState extends State<FinalVerification> {
     try {
       setState(() => _isCreatingContract = true);
 
+      // Verificar se temos o ID do usuário
+      if (_idUsuario == null || _idUsuario == 0) {
+        await _obterIdUsuario();
+
+        if (_idUsuario == null || _idUsuario == 0) {
+          throw Exception('❌ Usuário não identificado. Faça login novamente.');
+        }
+      }
+
       final pets = _cachedData['selected_pets']!;
       final dates = _cachedData['selected_dates']!;
       final services = _cachedData['selected_services'];
 
-      // Obter idhospedagem do cache
       final prefs = await SharedPreferences.getInstance();
-      final idHospedagem = prefs.getInt('current_hotel_id') ?? 1;
+      final idHospedagem = prefs.getInt('id_hospedagem_selecionada') ?? 1;
 
-      final response = await _contratoRepository.criarContrato(
+      print('📝 Criando contrato com os seguintes dados:');
+      print('👤 ID Usuário: $_idUsuario');
+      print('🏨 ID Hospedagem: $idHospedagem');
+      print('📅 Data início: ${dates['start_date']}');
+      print('📅 Data fim: ${dates['end_date']}');
+      print('🐾 Pets: ${pets['ids']}');
+      print('🛎️ Serviços: ${services?['ids'] ?? []}');
+
+      final contrato = await _contratoRepository.criarContrato(
         idHospedagem: idHospedagem,
+        idUsuario: _idUsuario!,
         dataInicio: _formatarDataParaAPI(dates['start_date'] as DateTime),
         dataFim: _formatarDataParaAPI(dates['end_date'] as DateTime),
         pets: (pets['ids'] as List<String>).map(int.parse).toList(),
@@ -142,13 +218,20 @@ class _FinalVerificationState extends State<FinalVerification> {
                 .map((id) => {'idservico': int.parse(id), 'quantidade': 1})
                 .toList()
             : null,
+        status: 'em_aprovacao',
       );
 
+      print('✅ Contrato criado com sucesso: ${contrato.idContrato}');
       await _limparCache();
-      if (mounted) _mostrarSucessoDialog();
+
+      if (mounted) {
+        _mostrarSucessoDialog(contrato);
+      }
     } catch (e) {
       print('❌ Erro criar contrato: $e');
-      if (mounted) _mostrarErroDialog(e.toString());
+      if (mounted) {
+        _mostrarErroDialog(e.toString());
+      }
     } finally {
       setState(() => _isCreatingContract = false);
     }
@@ -195,19 +278,19 @@ class _FinalVerificationState extends State<FinalVerification> {
         'hotel_daily_rate',
         'selected_pets_count',
         'stay_days_count',
-        'current_hotel_id'
+        'id_hospedagem_selecionada',
       ];
 
       for (var key in keysToRemove) {
         await prefs.remove(key);
       }
-      print('🗑️ Cache limpo');
+      print('🗑️ Cache limpo com sucesso');
     } catch (e) {
-      print('❌ Erro limpar cache: $e');
+      print('❌ Erro ao limpar cache: $e');
     }
   }
 
-  void _mostrarSucessoDialog() {
+  void _mostrarSucessoDialog(contrato) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -216,15 +299,26 @@ class _FinalVerificationState extends State<FinalVerification> {
           children: [
             Icon(Icons.check_circle, color: Colors.green),
             SizedBox(width: 8),
-            Text('Contrato Criado!')
+            Text('Sucesso!')
           ],
         ),
-        content: const Text(
-            'Seu contrato foi criado com sucesso e está em aprovação.'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Seu agendamento foi criado com sucesso!'),
+            const SizedBox(height: 10),
+            const Text('Status: Em Aprovação'),
+            const SizedBox(height: 10),
+            if (contrato.idContrato != null)
+              Text('ID do Contrato: ${contrato.idContrato}'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
+              // Navegar para a tela de agendamentos
               context.go('/core-navigation');
             },
             child: const Text('Ver Meus Agendamentos'),
@@ -235,20 +329,39 @@ class _FinalVerificationState extends State<FinalVerification> {
   }
 
   void _mostrarErroDialog(String error) {
+    String mensagemErro = error;
+
+    // Melhorar mensagens de erro específicas
+    if (error.contains('Usuário não identificado')) {
+      mensagemErro = 'Por favor, faça login novamente para continuar.';
+    } else if (error.contains('Connection') || error.contains('timeout')) {
+      mensagemErro =
+          'Problema de conexão. Verifique sua internet e tente novamente.';
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(children: [
           Icon(Icons.error, color: Colors.red),
           SizedBox(width: 8),
-          Text('Erro')
+          Text('Atenção')
         ]),
-        content: Text('Erro ao criar contrato: $error'),
+        content: Text(mensagemErro),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
-          )
+          ),
+          if (error.contains('Usuário não identificado'))
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Redirecionar para login
+                context.go('/login');
+              },
+              child: const Text('Ir para Login'),
+            ),
         ],
       ),
     );
@@ -493,14 +606,52 @@ class _FinalVerificationState extends State<FinalVerification> {
                     ),
                   ),
                   const SizedBox(height: 40),
+
+                  // Verificar se usuário está logado
+                  if (_idUsuario == null || _idUsuario == 0)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.warning, color: Colors.orange),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Usuário não identificado',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'É necessário estar logado para criar um agendamento.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.go('/login');
+                            },
+                            child: const Text('Fazer Login'),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   if (_isLoading)
                     _buildLoading()
                   else if (!_hasData)
                     _buildEmptyState()
                   else if (_isCalculating)
                     _buildCalculating()
-                  else
+                  else if (_idUsuario != null && _idUsuario! > 0)
                     _buildDataSummary(),
+
                   const SizedBox(height: 40),
                   if (_isCreatingContract)
                     Column(
@@ -517,7 +668,9 @@ class _FinalVerificationState extends State<FinalVerification> {
                   if (_hasData &&
                       !_isLoading &&
                       !_isCreatingContract &&
-                      !_isCalculating)
+                      !_isCalculating &&
+                      _idUsuario != null &&
+                      _idUsuario! > 0)
                     Column(
                       children: [
                         AppButton(

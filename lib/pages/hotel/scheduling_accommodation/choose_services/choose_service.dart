@@ -6,6 +6,8 @@ import 'package:pet_family_app/repository/service_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:pet_family_app/services/service_service.dart';
 
 class ChooseService extends StatefulWidget {
   const ChooseService({super.key});
@@ -20,50 +22,75 @@ class _ChooseServiceState extends State<ChooseService> {
   final Set<int> _selectedServices = {};
   bool _isLoading = true;
   String _errorMessage = '';
+  int? _idHospedagem;
 
   @override
   void initState() {
     super.initState();
-    _carregarServicos();
-    _carregarServicosSelecionadosDoCache();
+    _serviceRepository = ServiceRepositoryImpl(serviceService: ServiceService(client: http.Client())); // Inicialização correta
+    _carregarIdHospedagemEServicos();
   }
 
-  Future<int?> getIdHospedagemSelecionada() async {
+  Future<void> _carregarIdHospedagemEServicos() async {
     try {
+      // Primeiro carrega o ID da hospedagem
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt('id_hospedagem_selecionada');
+      final idHospedagem = prefs.getInt('id_hospedagem_selecionada');
+      
+      if (idHospedagem == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Nenhuma hospedagem selecionada';
+        });
+        return;
+      }
+      
+      setState(() {
+        _idHospedagem = idHospedagem;
+      });
+      
+      // Carrega os serviços selecionados do cache
+      await _carregarServicosSelecionadosDoCache();
+      
+      // Depois carrega os serviços da hospedagem
+      await _carregarServicos(idHospedagem);
+      
     } catch (e) {
-      print('❌ Erro ao pegar ID da hospedagem do cache: $e');
-      return null;
+      print('❌ Erro ao carregar dados: $e');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erro ao carregar dados. Tente novamente.';
+      });
     }
   }
 
-  final _idHospedagemFuture = SharedPreferences.getInstance()
-      .then((prefs) => prefs.getInt('id_hospedagem_selecionada'));
-
-  Future<void> _carregarServicos() async {
+  Future<void> _carregarServicos(int idHospedagem) async {
     try {
-      final servicos = await _serviceRepository
-          .listarServicosPorHospedagem(_idHospedagemFuture as int);
-
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final servicos = await _serviceRepository.listarServicosPorHospedagem(idHospedagem);
+      
       // Filtra serviços com preço válido
       final servicosValidos = servicos.where((s) => s.preco > 0).toList();
 
       setState(() {
         _services = servicosValidos;
         _isLoading = false;
-        _errorMessage =
-            servicosValidos.isEmpty ? 'Nenhum serviço disponível' : '';
+        _errorMessage = servicosValidos.isEmpty ? 'Nenhum serviço disponível' : '';
       });
     } catch (e) {
+      print('❌ Erro ao carregar serviços: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = 'Erro ao carregar serviços. Tente novamente.';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível carregar os serviços')),
-      );
-      print('Erro detalhado: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível carregar os serviços')),
+        );
+      }
     }
   }
 
@@ -71,11 +98,14 @@ class _ChooseServiceState extends State<ChooseService> {
   Future<void> _carregarServicosSelecionadosDoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final selectedServicesString =
-          prefs.getStringList('selected_services') ?? [];
+      final selectedServicesString = prefs.getStringList('selected_services') ?? [];
 
-      final selectedServices =
-          selectedServicesString.map((id) => int.parse(id)).toSet();
+      final selectedServices = selectedServicesString
+          .where((id) => id.isNotEmpty)
+          .map((id) => int.tryParse(id))
+          .where((id) => id != null)
+          .map((id) => id!)
+          .toSet();
 
       setState(() {
         _selectedServices.addAll(selectedServices);
@@ -91,8 +121,7 @@ class _ChooseServiceState extends State<ChooseService> {
   Future<void> _salvarServicosSelecionadosNoCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final selectedServicesString =
-          _selectedServices.map((id) => id.toString()).toList();
+      final selectedServicesString = _selectedServices.map((id) => id.toString()).toList();
 
       await prefs.setStringList('selected_services', selectedServicesString);
 
@@ -124,21 +153,9 @@ class _ChooseServiceState extends State<ChooseService> {
           .map((service) => service.preco.toString())
           .toList();
 
-      await prefs.setStringList(
-          'selected_service_prices', selectedServicePrices);
+      await prefs.setStringList('selected_service_prices', selectedServicePrices);
 
-      // Salva informações detalhadas de cada serviço
-      for (final service in _services) {
-        if (_selectedServices.contains(service.idServico)) {
-          await prefs.setString(
-              'service_${service.idServico}_desc', service.descricao);
-          await prefs.setDouble(
-              'service_${service.idServico}_price', service.preco);
-        }
-      }
-
-      print(
-          '💾 Detalhes dos serviços salvos no cache - Total: R\$${totalValue.toStringAsFixed(2)}');
+      print('💾 Detalhes dos serviços salvos no cache - Total: R\$${totalValue.toStringAsFixed(2)}');
     } catch (e) {
       print('❌ Erro ao salvar detalhes dos serviços: $e');
     }
@@ -204,13 +221,21 @@ class _ChooseServiceState extends State<ChooseService> {
     // Salva detalhes antes de navegar
     _salvarDetalhesServicosNoCache();
 
+    if (!mounted) return;
+    
     context.go('/final-verification', extra: {
       'selectedServices': _selectedServices.toList(),
-      'services': _services
-          .where((s) => _selectedServices.contains(s.idServico))
-          .toList(),
+      'services': _services.where((s) => _selectedServices.contains(s.idServico)).toList(),
       'totalValue': totalValue,
     });
+  }
+
+  void _tryAgain() {
+    if (_idHospedagem != null) {
+      _carregarServicos(_idHospedagem!);
+    } else {
+      _carregarIdHospedagemEServicos();
+    }
   }
 
   @override
@@ -325,14 +350,41 @@ class _ChooseServiceState extends State<ChooseService> {
 
                   // Exibe loading, erro ou lista de serviços
                   if (_isLoading)
-                    const Center(child: CircularProgressIndicator())
+                    const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   else if (_errorMessage.isNotEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Text(
+                            _errorMessage,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.red,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          AppButton(
+                            onPressed: _tryAgain,
+                            label: 'Tentar Novamente',
+                            fontSize: 16,
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (_services.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(
                         child: Text(
-                          _errorMessage,
-                          style: const TextStyle(fontSize: 18),
+                          'Nenhum serviço disponível',
+                          style: TextStyle(fontSize: 18),
                         ),
                       ),
                     )
@@ -343,12 +395,9 @@ class _ChooseServiceState extends State<ChooseService> {
                           padding: const EdgeInsets.only(bottom: 15),
                           child: ChooseServiceTemplate(
                             key: ValueKey(service.idServico),
-                            name:
-                                '${service.descricao} - R\$${service.preco.toStringAsFixed(2)}',
-                            isSelected:
-                                _selectedServices.contains(service.idServico),
-                            onTap: () =>
-                                _toggleServiceSelection(service.idServico),
+                            name: '${service.descricao} - R\$${service.preco.toStringAsFixed(2)}',
+                            isSelected: _selectedServices.contains(service.idServico),
+                            onTap: () => _toggleServiceSelection(service.idServico),
                           ),
                         );
                       }).toList(),
@@ -356,25 +405,26 @@ class _ChooseServiceState extends State<ChooseService> {
 
                   const SizedBox(height: 30),
 
+                  // Botão para limpar serviços (só aparece se houver serviços selecionados)
+                  if (_selectedServices.isNotEmpty)
+                    Column(
+                      children: [
+                        AppButton(
+                          onPressed: _limparServicosSelecionados,
+                          label: 'Limpar serviços',
+                          fontSize: 17,
+                          buttonColor: Colors.redAccent,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+
+                  // Botão próximo (sempre visível)
                   AppButton(
                     onPressed: _navigateToNext,
                     label: 'Próximo',
                     fontSize: 17,
                   ),
-
-                  const SizedBox(height: 16),
-
-                  if (_selectedServices.isNotEmpty)
-                    AppButton(
-                      onPressed: _navigateToNext,
-                      label: 'Limpar serviços',
-                      fontSize: 17,
-                      buttonColor: Colors.redAccent,
-                    ),
-
-                  if (_selectedServices.isNotEmpty) const SizedBox(height: 16),
-
-                  // Botão próximo
                 ],
               ),
             ),

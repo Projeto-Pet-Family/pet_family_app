@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/booking/template/booking_template.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
+import 'package:pet_family_app/services/contrato_service.dart';
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 
@@ -15,7 +17,7 @@ class Booking extends StatefulWidget {
 
 class _BookingState extends State<Booking> {
   String? _optionSelected;
-  final ContratoRepository _contratoRepository = ContratoRepository();
+  late ContratoRepository _contratoRepository;
   List<ContratoModel> _contratos = [];
   bool _isLoading = false;
   bool _isCreating = false;
@@ -51,8 +53,34 @@ class _BookingState extends State<Booking> {
   @override
   void initState() {
     super.initState();
+    _inicializarRepository();
     _criarContratoComCache();
     _carregarContratos();
+  }
+
+  void _inicializarRepository() {
+    try {
+      // Inicializar o Dio
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+      ));
+
+      // Inicializar o serviço
+      final contratoService = ContratoService(dio: dio);
+
+      // Inicializar o repository
+      _contratoRepository = ContratoRepositoryImpl(contratoService: contratoService);
+      
+      print('✅ ContratoRepository inicializado com sucesso');
+    } catch (e) {
+      print('❌ Erro ao inicializar ContratoRepository: $e');
+      // Fallback para evitar erro de late initialization
+      final dio = Dio();
+      final contratoService = ContratoService(dio: dio);
+      _contratoRepository = ContratoRepositoryImpl(contratoService: contratoService);
+    }
   }
 
   Future<void> _criarContratoComCache() async {
@@ -108,28 +136,33 @@ class _BookingState extends State<Booking> {
       }).toList();
 
       print('🚀 Criando contrato automático com dados do cache:');
+      print('👤 Usuário ID: $idUsuario');
       print('🐾 Pets: $petIds');
       print('📅 Data Início: $dataInicio');
       print('📅 Data Fim: $dataFim');
       print('🛎️ Serviços: $servicosFormatados');
 
-      final response = await _contratoRepository.criarContrato(
-        idHospedagem: 1,
+      // Criar contrato usando o método correto
+      final contrato = await _contratoRepository.criarContrato(
+        idHospedagem: 1, // TODO: Obter idHospedagem do cache se necessário
+        idUsuario: idUsuario, // Adicionado ID do usuário
         dataInicio: dataInicio,
         dataFim: dataFim,
         pets: petIds,
         servicos: servicosFormatados,
+        status: 'em_aprovacao',
       );
 
       await prefs.setBool('contrato_criado', true);
 
-      print('✅ Contrato criado com sucesso: $response');
+      print('✅ Contrato criado com sucesso: ${contrato.idContrato}');
 
       setState(() {
         _isCreating = false;
       });
 
-      _carregarContratos();
+      // Recarregar contratos para incluir o novo
+      await _carregarContratos();
     } catch (e) {
       print('❌ Erro ao criar contrato: $e');
       setState(() {
@@ -138,6 +171,7 @@ class _BookingState extends State<Booking> {
       });
     }
   }
+
   Future<void> _carregarContratos() async {
     try {
       setState(() {
@@ -153,7 +187,7 @@ class _BookingState extends State<Booking> {
       }
 
       final contratos =
-          await _contratoRepository.buscarContratosPorUsuario(idUsuario);
+          await _contratoRepository.listarContratosPorUsuario(idUsuario);
 
       setState(() {
         _contratos = contratos;
@@ -173,7 +207,7 @@ class _BookingState extends State<Booking> {
 
   Future<void> _filtrarContratosPorStatus(String? status) async {
     try {
-      if (status == null) {
+      if (status == null || status.isEmpty) {
         await _carregarContratos();
         return;
       }
@@ -183,13 +217,23 @@ class _BookingState extends State<Booking> {
         _errorMessage = '';
       });
 
-      final statusApi = _statusMap[status];
+      final authProvider = AuthProvider();
+      final idUsuario = await authProvider.getUserIdFromCache();
+
+      if (idUsuario == null) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      final statusApi = _statusMap[status.toLowerCase()];
       if (statusApi == null) {
         throw Exception('Status inválido: $status');
       }
 
       final contratosFiltrados =
-          await _contratoRepository.buscarContratosPorStatus(statusApi);
+          await _contratoRepository.listarContratosPorUsuarioEStatus(
+        idUsuario,
+        statusApi,
+      );
 
       setState(() {
         _contratos = contratosFiltrados;
@@ -207,28 +251,68 @@ class _BookingState extends State<Booking> {
     }
   }
 
-  // ✅ MÉTODO PARA ATUALIZAR CONTRATO NA LISTA
-  void _atualizarContratoNaLista(ContratoModel contratoAtualizado) {
-    setState(() {
-      final index = _contratos.indexWhere(
-        (c) => c.idContrato == contratoAtualizado.idContrato,
+  Future<void> _atualizarContratoNaLista(ContratoModel contratoAtualizado) async {
+    try {
+      // Buscar contrato atualizado do servidor
+      final contratoCompleto = await _contratoRepository.buscarContratoPorId(
+        contratoAtualizado.idContrato!,
       );
 
-      if (index != -1) {
-        _contratos[index] = contratoAtualizado;
-        print(
-            '✅ Contrato ${contratoAtualizado.idContrato} atualizado na lista');
-        print('📊 Novo status: ${contratoAtualizado.status}');
-      }
-    });
+      setState(() {
+        final index = _contratos.indexWhere(
+          (c) => c.idContrato == contratoCompleto.idContrato,
+        );
+
+        if (index != -1) {
+          _contratos[index] = contratoCompleto;
+          print(
+              '✅ Contrato ${contratoCompleto.idContrato} atualizado na lista');
+          print('📊 Novo status: ${contratoCompleto.status}');
+        } else {
+          // Se não encontrou, adicionar à lista
+          _contratos.add(contratoCompleto);
+        }
+      });
+    } catch (e) {
+      print('❌ Erro ao atualizar contrato na lista: $e');
+      // Fallback: atualizar com os dados disponíveis
+      setState(() {
+        final index = _contratos.indexWhere(
+          (c) => c.idContrato == contratoAtualizado.idContrato,
+        );
+
+        if (index != -1) {
+          _contratos[index] = contratoAtualizado;
+        }
+      });
+    }
   }
 
-  // ✅ MÉTODO PARA CANCELAR NO BACKEND
   Future<void> _cancelarContratoNoBackend(ContratoModel contrato) async {
     try {
       print('🚀 Cancelando contrato no backend: ${contrato.idContrato}');
 
-      await _contratoRepository.cancelarContrato(contrato.idContrato!);
+      // Atualizar status para cancelado
+      final contratoAtualizado = await _contratoRepository.atualizarStatusContrato(
+        idContrato: contrato.idContrato!,
+        status: 'cancelado',
+        motivo: 'Cancelado pelo usuário',
+      );
+
+      // Atualizar na lista
+      _atualizarContratoNaLista(contratoAtualizado);
+
+      // Mostrar mensagem de sucesso
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "Agendamento cancelado com sucesso!",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
 
       print('✅ Contrato cancelado com sucesso no backend');
     } catch (e) {
@@ -245,13 +329,173 @@ class _BookingState extends State<Booking> {
         ),
       );
 
-      _carregarContratos();
+      // Recarregar contratos para garantir consistência
+      await _carregarContratos();
     }
   }
 
-  // ✅ MÉTODO PARA EDITAR CONTRATO
-  void _editarContrato(ContratoModel contrato) {
-    print('📝 Editando contrato: ${contrato.idContrato}');
+  Future<void> _editarContrato(ContratoModel contrato) async {
+    try {
+      print('📝 Editando contrato: ${contrato.idContrato}');
+      
+      // TODO: Implementar navegação para tela de edição
+      // Por enquanto, mostramos um diálogo com opções
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Editar Agendamento'),
+          content: const Text('Funcionalidade de edição em desenvolvimento.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('❌ Erro ao editar contrato: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao editar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _excluirContrato(ContratoModel contrato) async {
+    try {
+      print('🗑️ Excluindo contrato: ${contrato.idContrato}');
+
+      // Mostrar diálogo de confirmação
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmar Exclusão'),
+          content: const Text('Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmar != true) return;
+
+      // Excluir contrato
+      await _contratoRepository.excluirContrato(contrato.idContrato!);
+
+      // Remover da lista
+      setState(() {
+        _contratos.removeWhere((c) => c.idContrato == contrato.idContrato);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Agendamento excluído com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      print('✅ Contrato excluído com sucesso');
+    } catch (e) {
+      print('❌ Erro ao excluir contrato: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _recarregarContratos() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      await _carregarContratos();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lista de agendamentos atualizada!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('❌ Erro ao recarregar contratos: $e');
+      setState(() {
+        _errorMessage = 'Erro ao recarregar: $e';
+      });
+    }
+  }
+
+  Future<void> _limparCacheECriarNovo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('contrato_criado');
+      await prefs.remove('selected_start_date');
+      await prefs.remove('selected_end_date');
+      await prefs.remove('selected_pets');
+      await prefs.remove('selected_services');
+
+      await _criarContratoComCache();
+    } catch (e) {
+      print('❌ Erro ao limpar cache: $e');
+    }
+  }
+
+  Widget _buildFiltroStatus() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Filtrar por Status:',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildChipFiltro('Todos', null),
+                ...listOptions.map((status) => _buildChipFiltro(status, status)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChipFiltro(String label, String? value) {
+    final isSelected = _optionSelected == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (selected) {
+          setState(() {
+            _optionSelected = selected ? value : null;
+          });
+          _filtrarContratosPorStatus(_optionSelected);
+        },
+        selectedColor: Colors.blue[100],
+        checkmarkColor: Colors.blue,
+      ),
+    );
   }
 
   String _formatarData(DateTime date) {
@@ -259,7 +503,7 @@ class _BookingState extends State<Booking> {
   }
 
   String _obterNomeStatus(String status) {
-    return _statusDisplayMap[status] ?? 'Desconhecido';
+    return _statusDisplayMap[status] ?? status;
   }
 
   Color _obterCorStatus(String status) {
@@ -313,6 +557,12 @@ class _BookingState extends State<Booking> {
                 ),
               ),
               const SizedBox(height: 30),
+
+              // Filtro de status - mantido no scroll
+              _buildFiltroStatus(),
+              const SizedBox(height: 20),
+
+              // Indicadores de carregamento
               if (_isCreating) ...[
                 const LinearProgressIndicator(),
                 const SizedBox(height: 10),
@@ -322,10 +572,14 @@ class _BookingState extends State<Booking> {
                 ),
                 const SizedBox(height: 20),
               ],
+
+              // Loading principal
               if (_isLoading) ...[
                 const Center(child: CircularProgressIndicator()),
                 const SizedBox(height: 20),
               ],
+
+              // Mensagem de erro
               if (_errorMessage.isNotEmpty)
                 Container(
                   width: double.infinity,
@@ -346,10 +600,7 @@ class _BookingState extends State<Booking> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () {
-                          setState(() => _errorMessage = '');
-                          _carregarContratos();
-                        },
+                        onPressed: _recarregarContratos,
                         icon: const Icon(
                           Icons.refresh,
                           color: Colors.red,
@@ -358,10 +609,15 @@ class _BookingState extends State<Booking> {
                     ],
                   ),
                 ),
+
+              // Lista vazia
               if (!_isLoading && _contratos.isEmpty && _errorMessage.isEmpty)
                 _buildEmptyState()
+
+              // Lista de contratos
               else if (!_isLoading && _contratos.isNotEmpty)
                 _buildContratosList(),
+
               const SizedBox(height: 20),
             ],
           ),
@@ -400,7 +656,7 @@ class _BookingState extends State<Booking> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: _carregarContratos,
+            onPressed: _recarregarContratos,
             child: const Text('Recarregar'),
           ),
         ],
@@ -409,11 +665,15 @@ class _BookingState extends State<Booking> {
   }
 
   Widget _buildContratosList() {
+    // Ordenar contratos por data de início (mais recentes primeiro)
+    final contratosOrdenados = List<ContratoModel>.from(_contratos)
+      ..sort((a, b) => b.dataInicio.compareTo(a.dataInicio));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        ..._contratos.map((contrato) {
+        ...contratosOrdenados.map((contrato) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 15),
             child: BookingTemplate(
@@ -426,6 +686,9 @@ class _BookingState extends State<Booking> {
               },
               onCancelar: () {
                 _cancelarContratoNoBackend(contrato);
+              },
+              onExcluir: () {
+                _excluirContrato(contrato);
               },
               onContratoEditado: (contratoAtualizado) {
                 _atualizarContratoNaLista(contratoAtualizado);

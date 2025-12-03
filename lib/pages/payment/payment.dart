@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -15,7 +17,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   String? selectedPaymentMethod;
   bool _isCreatingContract = false;
-  final ContratoRepository _contratoRepository = ContratoRepository();
+  late ContratoRepository _contratoRepository;
   Map<String, dynamic> _cachedData = {};
 
   @override
@@ -378,6 +380,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
   // Função para criar contrato e finalizar reserva
   Future<void> _criarContratoEFinalizar() async {
     try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final prefs = await SharedPreferences.getInstance();
+
       setState(() {
         _isCreatingContract = true;
       });
@@ -417,7 +422,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       // ID fixo da hospedagem
-      const idHospedagem = 1;
+      final idHospedagem = prefs.getInt('selected_hotel_id') ?? 1;
+      final idUsuario = authProvider.usuario?.idUsuario ?? 1;
 
       // Criar contrato
       final response = await _contratoRepository.criarContrato(
@@ -425,7 +431,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         dataInicio: dataInicio,
         dataFim: dataFim,
         pets: petIds,
-        servicos: servicosFormatados,
+        servicos: servicosFormatados, 
+        idUsuario: idUsuario, 
+      
       );
 
       print('✅ Contrato criado com sucesso: $response');

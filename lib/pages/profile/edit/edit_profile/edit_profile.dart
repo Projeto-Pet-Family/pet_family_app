@@ -1,8 +1,8 @@
 // lib/screens/edit_profile/edit_profile.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/models/user_model.dart';
 import 'package:pet_family_app/providers/user_provider.dart';
-
 import 'package:provider/provider.dart';
 
 class EditProfile extends StatefulWidget {
@@ -22,6 +22,7 @@ class _EditProfileState extends State<EditProfile> {
 
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isInitializing = true;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
@@ -41,20 +42,64 @@ class _EditProfileState extends State<EditProfile> {
     });
   }
 
-  void _carregarDadosUsuario() {
-    final usuarioProvider =
-        Provider.of<UsuarioProvider>(context, listen: false);
-    final usuario = usuarioProvider.usuarioLogado;
+  void _carregarDadosUsuario() async {
+    try {
+      final usuarioProvider = context.read<UsuarioProvider>();
+      final usuario = usuarioProvider.usuarioLogado;
 
-    if (usuario != null) {
-      setState(() {
-        _nomeController.text = usuario.nome;
-        _emailController.text = usuario.email;
-        _telefoneController.text = usuario.telefone;
-        _cpfController.text = usuario.cpf;
-        // Não carregamos a senha por segurança
-      });
+      print('🔍 Carregando dados do usuário...');
+      print('📊 Usuário no provider: $usuario');
+
+      // Se não há usuário no provider, tenta buscar do cache
+      if (usuario == null) {
+        print('⚠️ Usuário não encontrado no provider, tentando carregar...');
+        await usuarioProvider.carregarUsuarioDoCache();
+
+        final usuarioCarregado = usuarioProvider.usuarioLogado;
+        if (usuarioCarregado == null) {
+          print('❌ Usuário não encontrado em cache');
+          if (mounted) {
+            _mostrarErro('Usuário não encontrado. Faça login novamente.');
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) context.go('/login');
+            });
+          }
+          return;
+        }
+
+        _preencherCampos(usuarioCarregado);
+      } else {
+        _preencherCampos(usuario);
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar dados do usuário: $e');
+      if (mounted) {
+        _mostrarErro('Erro ao carregar dados: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
     }
+  }
+
+  void _preencherCampos(UsuarioModel usuario) {
+    setState(() {
+      _nomeController.text = usuario.nome ?? '';
+      _emailController.text = usuario.email ?? '';
+      _telefoneController.text = usuario.telefone ?? '';
+      _cpfController.text = usuario.cpf ?? '';
+      _senhaController.text = '';
+      _confirmarSenhaController.text = '';
+    });
+
+    print('✅ Campos preenchidos:');
+    print('👤 Nome: ${usuario.nome}');
+    print('📧 Email: ${usuario.email}');
+    print('📱 Telefone: ${usuario.telefone}');
+    print('🆔 CPF: ${usuario.cpf}');
   }
 
   String? _validarNome(String? value) {
@@ -82,9 +127,10 @@ class _EditProfileState extends State<EditProfile> {
     if (value == null || value.isEmpty) {
       return 'Telefone é obrigatório';
     }
-    final telefoneRegex = RegExp(r'^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$');
+    // Permite vários formatos: (11) 99999-9999, 11 999999999, 11999999999
+    final telefoneRegex = RegExp(r'^\(?\d{2}\)?[\s-]?\d{4,5}[\s-]?\d{4}$');
     if (!telefoneRegex.hasMatch(value)) {
-      return 'Telefone inválido (ex: (11) 99999-9999)';
+      return 'Telefone inválido';
     }
     return null;
   }
@@ -131,19 +177,21 @@ class _EditProfileState extends State<EditProfile> {
       _isLoading = true;
     });
 
-    final usuarioProvider =
-        Provider.of<UsuarioProvider>(context, listen: false);
-    final usuarioAtual = usuarioProvider.usuarioLogado;
-
-    if (usuarioAtual?.idUsuario == null) {
-      _mostrarErro('Usuário não identificado');
-      return;
-    }
-
     try {
+      final usuarioProvider = context.read<UsuarioProvider>();
+      final usuarioAtual = usuarioProvider.usuarioLogado;
+
+      if (usuarioAtual?.idUsuario == null) {
+        _mostrarErro('Usuário não identificado');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      print('💾 Salvando alterações do usuário ${usuarioAtual!.idUsuario}');
+
       // Cria usuário atualizado
       final usuarioAtualizado = UsuarioModel(
-        idUsuario: usuarioAtual!.idUsuario,
+        idUsuario: usuarioAtual.idUsuario,
         nome: _nomeController.text.trim(),
         cpf: _cpfController.text.trim(),
         email: _emailController.text.trim(),
@@ -155,18 +203,22 @@ class _EditProfileState extends State<EditProfile> {
         dataCadastro: usuarioAtual.dataCadastro,
       );
 
+      // Atualiza no provider
       await usuarioProvider.atualizarUsuario(
           usuarioAtual.idUsuario!, usuarioAtualizado);
+
+      print('✅ Usuário atualizado com sucesso');
 
       _mostrarSucesso('Perfil atualizado com sucesso!');
 
       // Navegar de volta após sucesso
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
           Navigator.pop(context);
         }
       });
     } catch (e) {
+      print('❌ Erro ao atualizar perfil: $e');
       _mostrarErro('Erro ao atualizar perfil: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -208,32 +260,66 @@ class _EditProfileState extends State<EditProfile> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final usuarioProvider = Provider.of<UsuarioProvider>(context);
-    final usuario = usuarioProvider.usuarioLogado;
-
-    if (usuario == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Editar Perfil'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
+  Widget _buildLoadingScreen() {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar Perfil'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.go('/core-navigation'),
+        ),
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text('Carregando perfil...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScreen(String message) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Editar Perfil'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/core-navigation'),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 60, color: Colors.red),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => context.go('/core-navigation'),
+              child: const Text('Voltar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm(UsuarioModel usuario) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Editar Perfil'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/core-navigation'),
         ),
         actions: [
           if (_isLoading)
@@ -265,10 +351,10 @@ class _EditProfileState extends State<EditProfile> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: Colors.grey[300],
-                      child: usuario.nome.isNotEmpty
+                      backgroundColor: Theme.of(context).primaryColor,
+                      child: usuario.nome != null && usuario.nome!.isNotEmpty
                           ? Text(
-                              usuario.nome[0].toUpperCase(),
+                              usuario.nome![0].toUpperCase(),
                               style: const TextStyle(
                                 fontSize: 40,
                                 fontWeight: FontWeight.bold,
@@ -298,8 +384,12 @@ class _EditProfileState extends State<EditProfile> {
                           color: Colors.white,
                           onPressed: () {
                             // TODO: Implementar upload de foto
-                            _mostrarErro(
-                                'Upload de foto ainda não implementado');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Upload de foto ainda não implementado'),
+                              ),
+                            );
                           },
                         ),
                       ),
@@ -371,12 +461,12 @@ class _EditProfileState extends State<EditProfile> {
                         '${usuario.dataCadastro!.month.toString().padLeft(2, '0')}/'
                         '${usuario.dataCadastro!.year}'
                     : 'Não informada',
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Data de cadastro',
-                  prefixIcon: Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.calendar_today),
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  enabled: false,
+                  fillColor: Colors.grey[100],
                 ),
                 readOnly: true,
               ),
@@ -470,6 +560,7 @@ class _EditProfileState extends State<EditProfile> {
                       onPressed: _isLoading ? null : _salvarAlteracoes,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Theme.of(context).primaryColor,
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -486,6 +577,7 @@ class _EditProfileState extends State<EditProfile> {
                               'SALVAR ALTERAÇÕES',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                             ),
                     ),
@@ -506,8 +598,14 @@ class _EditProfileState extends State<EditProfile> {
                             },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Theme.of(context).primaryColor),
                       ),
-                      child: const Text('CANCELAR'),
+                      child: Text(
+                        'CANCELAR',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -518,6 +616,22 @@ class _EditProfileState extends State<EditProfile> {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isInitializing) {
+      return _buildLoadingScreen();
+    }
+
+    final usuarioProvider = context.watch<UsuarioProvider>();
+    final usuario = usuarioProvider.usuarioLogado;
+
+    if (usuario == null) {
+      return _buildErrorScreen('Usuário não encontrado. Faça login novamente.');
+    }
+
+    return _buildForm(usuario);
   }
 }
 
