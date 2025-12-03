@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
@@ -29,12 +30,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      appBar: PetFamilyAppBar(),
       body: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
         child: Center(
           child: Column(
             children: [
+              AppBarReturn(route: '/'),
+              SizedBox(height: 20),
               Text(
                 'Recuperar senha',
                 style: TextStyle(

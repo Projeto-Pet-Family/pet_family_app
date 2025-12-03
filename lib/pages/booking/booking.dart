@@ -338,8 +338,6 @@ class _BookingState extends State<Booking> {
     try {
       print('📝 Editando contrato: ${contrato.idContrato}');
       
-      // TODO: Implementar navegação para tela de edição
-      // Por enquanto, mostramos um diálogo com opções
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -706,6 +704,7 @@ class _BookingState extends State<Booking> {
       builder: (context) => AlertDialog(
         title: const Text('Detalhes do Agendamento'),
         content: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

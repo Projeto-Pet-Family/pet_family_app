@@ -472,7 +472,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color:Colors.grey[200], // CORRIGIDO: Usar a cor correspondente
+        color: Colors.grey[200], // CORRIGIDO: Usar a cor correspondente
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: cor),
       ),
@@ -523,6 +523,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
     );
   }
 
+  // Atualizando o build do ShowMoreModalTemplate para agrupar as informações
   @override
   Widget build(BuildContext context) {
     final List<Widget> petIcons = _buildPetIconsForModal();
@@ -563,53 +564,122 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
 
               const SizedBox(height: 24),
 
-              // Nome da Hospedagem e Status
+              // CONTAINER UNIFICADO: Nome da Hospedagem, Status, Datas e Endereço
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xff8692DE),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.house,
-                      size: 40,
-                      color: Colors.white,
+                    // Nome da Hospedagem e Status
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.house,
+                          size: 40,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.contrato.hospedagemNome ?? 'Hospedagem',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  widget.contrato.statusFormatado,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.contrato.hospedagemNome ?? 'Hospedagem',
+
+                    const SizedBox(height: 16),
+
+                    // Divisor
+                    Container(
+                      height: 1,
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Datas
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '${_formatarData(widget.contrato.dataInicio)} - ${_formatarData(widget.contrato.dataFim ?? widget.contrato.dataInicio)}',
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
                               color: Colors.white,
-                              fontWeight: FontWeight.w300,
+                              fontSize: 16,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
+                        ),
+                      ],
+                    ),
+
+                    // Endereço (se disponível)
+                    if (widget.contrato.hospedagemEndereco != null) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.location_on,
+                              size: 20,
+                              color: Colors.white,
                             ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: Text(
-                              widget.contrato.statusFormatado,
+                              widget.contrato.hospedagemEndereco!,
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
                                 color: Colors.white,
-                                fontWeight: FontWeight.w500,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -620,70 +690,6 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
               _buildResumoFinanceiro(),
 
               const SizedBox(height: 20),
-
-              // Período
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 20,
-                      color: Color(0xff8692DE),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_formatarData(widget.contrato.dataInicio)} - ${_formatarData(widget.contrato.dataFim ?? widget.contrato.dataInicio)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Endereço
-              if (widget.contrato.hospedagemEndereco != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 20,
-                        color: Color(0xff8692DE),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.contrato.hospedagemEndereco!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: Color(0xFF1C1B1F),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
 
               // Serviços Contratados
               const Text(
