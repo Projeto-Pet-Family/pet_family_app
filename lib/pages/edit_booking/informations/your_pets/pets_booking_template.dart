@@ -41,8 +41,12 @@ class _PetsBookingTemplateState extends State<PetsBookingTemplate> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FFFE),
+        color: Colors.white, // Alterado: fundo branco
         borderRadius: BorderRadius.circular(25),
+        border: Border.all( // Adicionado: borda cinza clara
+          color: Colors.grey[300]!,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -93,25 +97,10 @@ class _PetsBookingTemplateState extends State<PetsBookingTemplate> {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: _onRemoverPet,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 2,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 16,
-                    color: Colors.white,
-                  ),
+                child: const Icon(
+                  Icons.close,
+                  size: 25,
+                  color: Colors.red,
                 ),
               ),
             ],

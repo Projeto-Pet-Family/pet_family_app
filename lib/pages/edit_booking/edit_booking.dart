@@ -129,6 +129,8 @@ class _EditBookingState extends State<EditBooking> {
       // Mostra modal de sucesso
       await showModalBottomSheet(
         context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
         builder: (BuildContext context) => BookingEdited(),
       );
 
@@ -191,13 +193,12 @@ class _EditBookingState extends State<EditBooking> {
     );
   }
 
+  String _formatarData(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    print('🏗️ Build do EditBooking');
-    print('📊 Cache: $_cacheAlteracoes');
-    print('📊 Contrato UI - Data início: ${_contratoEditado.dataInicio}');
-    print('📊 Contrato UI - Data fim: ${_contratoEditado.dataFim}');
-
     return Container(
       height: MediaQuery.of(context).size.height * 0.95,
       decoration: const BoxDecoration(
@@ -209,9 +210,9 @@ class _EditBookingState extends State<EditBooking> {
       ),
       child: Column(
         children: [
-          // Header (mantido igual)
+          // Header no estilo ShowMoreModal
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -221,152 +222,317 @@ class _EditBookingState extends State<EditBooking> {
                   offset: const Offset(0, 2),
                 ),
               ],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  onPressed: _fecharModal,
-                  icon: const Icon(Icons.close, size: 24, color: Colors.grey),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 40,
-                    minHeight: 40,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Icon(
+                    Icons.close,
+                    size: 30,
+                    color: Colors.black,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Editando agendamento',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _contratoEditado.hospedagemNome ?? 'Agendamento',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                const Text(
+                  'PetFamily',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w100,
+                    color: Color(0xFF8F8F8F),
+                    fontSize: 18,
                   ),
                 ),
-                if (_existemAlteracoes())
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Alterações não salvas',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.orange[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                const SizedBox(width: 30),
               ],
             ),
           ),
-          const Divider(height: 1, color: Colors.grey),
+
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
-
-                  // Hotel Information
+                  // Banner de informações do contrato (inspirado no ShowMoreModal)
                   Container(
-                    width: double.infinity,
-                    child: HotelInformation(
-                      contrato: _contratoEditado,
-                      onContratoAtualizado: _onContratoAtualizado,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff8692DE),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.edit,
+                              size: 40,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _contratoEditado.hospedagemNome ??
+                                        'Agendamento',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _contratoEditado.statusFormatado,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
 
-                  const SizedBox(height: 24),
+                        const SizedBox(height: 16),
 
-                  // Data Information
-                  Container(
-                    width: double.infinity,
-                    child: DataInformation(
-                      contrato: _contratoEditado,
-                      onContratoAtualizado: _onContratoAtualizado,
-                      editavel: true,
-                    ),
-                  ),
+                        // Divisor
+                        Container(
+                          height: 1,
+                          color: Colors.white.withOpacity(0.3),
+                        ),
 
-                  const SizedBox(height: 24),
+                        const SizedBox(height: 16),
 
-                  // Services Information
-                  Container(
-                    width: double.infinity,
-                    child: ServicesInformation(
-                      contrato: _contratoEditado,
-                      onContratoAtualizado: _onContratoAtualizado,
-                      editavel: true,
-                    ),
-                  ),
+                        // Informações principais
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                '${_formatarData(_contratoEditado.dataInicio)} - ${_formatarData(_contratoEditado.dataFim ?? _contratoEditado.dataInicio)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
 
-                  const SizedBox(height: 24),
+                        if (widget.contrato.hospedagemEndereco != null) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  widget.contrato.hospedagemEndereco!,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
 
-                  // Your Pets Information
-                  Container(
-                    width: double.infinity,
-                    child: YourPetsInformations(
-                      contrato: _contratoEditado,
-                      onContratoAtualizado: _onContratoAtualizado,
-                      editavel: true,
+                        // Indicador de alterações pendentes
+                        if (_existemAlteracoes()) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_amber,
+                                  size: 20,
+                                  color: Colors.orange[800],
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Existem alterações não salvas',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.orange[800],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
 
                   const SizedBox(height: 32),
 
-                  // Botões de ação
-                  Container(
-                    width: double.infinity,
-                    child: Column(
-                      children: [
-                        AppButton(
-                          onPressed: _onSalvarAlteracoes,
-                          label: 'Salvar Alterações',
-                          fontSize: 16,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          // Desabilita o botão se não houver alterações
-                          buttonColor:
-                              _existemAlteracoes() ? null : Colors.grey[300],
-                        ),
-                        const SizedBox(height: 12),
-                        AppButton(
-                          onPressed: _fecharModal,
-                          label: 'Cancelar',
-                          fontSize: 16,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          buttonColor: Colors.white,
-                          textButtonColor: Colors.black,
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                      ],
+                  // Data Information com card
+                  const Text(
+                    'Datas da Hospedagem',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff8692DE),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+
+                  DataInformation(
+                    contrato: _contratoEditado,
+                    onContratoAtualizado: _onContratoAtualizado,
+                    editavel: true,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Services Information com card
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Serviços Adicionais',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xff8692DE),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AppButton(
+                        onPressed: () {},
+                        label: 'Adicionar',
+                        fontSize: 14,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        buttonColor: const Color(0xff8692DE),
+                        textButtonColor: Colors.white,
+                        borderRadius: BorderRadius.circular(50),
+                        widthFactor: null,
+                        minWidth: null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  ServicesInformation(
+                    contrato: _contratoEditado,
+                    onContratoAtualizado: _onContratoAtualizado,
+                    editavel: true,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Pets incluídos',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xff8692DE),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AppButton(
+                        onPressed: () {},
+                        label: 'Adicionar',
+                        fontSize: 14,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        buttonColor: const Color(0xff8692DE),
+                        textButtonColor: Colors.white,
+                        borderRadius: BorderRadius.circular(50),
+                        widthFactor: null,
+                        minWidth: null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  YourPetsInformations(
+                    contrato: _contratoEditado,
+                    onContratoAtualizado: _onContratoAtualizado,
+                    editavel: true,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  AppButton(
+                    onPressed: _onSalvarAlteracoes,
+                    label: 'Salvar Alterações',
+                    fontSize: 16,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    buttonColor: Color(0xff8692DE),
+                    textButtonColor: Colors.white,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    onPressed: _fecharModal,
+                    label: 'Fechar',
+                    fontSize: 16,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    buttonColor: Colors.white,
+                    textButtonColor: Colors.black,
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+
+                  const SizedBox(height: 40),
                 ],
               ),
             ),

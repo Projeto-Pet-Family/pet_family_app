@@ -15,10 +15,21 @@ class ServicesTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white, // Fundo branco
+        border: Border.all(color: Colors.grey[300]!), // Borda cinza clara
+        borderRadius: BorderRadius.circular(50),
+        boxShadow: [
+          // Adicionada sombra
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4.0,
+            offset: const Offset(0, 2),
+            spreadRadius: 1.0,
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -56,19 +67,12 @@ class ServicesTemplate extends StatelessWidget {
             const SizedBox(width: 12),
             InkWell(
               onTap: onRemover,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
+              borderRadius: BorderRadius.circular(50),
+              child: Icon(
                   Icons.close,
-                  size: 20,
-                  color: Colors.red[600],
+                  size: 25,
+                  color: Colors.red,
                 ),
-              ),
             ),
           ],
         ],

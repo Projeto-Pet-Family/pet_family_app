@@ -214,18 +214,6 @@ class _DataInformationState extends State<DataInformation> {
         ),
         const SizedBox(height: 8),
 
-        // Período
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Período: ${_formatarData(widget.contrato.dataInicio)} - ${widget.contrato.dataFim != null ? _formatarData(widget.contrato.dataFim!) : _formatarData(widget.contrato.dataInicio)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w300,
-              color: Colors.grey,
-            ),
-          ),
-        ),
       ],
     );
   }

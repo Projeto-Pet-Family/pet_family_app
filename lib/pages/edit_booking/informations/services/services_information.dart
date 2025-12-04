@@ -447,10 +447,22 @@ class _ServicesInformationState extends State<ServicesInformation> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const TitleInformationTemplate(description: 'Serviço(s)'),
-            if (widget.editavel) ...[
-
-            ],
+            const Text(
+              'Total dos serviços:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF727272),
+              ),
+            ),
+            Text(
+              'R\$${totalServicos.toStringAsFixed(2).replaceAll('.', ',')}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF727272),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -491,35 +503,6 @@ class _ServicesInformationState extends State<ServicesInformation> {
               ],
             );
           }).toList(),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xff8692DE).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total dos serviços:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Text(
-                  'R\$${totalServicos.toStringAsFixed(2).replaceAll('.', ',')}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xff8692DE),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ] else ...[
           const Text(
             'Nenhum serviço contratado',

@@ -1,26 +1,27 @@
 // pages/booking/template/booking_template.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/models/avaliacao_model.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/models/denuncia_model.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/pages/booking/modal/remover_pet_modal.dart';
 import 'package:pet_family_app/pages/booking/modal/show_more/show_more_modal.dart';
 import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
 import 'package:pet_family_app/pages/message/message.dart';
-import 'package:pet_family_app/widgets/app_button.dart';
 import './pet_icon_bookin_template.dart';
 import '../modal/avaliacao_modal.dart';
 import '../modal/denuncia_modal.dart';
-import '../../../models/contrato_model.dart';
+import '../modal/remover_servico_modal.dart';
 
-class BookingTemplate extends StatelessWidget {
+class BookingTemplate extends StatefulWidget {
   final ContratoModel contrato;
   final VoidCallback onTap;
   final VoidCallback onEditar;
   final VoidCallback onCancelar;
   final VoidCallback onExcluir;
   final Function(ContratoModel)? onContratoEditado;
+  final Future<void> Function(int idServico)? onRemoverServico;
+  final Future<void> Function(int idPet)? onRemoverPet;
   final AvaliacaoModel? avaliacaoExistente;
   final DenunciaModel? denunciaExistente;
 
@@ -32,13 +33,24 @@ class BookingTemplate extends StatelessWidget {
     required this.onCancelar,
     required this.onExcluir,
     this.onContratoEditado,
+    this.onRemoverServico,
+    this.onRemoverPet,
     this.avaliacaoExistente,
     this.denunciaExistente,
   });
 
-  void _abrirTelaMensagem(BuildContext context) {
-    if (contrato.idUsuario == null ||
-        contrato.idHospedagem == null) {
+  @override
+  State<BookingTemplate> createState() => _BookingTemplateState();
+}
+
+class _BookingTemplateState extends State<BookingTemplate> {
+  bool _loading = false;
+  bool _removingService = false;
+  bool _removingPet = false;
+
+  void _abrirTelaMensagem() {
+    if (widget.contrato.idUsuario == null ||
+        widget.contrato.idHospedagem == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Dados do contrato incompletos')),
       );
@@ -49,9 +61,9 @@ class BookingTemplate extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => Message(
-          idusuario: contrato.idUsuario!,
-          idhospedagem: contrato.idHospedagem!,
-          nomeHospedagem: contrato.hospedagemNome ?? 'Hospedagem',
+          idusuario: widget.contrato.idUsuario!,
+          idhospedagem: widget.contrato.idHospedagem!,
+          nomeHospedagem: widget.contrato.hospedagemNome ?? 'Hospedagem',
         ),
       ),
     );
@@ -93,7 +105,7 @@ class BookingTemplate extends StatelessWidget {
   }
 
   List<Widget> _buildPetIcons() {
-    if (contrato.pets == null || contrato.pets!.isEmpty) {
+    if (widget.contrato.pets == null || widget.contrato.pets!.isEmpty) {
       return [
         const PetIconBookingTemplate(
           petName: 'Nenhum pet',
@@ -101,7 +113,7 @@ class BookingTemplate extends StatelessWidget {
       ];
     }
 
-    return contrato.pets!.map((pet) {
+    return widget.contrato.pets!.map((pet) {
       String petName = 'Pet';
 
       if (pet is Map<String, dynamic>) {
@@ -121,32 +133,32 @@ class BookingTemplate extends StatelessWidget {
     }).toList();
   }
 
-  void _abrirModalDetalhes(BuildContext context) {
+  void _abrirModalDetalhes() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ShowMoreModalTemplate(contrato: contrato),
+      builder: (context) => ShowMoreModalTemplate(contrato: widget.contrato),
     );
   }
 
-  void _abrirTelaEdicao(BuildContext context) {
+  void _abrirTelaEdicao() {
     EditBooking.show(
       context: context,
-      contrato: contrato,
-      onContratoEditado: onContratoEditado,
+      contrato: widget.contrato,
+      onContratoEditado: widget.onContratoEditado,
     );
   }
 
-  void _abrirModalAvaliacao(BuildContext context) {
-    if (!contrato.podeAvaliar) {
-      _mostrarMensagemAvaliacaoNaoDisponivel(context);
+  void _abrirModalAvaliacao() {
+    if (!widget.contrato.podeAvaliar) {
+      _mostrarMensagemAvaliacaoNaoDisponivel();
       return;
     }
 
     AvaliacaoModal.show(
       context: context,
-      contrato: contrato,
+      contrato: widget.contrato,
       onAvaliacaoCriada: () {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -156,19 +168,19 @@ class BookingTemplate extends StatelessWidget {
           ),
         );
       },
-      avaliacaoExistente: avaliacaoExistente,
+      avaliacaoExistente: widget.avaliacaoExistente,
     );
   }
 
-  void _abrirModalDenuncia(BuildContext context) {
-    if (!contrato.podeDenunciar) {
-      _mostrarMensagemDenunciaNaoDisponivel(context);
+  void _abrirModalDenuncia() {
+    if (!widget.contrato.podeDenunciar) {
+      _mostrarMensagemDenunciaNaoDisponivel();
       return;
     }
 
     DenunciaModal.show(
       context: context,
-      contrato: contrato,
+      contrato: widget.contrato,
       onDenunciaCriada: () {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -178,14 +190,198 @@ class BookingTemplate extends StatelessWidget {
           ),
         );
       },
-      denunciaExistente: denunciaExistente,
+      denunciaExistente: widget.denunciaExistente,
     );
   }
 
-  void _mostrarMensagemAvaliacaoNaoDisponivel(BuildContext context) {
+  // NOVO: Abrir modal para remover serviços
+  Future<void> _abrirModalRemoverServico() async {
+    if (widget.contrato.servicos == null || widget.contrato.servicos!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não há serviços para remover')),
+      );
+      return;
+    }
+
+    if (widget.onRemoverServico == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Funcionalidade de remover serviços não está disponível')),
+      );
+      return;
+    }
+
+    final servicoRemovido = await showModalBottomSheet<int?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RemoverServicoModal(
+        servicos: widget.contrato.servicos!,
+      ),
+    );
+
+    if (servicoRemovido != null) {
+      await _removerServico(servicoRemovido);
+    }
+  }
+
+  // NOVO: Abrir modal para remover pets
+  Future<void> _abrirModalRemoverPet() async {
+    if (widget.contrato.pets == null || widget.contrato.pets!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não há pets para remover'),
+        ),
+      );
+      return;
+    }
+
+    if (widget.onRemoverPet == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Funcionalidade de remover pets não está disponível'),
+        ),
+      );
+      return;
+    }
+
+    final petRemovido = await showModalBottomSheet<int?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RemoverPetModal(
+        pets: widget.contrato.pets!,
+      ),
+    );
+
+    if (petRemovido != null) {
+      await _removerPet(petRemovido);
+    }
+  }
+
+  // NOVO: Remover serviço
+  Future<void> _removerServico(int idServico) async {
+    if (widget.onRemoverServico == null) return;
+
+    setState(() {
+      _removingService = true;
+    });
+
+    try {
+      print(
+          '🔄 Removendo serviço ID: $idServico do contrato ${widget.contrato.idContrato}');
+
+      await widget.onRemoverServico!(idServico);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Serviço removido com sucesso!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Atualiza a lista de serviços localmente
+      if (widget.contrato.servicos != null) {
+        widget.contrato.servicos!.removeWhere((servico) {
+          if (servico is Map<String, dynamic>) {
+            return servico['id'] == idServico;
+          }
+          return false;
+        });
+
+        // Atualiza o contrato se houver callback
+        if (widget.onContratoEditado != null) {
+          widget.onContratoEditado!(widget.contrato);
+        }
+
+        // Força rebuild do widget
+        setState(() {});
+      }
+    } catch (e) {
+      print('❌ Erro ao remover serviço: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Erro ao remover serviço'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Tentar novamente',
+            onPressed: () => _removerServico(idServico),
+          ),
+        ),
+      );
+    } finally {
+      setState(() {
+        _removingService = false;
+      });
+    }
+  }
+
+  // NOVO: Remover pet
+  Future<void> _removerPet(int idPet) async {
+    if (widget.onRemoverPet == null) return;
+
+    setState(() {
+      _removingPet = true;
+    });
+
+    try {
+      print(
+          '🔄 Removendo pet ID: $idPet do contrato ${widget.contrato.idContrato}');
+
+      await widget.onRemoverPet!(idPet);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pet removido com sucesso!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Atualiza a lista de pets localmente
+      if (widget.contrato.pets != null) {
+        widget.contrato.pets!.removeWhere((pet) {
+          if (pet is Map<String, dynamic>) {
+            return pet['id'] == idPet;
+          } else if (pet is PetModel) {
+            return pet.idPet == idPet;
+          }
+          return false;
+        });
+
+        // Atualiza o contrato se houver callback
+        if (widget.onContratoEditado != null) {
+          widget.onContratoEditado!(widget.contrato);
+        }
+
+        // Força rebuild do widget
+        setState(() {});
+      }
+    } catch (e) {
+      print('❌ Erro ao remover pet: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Erro ao remover pet'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Tentar novamente',
+            onPressed: () => _removerPet(idPet),
+          ),
+        ),
+      );
+    } finally {
+      setState(() {
+        _removingPet = false;
+      });
+    }
+  }
+
+  void _mostrarMensagemAvaliacaoNaoDisponivel() {
     String mensagem = '';
 
-    switch (contrato.status) {
+    switch (widget.contrato.status) {
       case 'em_aprovacao':
         mensagem = 'Avaliação disponível apenas para hospedagens concluídas.';
         break;
@@ -230,10 +426,10 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  void _mostrarMensagemDenunciaNaoDisponivel(BuildContext context) {
+  void _mostrarMensagemDenunciaNaoDisponivel() {
     String mensagem = '';
 
-    switch (contrato.status) {
+    switch (widget.contrato.status) {
       case 'em_aprovacao':
         mensagem = 'Denúncia disponível apenas para hospedagens concluídas.';
         break;
@@ -278,9 +474,9 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  void _abrirModalConfirmacaoCancelamento(BuildContext context) {
-    if (!contrato.podeCancelar) {
-      _mostrarMensagemNaoCancelavel(context);
+  void _abrirModalConfirmacaoCancelamento() {
+    if (!widget.contrato.podeCancelar) {
+      _mostrarMensagemNaoCancelavel();
       return;
     }
 
@@ -308,7 +504,7 @@ class BookingTemplate extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _cancelarHospedagem(context);
+                _cancelarHospedagem();
               },
               child: const Text(
                 "Sim, Cancelar",
@@ -324,10 +520,10 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  void _mostrarMensagemNaoCancelavel(BuildContext context) {
+  void _mostrarMensagemNaoCancelavel() {
     String mensagem = '';
 
-    switch (contrato.status) {
+    switch (widget.contrato.status) {
       case 'em_execucao':
         mensagem =
             'Não é possível cancelar uma hospedagem em execução. Entre em contato com o anfitrião para mais informações.';
@@ -370,27 +566,28 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  void _cancelarHospedagem(BuildContext context) {
+  void _cancelarHospedagem() {
     try {
-      print('🚀 Iniciando cancelamento do contrato: ${contrato.idContrato}');
-      print('📊 Status atual: ${contrato.status}');
+      print(
+          '🚀 Iniciando cancelamento do contrato: ${widget.contrato.idContrato}');
+      print('📊 Status atual: ${widget.contrato.status}');
 
-      final contratoCancelado = contrato.copyWith(
+      final contratoCancelado = widget.contrato.copyWith(
         status: 'cancelado',
         dataAtualizacao: DateTime.now(),
       );
 
       print('📝 Novo status: ${contratoCancelado.status}');
 
-      if (onContratoEditado != null) {
+      if (widget.onContratoEditado != null) {
         print('🔄 Chamando onContratoEditado com contrato atualizado');
-        onContratoEditado!(contratoCancelado);
+        widget.onContratoEditado!(contratoCancelado);
       } else {
         print('⚠️ onContratoEditado não está definido');
       }
 
       print('🔄 Executando onCancelar para chamar a API');
-      onCancelar();
+      widget.onCancelar();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -420,7 +617,7 @@ class BookingTemplate extends StatelessWidget {
             label: "Tentar Novamente",
             textColor: Colors.white,
             onPressed: () {
-              _abrirModalConfirmacaoCancelamento(context);
+              _abrirModalConfirmacaoCancelamento();
             },
           ),
         ),
@@ -490,35 +687,63 @@ class BookingTemplate extends StatelessWidget {
     );
   }
 
-  Widget _buildBotaoAvaliacao(BuildContext context) {
+  Widget _buildBotaoAvaliacao() {
     // Se já existe avaliação, mostra o status em vez do botão
-    if (avaliacaoExistente != null) {
+    if (widget.avaliacaoExistente != null) {
       return _buildStatusAvaliacao();
     }
 
     return _buildBotaoPadrao(
       label: 'Avaliar Hospedagem',
-      onPressed: () => _abrirModalAvaliacao(context),
+      onPressed: () => _abrirModalAvaliacao(),
       icon: const Icon(Icons.star_outline, size: 20),
     );
   }
 
-  Widget _buildBotaoDenuncia(BuildContext context) {
+  Widget _buildBotaoDenuncia() {
     // Se já existe denúncia, mostra o status em vez do botão
-    if (denunciaExistente != null) {
+    if (widget.denunciaExistente != null) {
       return _buildStatusDenuncia();
     }
 
     return _buildBotaoPadrao(
       label: 'Fazer Denúncia',
-      onPressed: () => _abrirModalDenuncia(context),
+      onPressed: () => _abrirModalDenuncia(),
       icon: const Icon(Icons.warning_outlined, size: 20),
+    );
+  }
+
+  Widget _buildBotaoRemoverServico() {
+    return _buildBotaoPadrao(
+      label: _removingService ? 'Removendo...' : 'Remover Serviço',
+      onPressed: _removingService ? null : () => _abrirModalRemoverServico(),
+      icon: _removingService
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.remove_circle_outline, size: 20),
+    );
+  }
+
+  Widget _buildBotaoRemoverPet() {
+    return _buildBotaoPadrao(
+      label: _removingPet ? 'Removendo...' : 'Remover Pet',
+      onPressed: _removingPet ? null : () => _abrirModalRemoverPet(),
+      icon: _removingPet
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.pets, size: 20),
     );
   }
 
   Widget _buildBotaoPadrao({
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     Widget? icon,
     Color? backgroundColor,
     BorderRadius? borderRadius,
@@ -559,8 +784,21 @@ class BookingTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final petIcons = _buildPetIcons();
-    final podeAvaliar = contrato.podeAvaliar;
-    final podeDenunciar = contrato.podeDenunciar;
+    final podeAvaliar = widget.contrato.podeAvaliar;
+    final podeDenunciar = widget.contrato.podeDenunciar;
+
+    // Verificar condições para mostrar botões de remoção
+    final podeRemoverServico = widget.onRemoverServico != null &&
+        widget.contrato.servicos != null &&
+        widget.contrato.servicos!.isNotEmpty &&
+        widget.contrato.podeEditar;
+
+    final podeRemoverPet = widget.onRemoverPet != null &&
+        widget.contrato.pets != null &&
+        widget.contrato.pets!.isNotEmpty &&
+        widget.contrato.podeEditar &&
+        widget.contrato.pets!.length >
+            1; // Não permite remover se só tiver um pet
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -597,19 +835,20 @@ class BookingTemplate extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _obterCorStatus(contrato.status).withOpacity(0.1),
+                    color: _obterCorStatus(widget.contrato.status)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: _obterCorStatus(contrato.status),
+                      color: _obterCorStatus(widget.contrato.status),
                       width: 1.5,
                     ),
                   ),
                   child: Text(
-                    _obterNomeStatus(contrato.status).toUpperCase(),
+                    _obterNomeStatus(widget.contrato.status).toUpperCase(),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: _obterCorStatus(contrato.status),
+                      color: _obterCorStatus(widget.contrato.status),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -633,7 +872,7 @@ class BookingTemplate extends StatelessWidget {
 
                 // Nome da hospedagem
                 Text(
-                  contrato.hospedagemNome ?? 'Hospedagem',
+                  widget.contrato.hospedagemNome ?? 'Hospedagem',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
@@ -656,7 +895,7 @@ class BookingTemplate extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${_formatarData(contrato.dataInicio)} - ${_formatarData(contrato.dataFim ?? contrato.dataInicio)}',
+                      '${_formatarData(widget.contrato.dataInicio)} - ${_formatarData(widget.contrato.dataFim ?? widget.contrato.dataInicio)}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xffD9D9D9),
@@ -667,10 +906,10 @@ class BookingTemplate extends StatelessWidget {
                 ),
 
                 // Duração
-                if (contrato.duracaoDias != null) ...[
+                if (widget.contrato.duracaoDias != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    '${contrato.duracaoDias} ${contrato.duracaoDias == 1 ? 'dia' : 'dias'}',
+                    '${widget.contrato.duracaoDias} ${widget.contrato.duracaoDias == 1 ? 'dia' : 'dias'}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xffD9D9D9),
@@ -717,32 +956,37 @@ class BookingTemplate extends StatelessWidget {
           // Botão Ver Mais
           _buildBotaoPadrao(
             label: 'Ver Mais',
-            onPressed: () => _abrirModalDetalhes(context),
+            onPressed: () => _abrirModalDetalhes(),
             icon: const Icon(Icons.arrow_forward, size: 20),
           ),
 
           // Botão Editar (se aplicável)
-          if (contrato.podeEditar)
+          if (widget.contrato.podeEditar)
             _buildBotaoPadrao(
               label: 'Editar',
-              onPressed: () => _abrirTelaEdicao(context),
+              onPressed: () => _abrirTelaEdicao(),
               icon: const Icon(Icons.edit, size: 20),
             ),
 
+          // Botão Remover Serviço (NOVO - se aplicável)
+          if (podeRemoverServico) _buildBotaoRemoverServico(),
+
+          // Botão Remover Pet (NOVO - se aplicável)
+          if (podeRemoverPet) _buildBotaoRemoverPet(),
+
           // Botão Enviar Mensagem (se aplicável)
-          if (contrato.estaAtivo)
+          if (widget.contrato.estaAtivo)
             _buildBotaoPadrao(
               label: 'Enviar mensagem',
-              onPressed: () =>
-                  _abrirTelaMensagem(context), // Use o método diretamente
+              onPressed: () => _abrirTelaMensagem(),
               icon: const Icon(Icons.message, size: 20),
             ),
 
           // Botão Avaliação (APENAS quando status for 'concluido')
-          if (podeAvaliar) _buildBotaoAvaliacao(context),
+          if (podeAvaliar) _buildBotaoAvaliacao(),
 
           // Botão Denúncia (APENAS quando status for 'concluido')
-          if (podeDenunciar) _buildBotaoDenuncia(context),
+          if (podeDenunciar) _buildBotaoDenuncia(),
 
           // Botão Cancelar
           Container(
@@ -750,10 +994,10 @@ class BookingTemplate extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: contrato.status == 'cancelado'
+                backgroundColor: widget.contrato.status == 'cancelado'
                     ? Colors.grey[300]!
                     : const Color(0xffEDEDED),
-                foregroundColor: contrato.status == 'cancelado'
+                foregroundColor: widget.contrato.status == 'cancelado'
                     ? Colors.grey[600]!
                     : const Color(0xff000000),
                 padding:
@@ -764,7 +1008,7 @@ class BookingTemplate extends StatelessWidget {
                     bottomRight: Radius.circular(10),
                   ),
                   side: BorderSide(
-                    color: contrato.status == 'cancelado'
+                    color: widget.contrato.status == 'cancelado'
                         ? Colors.grey[400]!
                         : const Color(0xffCFCCCC),
                   ),
@@ -772,23 +1016,27 @@ class BookingTemplate extends StatelessWidget {
                 elevation: 0,
                 alignment: Alignment.center,
               ),
-              onPressed: contrato.podeCancelar
-                  ? () => _abrirModalConfirmacaoCancelamento(context)
-                  : () => _mostrarMensagemNaoCancelavel(context),
+              onPressed: widget.contrato.podeCancelar
+                  ? () => _abrirModalConfirmacaoCancelamento()
+                  : () => _mostrarMensagemNaoCancelavel(),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    contrato.status == 'cancelado' ? 'Cancelado' : 'Cancelar',
+                    widget.contrato.status == 'cancelado'
+                        ? 'Cancelado'
+                        : 'Cancelar',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Icon(
-                    contrato.status == 'cancelado' ? Icons.block : Icons.close,
+                    widget.contrato.status == 'cancelado'
+                        ? Icons.block
+                        : Icons.close,
                     size: 20,
-                    color: contrato.status == 'cancelado'
+                    color: widget.contrato.status == 'cancelado'
                         ? Colors.grey[600]!
                         : null,
                   ),

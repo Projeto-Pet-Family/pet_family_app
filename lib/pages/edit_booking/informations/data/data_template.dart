@@ -13,14 +13,23 @@ class DataTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isClickable ? Colors.grey[50] : Colors.transparent,
+        color: Colors.white, // Fundo branco
         border: Border.all(
-          color: isClickable ? Colors.grey[300]! : Colors.transparent,
+          color: Colors.grey[300]!, // Borda cinza clara
           width: 1,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(25), // Arredondamento máximo (25)
+        boxShadow: [ // Adicionada sombra
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4.0,
+            offset: const Offset(0, 2),
+            spreadRadius: 1.0,
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
