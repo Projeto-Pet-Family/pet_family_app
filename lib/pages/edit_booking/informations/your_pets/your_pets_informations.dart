@@ -6,6 +6,7 @@ import 'package:pet_family_app/pages/edit_booking/informations/your_pets/pets_bo
 import 'package:pet_family_app/services/contrato_service.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
 import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 
 class YourPetsInformations extends StatefulWidget {
   final ContratoModel contrato;
@@ -39,7 +40,7 @@ class _YourPetsInformationsState extends State<YourPetsInformations> {
   }
 
   void _inicializarServicos() {
-    _contratoService = ContratoService(dio: Dio());
+    _contratoService = ContratoService(dio: Dio(), client: http.Client());
     _contratoRepository = ContratoRepositoryImpl(contratoService: _contratoService);
   }
 

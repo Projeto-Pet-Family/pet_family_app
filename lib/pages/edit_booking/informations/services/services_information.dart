@@ -404,8 +404,10 @@ class _ServicesInformationState extends State<ServicesInformation> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      leading:
-                          const Icon(Icons.room_service, color: Colors.blue),
+                      leading: const Icon(
+                        Icons.room_service,
+                        color: Colors.blue,
+                      ),
                       title: Text(
                         servico.descricao,
                         style: const TextStyle(

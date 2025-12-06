@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
+import 'package:pet_family_app/models/pet/pet_model.dart';
+import 'package:pet_family_app/models/service_model.dart';
+import 'package:pet_family_app/pages/booking/template/add/add_pet_modal.dart';
+import 'package:pet_family_app/pages/booking/template/add/add_service_modal.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/data/data_information.dart';
-import 'package:pet_family_app/pages/edit_booking/informations/hotel/hotel_information.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/services/services_information.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/your_pets/your_pets_informations.dart';
 import 'package:pet_family_app/pages/edit_booking/modal/booking_edited.dart';
@@ -40,11 +44,199 @@ class EditBooking extends StatefulWidget {
 class _EditBookingState extends State<EditBooking> {
   late ContratoModel _contratoEditado;
   final Map<String, dynamic> _cacheAlteracoes = {};
+  late Dio _dio;
 
   @override
   void initState() {
     super.initState();
     _contratoEditado = widget.contrato.copyWith();
+    _dio = Dio();
+  }
+
+  // Método para adicionar serviços
+  void _adicionarServico() {
+    final servicosNoContrato = _contratoEditado.servicos ?? [];
+
+    // CONVERSÃO EXPLÍCITA - Linha 68 corrigida
+    final List<ServiceModel> servicosConvertidos =
+        servicosNoContrato.map((item) {
+      if (item is ServiceModel) {
+        return item;
+      } else if (item is Map<String, dynamic>) {
+        // Tente converter para ServiceModel
+        try {
+          return ServiceModel.fromJson(item);
+        } catch (e) {
+          print('❌ Erro ao converter item para ServiceModel: $e');
+          print('❌ Item: $item');
+          // Retorna um ServiceModel vazio ou lança exceção
+          return ServiceModel(
+            idservico: item['idservico'] ?? 0,
+            idhospedagem: item['idhospedagem'] ?? 0,
+            descricao: item['descricao']?.toString() ?? 'Serviço desconhecido',
+            preco: (item['preco'] is String)
+                ? double.tryParse(item['preco']) ?? 0.0
+                : (item['preco'] as num?)?.toDouble() ?? 0.0,
+          );
+        }
+      } else {
+        print('❌ Tipo inesperado: ${item.runtimeType}');
+        // Retorna um ServiceModel padrão para evitar erro
+        return ServiceModel(
+          idservico: 0,
+          idhospedagem: 0,
+          descricao: 'Serviço inválido',
+          preco: 0.0,
+        );
+      }
+    }).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddServiceModal(
+        idContrato: _contratoEditado.idContrato!,
+        idHospedagem: _contratoEditado.idHospedagem!,
+        servicosNoContrato: servicosConvertidos, // Use a lista convertida
+        onServicoAdicionado: (contratoAtualizado) {
+          setState(() {
+            _contratoEditado = contratoAtualizado;
+          });
+        },
+      ),
+    );
+  }
+
+  void _processarServicoAdicionado(ContratoModel contratoAtualizado) {
+    setState(() {
+      _contratoEditado = contratoAtualizado;
+    });
+
+    // Atualizar cache
+    _cacheAlteracoes['servicos'] = contratoAtualizado.servicos ?? [];
+
+    // Notificar callback
+    if (widget.onContratoEditado != null) {
+      widget.onContratoEditado!(contratoAtualizado);
+    }
+
+    // Mostrar mensagem de sucesso
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Serviços adicionados com sucesso!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Método para adicionar pets
+  void _adicionarPet() {
+    final petsNoContrato = _contratoEditado.pets ?? [];
+
+    print('🎯 Abrindo modal AddPetModal');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        // Criar uma referência para o contexto do modal
+        final BuildContext modalContext = context;
+
+        return AddPetModal(
+          idContrato: _contratoEditado.idContrato!,
+          idUsuario: _contratoEditado.idUsuario,
+          petsNoContrato: petsNoContrato,
+          onPetAdicionado: (contratoAtualizado) {
+            print('🔄 Pet adicionado, atualizando estado...');
+
+            // Atualizar o estado local
+            _processarPetAdicionado(contratoAtualizado);
+
+            // Fechar o modal atual
+            Navigator.of(modalContext).pop();
+
+            // Reabrir o modal com dados atualizados
+            _adicionarPet(); // Chama a si mesmo recursivamente
+
+            // Notificar callback externo
+            if (widget.onContratoEditado != null) {
+              widget.onContratoEditado!(contratoAtualizado);
+            }
+
+            // Mostrar mensagem de sucesso
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Pet adicionado com sucesso!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _reabrirModalPetAtualizado(ContratoModel contratoAtualizado) {
+    // Pequeno delay para garantir que o modal anterior foi fechado
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => AddPetModal(
+          idContrato: contratoAtualizado.idContrato!,
+          idUsuario: contratoAtualizado.idUsuario,
+          petsNoContrato: contratoAtualizado.pets ?? [], // Lista ATUALIZADA
+          onPetAdicionado: (novoContratoAtualizado) {
+            // Processar novo pet adicionado (recursivo)
+            _processarPetAdicionado(novoContratoAtualizado);
+            Navigator.of(context).pop();
+            _reabrirModalPetAtualizado(novoContratoAtualizado);
+
+            if (widget.onContratoEditado != null) {
+              widget.onContratoEditado!(novoContratoAtualizado);
+            }
+          },
+        ),
+      );
+    });
+  }
+
+  // No EditBooking, método _processarPetAdicionado:
+  void _processarPetAdicionado(ContratoModel contratoAtualizado) {
+    print('🔄 Processando pet adicionado');
+    print('📊 Pets antes: ${_contratoEditado.pets?.length ?? 0}');
+    print('📊 Pets depois: ${contratoAtualizado.pets?.length ?? 0}');
+
+    // Limpar o cache de pets para forçar recarregamento
+    if (_cacheAlteracoes.containsKey('pets')) {
+      _cacheAlteracoes.remove('pets');
+    }
+
+    // Adicionar os novos pets ao cache
+    _cacheAlteracoes['pets'] = contratoAtualizado.pets ?? [];
+
+    // Atualizar o estado local
+    setState(() {
+      _contratoEditado = contratoAtualizado.copyWith();
+    });
+
+    print('✅ Pets atualizados: ${_contratoEditado.pets?.length ?? 0}');
+
+    // Mostrar mensagem de sucesso
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pets adicionados com sucesso!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _onContratoAtualizado(ContratoModel contratoAtualizado,
@@ -72,7 +264,22 @@ class _EditBookingState extends State<EditBooking> {
       setState(() {
         _contratoEditado = contratoAtualizado.copyWith();
       });
-      return; // Não armazena no cache, já foi processado na API
+
+      // Atualizar cache de serviços
+      _cacheAlteracoes['servicos'] = contratoAtualizado.servicos ?? [];
+      return;
+    }
+
+    // Para pets removidos, atualiza imediatamente a UI
+    if (tipoAlteracao == 'pet_removido') {
+      print('🔄 Pet removido - atualizando UI imediatamente');
+      setState(() {
+        _contratoEditado = contratoAtualizado.copyWith();
+      });
+
+      // Atualizar cache de pets
+      _cacheAlteracoes['pets'] = contratoAtualizado.pets ?? [];
+      return;
     }
 
     // Atualiza a UI com os dados em cache
@@ -93,18 +300,39 @@ class _EditBookingState extends State<EditBooking> {
           dataFim: _cacheAlteracoes['dataFim'],
         );
       }
+
+      if (_cacheAlteracoes.containsKey('servicos')) {
+        _contratoEditado = _contratoEditado.copyWith(
+          servicos: _cacheAlteracoes['servicos'],
+        );
+      }
+
+      if (_cacheAlteracoes.containsKey('pets')) {
+        _contratoEditado = _contratoEditado.copyWith(
+          pets: _cacheAlteracoes['pets'],
+        );
+      }
     });
 
     print('📊 Estado atual do cache:');
-    print('  - dataInicio: ${_cacheAlteracoes['dataInicio']}');
-    print('  - dataFim: ${_cacheAlteracoes['dataFim']}');
-    print('📊 Contrato atualizado na UI:');
-    print('  - Data início: ${_contratoEditado.dataInicio}');
-    print('  - Data fim: ${_contratoEditado.dataFim}');
+    _cacheAlteracoes.forEach((key, value) {
+      if (value is List) {
+        print('  - $key: ${value.length} item(s)');
+      } else {
+        print('  - $key: $value');
+      }
+    });
   }
 
   bool _existemAlteracoes() {
     return _cacheAlteracoes.isNotEmpty;
+  }
+
+  // Verificar se o contrato está em status editável
+  bool _podeAdicionar() {
+    // Status que permitem adição de serviços/pets
+    final statusEditaveis = ['em_aprovacao', 'pendente', 'confirmado'];
+    return statusEditaveis.contains(_contratoEditado.status);
   }
 
   void _onSalvarAlteracoes() async {
@@ -118,23 +346,72 @@ class _EditBookingState extends State<EditBooking> {
     print('📊 Alterações a serem salvas: $_cacheAlteracoes');
 
     try {
-      // Aqui você chamaria sua API para salvar as alterações
+      // Simula o salvamento na API
       await _salvarAlteracoesNaAPI();
 
-      // Notifica o callback com as alterações
+      // Notifica o callback
       if (widget.onContratoEditado != null) {
         widget.onContratoEditado!(_contratoEditado);
       }
 
-      // Mostra modal de sucesso
-      await showModalBottomSheet(
+      // Mostra popup de sucesso
+      await showDialog(
         context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (BuildContext context) => BookingEdited(),
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle,
+                size: 60,
+                color: Colors.green[400],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Alterações Salvas!',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Suas alterações foram salvas com sucesso.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff8692DE),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                ),
+                child: const Text('OK'),
+              ),
+            ),
+          ],
+        ),
       );
 
-      // Fecha o modal
+      // Fecha o modal de edição
       _fecharModal();
     } catch (e) {
       print('❌ Erro ao salvar alterações: $e');
@@ -199,6 +476,8 @@ class _EditBookingState extends State<EditBooking> {
 
   @override
   Widget build(BuildContext context) {
+    final podeAdicionar = _podeAdicionar();
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.95,
       decoration: const BoxDecoration(
@@ -445,15 +724,18 @@ class _EditBookingState extends State<EditBooking> {
                       ),
                       const SizedBox(width: 8),
                       AppButton(
-                        onPressed: () {},
+                        onPressed: podeAdicionar ? _adicionarServico : null,
                         label: 'Adicionar',
                         fontSize: 14,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
-                        buttonColor: const Color(0xff8692DE),
-                        textButtonColor: Colors.white,
+                        buttonColor: podeAdicionar
+                            ? const Color(0xff8692DE)
+                            : Colors.grey[300],
+                        textButtonColor:
+                            podeAdicionar ? Colors.white : Colors.grey,
                         borderRadius: BorderRadius.circular(50),
                         widthFactor: null,
                         minWidth: null,
@@ -465,7 +747,7 @@ class _EditBookingState extends State<EditBooking> {
                   ServicesInformation(
                     contrato: _contratoEditado,
                     onContratoAtualizado: _onContratoAtualizado,
-                    editavel: true,
+                    editavel: podeAdicionar,
                   ),
 
                   const SizedBox(height: 32),
@@ -486,15 +768,18 @@ class _EditBookingState extends State<EditBooking> {
                       ),
                       const SizedBox(width: 8),
                       AppButton(
-                        onPressed: () {},
+                        onPressed: podeAdicionar ? _adicionarPet : null,
                         label: 'Adicionar',
                         fontSize: 14,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
-                        buttonColor: const Color(0xff8692DE),
-                        textButtonColor: Colors.white,
+                        buttonColor: podeAdicionar
+                            ? const Color(0xff8692DE)
+                            : Colors.grey[300],
+                        textButtonColor:
+                            podeAdicionar ? Colors.white : Colors.grey,
                         borderRadius: BorderRadius.circular(50),
                         widthFactor: null,
                         minWidth: null,
@@ -506,7 +791,7 @@ class _EditBookingState extends State<EditBooking> {
                   YourPetsInformations(
                     contrato: _contratoEditado,
                     onContratoAtualizado: _onContratoAtualizado,
-                    editavel: true,
+                    editavel: podeAdicionar,
                   ),
 
                   const SizedBox(height: 32),

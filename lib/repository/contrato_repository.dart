@@ -40,7 +40,7 @@ abstract class ContratoRepository {
   
   Future<ContratoModel> adicionarServicoContrato({
     required int idContrato,
-    required List<Map<String, dynamic>> servicos,
+    required List<int> servicosIds,
   });
   
   Future<ContratoModel> adicionarPetContrato({
@@ -193,13 +193,13 @@ class ContratoRepositoryImpl implements ContratoRepository {
   @override
   Future<ContratoModel> adicionarServicoContrato({
     required int idContrato,
-    required List<Map<String, dynamic>> servicos,
+    required List<int> servicosIds,
   }) async {
     try {
       print('➕ Repository: Adicionando serviço ao contrato');
       return await contratoService.adicionarServicoContrato(
         idContrato: idContrato,
-        servicos: servicos,
+        servicosIds: servicosIds,
       );
     } catch (e) {
       print('❌ Repository: Erro ao adicionar serviço: $e');

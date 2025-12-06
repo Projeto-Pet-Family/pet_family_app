@@ -3,6 +3,9 @@ import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/data/data_template.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/title_information_template.dart';
 import 'package:pet_family_app/services/api_service.dart';
+import 'package:pet_family_app/services/contrato_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 class DataInformation extends StatefulWidget {
   final ContratoModel contrato;
@@ -33,7 +36,16 @@ class _DataInformationState extends State<DataInformation> {
   }
 
   String _formatarDataParaAPI(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final String dataFormatada =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    print('🔧 Formatando data para API:');
+    print('  📅 Data original: $date');
+    print('  📅 Data formatada: $dataFormatada');
+    print('  📅 Tipo da formatada: ${dataFormatada.runtimeType}');
+    print('  📅 Tamanho: ${dataFormatada.length} caracteres');
+
+    return dataFormatada;
   }
 
   Future<void> _selecionarData(BuildContext context, bool isDataInicio) async {
@@ -43,12 +55,24 @@ class _DataInformationState extends State<DataInformation> {
         ? widget.contrato.dataInicio
         : widget.contrato.dataFim ?? widget.contrato.dataInicio;
 
-    final DateTime primeiraData =
-        isDataInicio ? DateTime.now() : widget.contrato.dataInicio;
+    // CORREÇÃO: Garantir que o initialDate não seja anterior ao firstDate
+    DateTime primeiraData;
+    if (isDataInicio) {
+      primeiraData = DateTime.now();
+    } else {
+      // Para data de fim, a primeira data deve ser a data de início
+      primeiraData = widget.contrato.dataInicio;
+    }
+
+    // CORREÇÃO: Ajustar o initialDate se ele for anterior ao firstDate
+    DateTime initialDateAjustado = dataAtual;
+    if (initialDateAjustado.isBefore(primeiraData)) {
+      initialDateAjustado = primeiraData;
+    }
 
     final DateTime? dataSelecionada = await showDatePicker(
       context: context,
-      initialDate: dataAtual,
+      initialDate: initialDateAjustado, // Usar a data ajustada
       firstDate: primeiraData,
       lastDate: DateTime(DateTime.now().year + 2),
       builder: (BuildContext context, Widget? child) {
@@ -156,19 +180,42 @@ class _DataInformationState extends State<DataInformation> {
     });
 
     try {
-      final bool sucesso = await ApiService().atualizarDatasContrato(
+      final String dataFormatada = _formatarDataParaAPI(novaData);
+      print('📤 Enviando data para API:');
+      print('  📅 Data original: $novaData');
+      print('  📅 Data formatada: $dataFormatada');
+      print('  📅 Tipo: ${isDataInicio ? "Início" : "Fim"}');
+
+      final ContratoModel contratoAtualizado = await ContratoService(
+        dio: Dio(),
+        client: http.Client(),
+      ).atualizarDatasContrato(
         idContrato: widget.contrato.idContrato!,
-        dataInicio: isDataInicio ? _formatarDataParaAPI(novaData) : null,
-        dataFim: !isDataInicio ? _formatarDataParaAPI(novaData) : null,
+        dataInicio: isDataInicio ? dataFormatada : null,
+        dataFim: !isDataInicio ? dataFormatada : null,
       );
 
-      if (!sucesso) {
-        throw Exception('Falha ao salvar data na API');
-      }
-
       print('✅ Data salva com sucesso na API');
+      print('📄 Contrato atualizado: ${contratoAtualizado.idContrato}');
+
+      // Atualiza o contrato local com os dados retornados da API
+      if (widget.onContratoAtualizado != null) {
+        widget.onContratoAtualizado!(
+          contratoAtualizado,
+          tipoAlteracao: isDataInicio ? 'data_inicio' : 'data_fim',
+        );
+      }
     } catch (e) {
       print('❌ Erro ao salvar data na API: $e');
+
+      // Reverte a alteração local em caso de erro na API
+      if (widget.onContratoAtualizado != null) {
+        widget.onContratoAtualizado!(
+          widget.contrato,
+          tipoAlteracao: 'reverter_alteracao',
+        );
+      }
+
       rethrow;
     } finally {
       if (mounted) {
@@ -182,8 +229,12 @@ class _DataInformationState extends State<DataInformation> {
   void _mostrarMensagem(String mensagem, Color cor) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:
-            Text(mensagem, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+          mensagem,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: cor,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
@@ -213,7 +264,6 @@ class _DataInformationState extends State<DataInformation> {
           isDataInicio: false,
         ),
         const SizedBox(height: 8),
-
       ],
     );
   }
@@ -234,10 +284,8 @@ class _DataInformationState extends State<DataInformation> {
             TitleInformationTemplate(description: titulo),
             if (podeEditar) ...[
               const SizedBox(width: 8),
-            
             ] else if (widget.editavel && !widget.contrato.podeEditar) ...[
               const SizedBox(width: 8),
-
             ],
           ],
         ),

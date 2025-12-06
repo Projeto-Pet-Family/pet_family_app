@@ -233,7 +233,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(50),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: const Center(
@@ -274,7 +274,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(50),
             border: Border.all(color: Colors.grey[300]!),
           ),
           child: Row(
@@ -291,13 +291,6 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${quantidade}x ${_formatarMoeda(precoUnitario)}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -324,6 +317,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
     final valorServicosFormatado = _obterValorFormatado('valor_total_servicos');
     final valorTotalFormatado = _obterValorFormatado('valor_total_contrato');
     final periodoFormatado = _obterPeriodoFormatado();
+    final quantidadePets = widget.contrato.pets?.length ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -356,6 +350,12 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
           _buildItemFinanceiro(
             '📅 Período da hospedagem',
             periodoFormatado,
+          ),
+          const SizedBox(height: 12),
+
+          _buildItemFinanceiro(
+            '🐈 Quantidade de pets',
+            quantidadePets.toString(),
           ),
           const SizedBox(height: 12),
 
@@ -442,57 +442,7 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
             ),
           ),
 
-          // Informação sobre origem dos dados
           const SizedBox(height: 12),
-          _buildInfoOrigemDados(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoOrigemDados() {
-    String origem;
-    Color cor;
-    IconData icone;
-
-    if (_temDadosCalculadosAPI) {
-      origem = 'Valores calculados pela API';
-      cor = Colors.green;
-      icone = Icons.check_circle;
-    } else if (widget.contrato.valorDiaria != null) {
-      origem = 'Valor da diária da API + cálculo local';
-      cor = Colors.blue;
-      icone = Icons.info;
-    } else {
-      origem = 'Valores calculados localmente';
-      cor = Colors.orange;
-      icone = Icons.info;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[200], // CORRIGIDO: Usar a cor correspondente
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cor),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icone,
-            color: Colors.black, // CORRIGIDO: Usar a cor correspondente
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              origem,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.black, // CORRIGIDO: Usar a cor correspondente
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -523,7 +473,6 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
     );
   }
 
-  // Atualizando o build do ShowMoreModalTemplate para agrupar as informações
   @override
   Widget build(BuildContext context) {
     final List<Widget> petIcons = _buildPetIconsForModal();
@@ -598,7 +547,9 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
                               const SizedBox(height: 4),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
@@ -692,14 +643,27 @@ class _ShowMoreModalTemplateState extends State<ShowMoreModalTemplate> {
               const SizedBox(height: 20),
 
               // Serviços Contratados
-              const Text(
-                'Serviços Adicionais',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xff8692DE),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Serviços Adicionais',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff8692DE),
+                    ),
+                  ),
+                  Text(
+                    'Valor total: ${_obterValorFormatado('valor_total_servicos')}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
+
               const SizedBox(height: 12),
               _buildServicosList(),
 

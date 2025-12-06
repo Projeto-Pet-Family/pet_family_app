@@ -2,20 +2,21 @@
 
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:http/src/client.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 
 class ContratoService {
   final Dio _dio;
 
-  ContratoService({required Dio dio}) : _dio = dio;
+  ContratoService({required Dio dio, required Client client}) : _dio = dio;
 
   // Configuração base
   String get _baseUrl => 'https://bepetfamily.onrender.com';
-  
+
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
 
   // Tratamento de erros
   void _handleError(DioException e) {
@@ -23,7 +24,7 @@ class ContratoService {
     print('📡 URL: ${e.requestOptions.uri}');
     print('📊 Status: ${e.response?.statusCode}');
     print('📦 Response: ${e.response?.data}');
-    
+
     if (e.response?.statusCode == 404) {
       throw Exception('Recurso não encontrado');
     } else if (e.response?.statusCode == 400) {
@@ -123,7 +124,8 @@ class ContratoService {
         print('✅ Contrato criado com sucesso!');
         return response.data;
       } else {
-        throw Exception('Erro ao criar contrato: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao criar contrato: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -149,7 +151,8 @@ class ContratoService {
         print('✅ Contrato encontrado: ${data['idcontrato']}');
         return ContratoModel.fromJson(data);
       } else {
-        throw Exception('Contrato não encontrado: Status ${response.statusCode}');
+        throw Exception(
+            'Contrato não encontrado: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -173,10 +176,11 @@ class ContratoService {
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['contratos'] ?? response.data;
         print('✅ ${data.length} contratos encontrados');
-        
+
         return data.map((json) => ContratoModel.fromJson(json)).toList();
       } else {
-        throw Exception('Erro ao listar contratos: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao listar contratos: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -189,9 +193,7 @@ class ContratoService {
 
   // 5. Listar contratos por usuário e status
   Future<List<ContratoModel>> listarContratosPorUsuarioEStatus(
-    int idUsuario, 
-    String status
-  ) async {
+      int idUsuario, String status) async {
     try {
       print('📋 Listando contratos do usuário $idUsuario com status: $status');
 
@@ -204,10 +206,11 @@ class ContratoService {
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
         print('✅ ${data.length} contratos encontrados');
-        
+
         return data.map((json) => ContratoModel.fromJson(json)).toList();
       } else {
-        throw Exception('Erro ao listar contratos: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao listar contratos: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -243,7 +246,8 @@ class ContratoService {
         print('✅ Status atualizado com sucesso!');
         return ContratoModel.fromJson(data);
       } else {
-        throw Exception('Erro ao atualizar status: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao atualizar status: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -268,7 +272,8 @@ class ContratoService {
         print('✅ Transições obtidas com sucesso!');
         return response.data;
       } else {
-        throw Exception('Erro ao obter transições: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao obter transições: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -282,31 +287,92 @@ class ContratoService {
   // 8. Adicionar serviço ao contrato
   Future<ContratoModel> adicionarServicoContrato({
     required int idContrato,
-    required List<Map<String, dynamic>> servicos,
+    required List<int> servicosIds,
   }) async {
-    try {
-      print('➕ Adicionando ${servicos.length} serviço(s) ao contrato $idContrato');
+    print(
+        '➕ Adicionando ${servicosIds.length} serviço(s) ao contrato $idContrato');
+    print('📊 IDs dos serviços: $servicosIds');
 
-      final body = {'servicos': servicos};
+    try {
+      // FORMATO CORRETO: array de IDs no campo "servicos"
+      final payload = {
+        'servicos': servicosIds, // Apenas os IDs
+      };
+
+      print('📤 Payload sendo enviado: $payload');
+      print('📤 URL: POST /contrato/$idContrato/servico');
 
       final response = await _dio.post(
-        '$_baseUrl/contrato/$idContrato/servico',
-        data: json.encode(body),
-        options: Options(headers: _headers),
+        'https://bepetfamily.onrender.com/contrato/$idContrato/servico',
+        data: payload,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
       );
 
-      if (response.statusCode == 200) {
-        final data = response.data['data'];
+      print('📡 Response completa:');
+      print('  Status: ${response.statusCode}');
+      print('  Data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         print('✅ Serviço(s) adicionado(s) com sucesso!');
-        return ContratoModel.fromJson(data);
+        final data = response.data;
+
+        // Verifique a estrutura da resposta
+        print('📊 Estrutura da resposta:');
+        if (data is Map) {
+          data.forEach((key, value) {
+            print('  $key: $value');
+          });
+        }
+
+        // A resposta deve conter o contrato atualizado em data.data
+        if (data is Map && data.containsKey('data')) {
+          return ContratoModel.fromJson(data['data']);
+        } else {
+          // Fallback: se não tiver data.data, tenta usar o objeto direto
+          return ContratoModel.fromJson(data);
+        }
+      } else if (response.statusCode == 400) {
+        // Erro de validação específico
+        final errorData = response.data;
+        print('❌ Erro 400 detalhado: $errorData');
+
+        if (errorData is Map) {
+          if (errorData.containsKey('servicosExistentes')) {
+            throw Exception(
+                'Alguns serviços já estão no contrato: ${errorData['servicosExistentes']}');
+          } else if (errorData.containsKey('servicosInvalidos')) {
+            throw Exception(
+                'Serviços inválidos: ${errorData['servicosInvalidos']}');
+          } else if (errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          }
+        }
+
+        throw Exception('Erro de validação: $errorData');
       } else {
-        throw Exception('Erro ao adicionar serviço: Status ${response.statusCode}');
+        throw Exception('Erro ${response.statusCode}: ${response.data}');
       }
     } on DioException catch (e) {
-      _handleError(e);
-      rethrow;
+      print('❌ DioException:');
+      print('  Type: ${e.type}');
+      print('  Message: ${e.message}');
+      print('  Response: ${e.response?.data}');
+
+      if (e.response?.statusCode == 400) {
+        final errorData = e.response?.data;
+        if (errorData is Map && errorData.containsKey('message')) {
+          throw Exception(errorData['message']);
+        }
+      }
+
+      throw Exception('Erro ao adicionar serviços: ${e.message}');
     } catch (e) {
-      print('❌ Erro ao adicionar serviço: $e');
+      print('❌ Erro inesperado: $e');
       rethrow;
     }
   }
@@ -350,32 +416,130 @@ class ContratoService {
     String? dataFim,
   }) async {
     try {
-      print('📅 Atualizando datas do contrato $idContrato');
+      print('🚀🚀🚀 DEBUG DETALHADO - atualizarDatasContrato 🚀🚀🚀');
+      print('📌 Contrato ID: $idContrato');
 
-      final body = {
-        if (dataInicio != null) 'dataInicio': dataInicio,
-        if (dataFim != null) 'dataFim': dataFim,
-      };
+      // Criar um transformer customizado para as datas
+      final Map<String, dynamic> body = {};
 
-      final response = await _dio.put(
-        '$_baseUrl/contrato/$idContrato/data',
-        data: json.encode(body),
-        options: Options(headers: _headers),
+      // Processar dataInicio
+      if (dataInicio != null) {
+        // Remover qualquer informação de hora/minuto/segundo
+        final dataInicioLimpa = _limparDataString(dataInicio);
+        body['dataInicio'] = dataInicioLimpa;
+
+        print('📝 Data Início:');
+        print('   - Recebida: "$dataInicio"');
+        print('   - Limpa: "$dataInicioLimpa"');
+        print('   - Tipo: ${dataInicioLimpa.runtimeType}');
+      }
+
+      // Processar dataFim
+      if (dataFim != null) {
+        // Remover qualquer informação de hora/minuto/segundo
+        final dataFimLimpa = _limparDataString(dataFim);
+        body['dataFim'] = dataFimLimpa;
+
+        print('📝 Data Fim:');
+        print('   - Recebida: "$dataFim"');
+        print('   - Limpa: "$dataFimLimpa"');
+        print('   - Tipo: ${dataFimLimpa.runtimeType}');
+      }
+
+      print('📦 Body antes do envio:');
+      print('   - Conteúdo: $body');
+      print('   - Tipo: ${body.runtimeType}');
+
+      // Teste: ver como o JSON serializa
+      final jsonString = jsonEncode(body);
+      print('📄 JSON serializado: $jsonString');
+
+      // Adicionar interceptor para debug
+      final dioDebug = Dio();
+
+      // Interceptor para debug
+      dioDebug.interceptors.add(InterceptorsWrapper(
+        onRequest: (RequestOptions options, RequestInterceptorHandler handler) {
+          print('🌐 REQUEST DEBUG:');
+          print('   - URL: ${options.baseUrl}${options.path}');
+          print('   - Method: ${options.method}');
+          print('   - Headers: ${options.headers}');
+          print('   - Data: ${options.data}');
+          print('   - Data tipo: ${options.data.runtimeType}');
+          handler.next(options);
+        },
+        onResponse: (Response response, ResponseInterceptorHandler handler) {
+          print('📥 RESPONSE DEBUG:');
+          print('   - Status: ${response.statusCode}');
+          print('   - Data: ${response.data}');
+          handler.next(response);
+        },
+        onError: (DioException e, ErrorInterceptorHandler handler) {
+          print('❌ ERROR DEBUG:');
+          print('   - Type: ${e.type}');
+          print('   - Message: ${e.message}');
+          print('   - Response: ${e.response?.data}');
+          handler.next(e);
+        },
+      ));
+
+      // Fazer a requisição
+      final response = await dioDebug.put(
+        'https://bepetfamily.onrender.com/contrato/$idContrato/data',
+        data: body,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            // Adicione outros headers necessários (auth, etc.)
+            ..._headers,
+          },
+        ),
       );
+
+      print('✅ Resposta da API: ${response.statusCode}');
+      print('📦 Dados retornados: ${response.data}');
 
       if (response.statusCode == 200) {
         final data = response.data['data'];
-        print('✅ Datas atualizadas com sucesso!');
         return ContratoModel.fromJson(data);
       } else {
-        throw Exception('Erro ao atualizar datas: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao atualizar datas: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
-      _handleError(e);
+      print('❌ DioException detalhada:');
+      print('   - Error: $e');
+      print('   - Response: ${e.response?.data}');
+      print('   - Request: ${e.requestOptions.data}');
       rethrow;
     } catch (e) {
-      print('❌ Erro ao atualizar datas: $e');
+      print('❌ Erro geral: $e');
       rethrow;
+    } finally {
+      print('🏁 FIM DEBUG 🏁');
+    }
+  }
+
+// Método auxiliar para limpar strings de data
+  String _limparDataString(String dataString) {
+    // Se a string contém espaço (tem hora), pegar apenas a parte da data
+    if (dataString.contains(' ')) {
+      return dataString.split(' ')[0];
+    }
+
+    // Se já está no formato YYYY-MM-DD, retornar como está
+    final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+    if (regex.hasMatch(dataString)) {
+      return dataString;
+    }
+
+    // Tentar parsear e formatar
+    try {
+      final date = DateTime.parse(dataString);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (e) {
+      // Se não conseguir parsear, retornar a string original
+      return dataString;
     }
   }
 
@@ -396,7 +560,8 @@ class ContratoService {
         print('✅ Serviço removido com sucesso!');
         return response.data;
       } else {
-        throw Exception('Erro ao remover serviço: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao remover serviço: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -436,7 +601,8 @@ class ContratoService {
   }
 
   // 13. Obter cálculo detalhado de um contrato existente
-  Future<Map<String, dynamic>> obterCalculoDetalhadoContrato(int idContrato) async {
+  Future<Map<String, dynamic>> obterCalculoDetalhadoContrato(
+      int idContrato) async {
     try {
       print('🧮 Obtendo cálculo detalhado do contrato: $idContrato');
 
@@ -474,7 +640,8 @@ class ContratoService {
         print('✅ Contrato excluído com sucesso!');
         return response.data;
       } else {
-        throw Exception('Erro ao excluir contrato: Status ${response.statusCode}');
+        throw Exception(
+            'Erro ao excluir contrato: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
       _handleError(e);
@@ -510,13 +677,44 @@ class ContratoService {
         'servicos_selecionados': 0,
       },
       'formatado': {
-        'valor_diaria': 'R\$${valorDiaria.toStringAsFixed(2).replaceAll('.', ',')}',
-        'valor_hospedagem': 'R\$${valorHospedagem.toStringAsFixed(2).replaceAll('.', ',')}',
-        'valor_servicos': 'R\$${totalServicos.toStringAsFixed(2).replaceAll('.', ',')}',
-        'valor_total': 'R\$${valorTotal.toStringAsFixed(2).replaceAll('.', ',')}',
+        'valor_diaria':
+            'R\$${valorDiaria.toStringAsFixed(2).replaceAll('.', ',')}',
+        'valor_hospedagem':
+            'R\$${valorHospedagem.toStringAsFixed(2).replaceAll('.', ',')}',
+        'valor_servicos':
+            'R\$${totalServicos.toStringAsFixed(2).replaceAll('.', ',')}',
+        'valor_total':
+            'R\$${valorTotal.toStringAsFixed(2).replaceAll('.', ',')}',
         'periodo': '$quantidadeDias dia(s)',
         'pets': '$quantidadePets pet(s)',
       },
     };
+  }
+
+  Future<Map<String, dynamic>> lerPetsExistentesContrato(int idContrato) async {
+    try {
+      print('🐕 Carregando pets existentes do contrato ID: $idContrato');
+
+      final response = await _dio.get(
+        '$_baseUrl/contrato/$idContrato/pets',
+        options: Options(headers: _headers),
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        print('✅ Pets carregados com sucesso!');
+        print('📊 Total de pets: ${data['data']['pets'].length}');
+
+        return data;
+      } else {
+        throw Exception('Erro ao carregar pets: Status ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      _handleError(e);
+      rethrow;
+    } catch (e) {
+      print('❌ Erro ao carregar pets existentes: $e');
+      rethrow;
+    }
   }
 }

@@ -12,6 +12,7 @@ import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class FinalVerification extends StatefulWidget {
   const FinalVerification({super.key});
@@ -47,7 +48,7 @@ class _FinalVerificationState extends State<FinalVerification> {
       ));
 
       // Inicializar o serviço
-      final contratoService = ContratoService(dio: dio);
+      final contratoService = ContratoService(dio: dio, client: http.Client());
 
       // Inicializar o repository
       _contratoRepository =
@@ -58,7 +59,7 @@ class _FinalVerificationState extends State<FinalVerification> {
       print('❌ Erro ao inicializar ContratoRepository: $e');
       // Fallback para evitar erro de late initialization
       final dio = Dio();
-      final contratoService = ContratoService(dio: dio);
+      final contratoService = ContratoService(dio: dio, client: http.Client());
       _contratoRepository =
           ContratoRepositoryImpl(contratoService: contratoService);
     }

@@ -146,7 +146,31 @@ class _BookingTemplateState extends State<BookingTemplate> {
     EditBooking.show(
       context: context,
       contrato: widget.contrato,
-      onContratoEditado: widget.onContratoEditado,
+      onContratoEditado: (contratoAtualizado) {
+        print('🔄 Contrato editado no BookingTemplate');
+
+        // Atualizar o widget pai se houver callback
+        if (widget.onContratoEditado != null) {
+          widget.onContratoEditado!(contratoAtualizado);
+        }
+
+        // FORÇAR REBUILD DO BookingTemplate
+        setState(() {
+          // Se o contrato for mutável, você pode atualizar seus pets aqui
+          // Mas geralmente o callback externo já atualiza
+          print(
+              '🔄 Pets incluídos atualizados: ${contratoAtualizado.pets?.length ?? 0}');
+        });
+
+        // Mostrar mensagem de sucesso
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contrato atualizado com sucesso!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
     );
   }
 
@@ -923,7 +947,9 @@ class _BookingTemplateState extends State<BookingTemplate> {
                 if (petIcons.isNotEmpty) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),

@@ -7,6 +7,7 @@ import 'package:pet_family_app/services/contrato_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
+import 'package:http/http.dart' as http;
 
 class Booking extends StatefulWidget {
   const Booking({super.key});
@@ -68,7 +69,7 @@ class _BookingState extends State<Booking> {
       ));
 
       // Inicializar o serviço
-      final contratoService = ContratoService(dio: dio);
+      final contratoService = ContratoService(dio: dio, client: http.Client());
 
       // Inicializar o repository
       _contratoRepository = ContratoRepositoryImpl(contratoService: contratoService);
@@ -78,7 +79,7 @@ class _BookingState extends State<Booking> {
       print('❌ Erro ao inicializar ContratoRepository: $e');
       // Fallback para evitar erro de late initialization
       final dio = Dio();
-      final contratoService = ContratoService(dio: dio);
+      final contratoService = ContratoService(dio: dio, client: http.Client());
       _contratoRepository = ContratoRepositoryImpl(contratoService: contratoService);
     }
   }

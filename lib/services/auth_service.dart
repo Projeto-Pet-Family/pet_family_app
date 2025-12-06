@@ -30,9 +30,10 @@ class AuthService {
         
         if (responseData['success'] == true) {
           final usuario = UsuarioModel.fromJson(responseData['usuario']);
+          final idUsuario = usuario.idUsuario;
           
           // ✅ SALVAR ID DO USUÁRIO NO ARMAZENAMENTO
-          await _saveUsuarioId(usuario.idUsuario ?? 0);
+          await _saveUsuarioId(idUsuario!);
           
           // Salvar token se existir
           if (responseData['token'] != null) {

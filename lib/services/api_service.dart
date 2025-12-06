@@ -143,7 +143,7 @@ class ApiService {
       }
 
       final response = await _dio.put(
-        '/contrato/$idContrato/atualizar-data',
+        '/contrato/$idContrato/data',
         data: data,
       );
 
