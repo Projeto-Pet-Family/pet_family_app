@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/booking/template/booking_template.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
+import 'package:pet_family_app/services/auth_service.dart';
 import 'package:pet_family_app/services/contrato_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,15 +73,17 @@ class _BookingState extends State<Booking> {
       final contratoService = ContratoService(dio: dio, client: http.Client());
 
       // Inicializar o repository
-      _contratoRepository = ContratoRepositoryImpl(contratoService: contratoService);
-      
+      _contratoRepository =
+          ContratoRepositoryImpl(contratoService: contratoService);
+
       print('✅ ContratoRepository inicializado com sucesso');
     } catch (e) {
       print('❌ Erro ao inicializar ContratoRepository: $e');
       // Fallback para evitar erro de late initialization
       final dio = Dio();
       final contratoService = ContratoService(dio: dio, client: http.Client());
-      _contratoRepository = ContratoRepositoryImpl(contratoService: contratoService);
+      _contratoRepository =
+          ContratoRepositoryImpl(contratoService: contratoService);
     }
   }
 
@@ -88,7 +91,8 @@ class _BookingState extends State<Booking> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final authProvider = AuthProvider();
-      final idUsuario = await authProvider.getUserIdFromCache();
+      final authService = AuthService();
+      final idUsuario = await authService.getUserIdFromCache();
 
       if (idUsuario == null) {
         print('❌ Usuário não autenticado');
@@ -181,7 +185,8 @@ class _BookingState extends State<Booking> {
       });
 
       final authProvider = AuthProvider();
-      final idUsuario = await authProvider.getUserIdFromCache();
+      final authService = AuthService();
+      final idUsuario = await authService.getUserIdFromCache();
 
       if (idUsuario == null) {
         throw Exception('Usuário não autenticado');
@@ -219,7 +224,8 @@ class _BookingState extends State<Booking> {
       });
 
       final authProvider = AuthProvider();
-      final idUsuario = await authProvider.getUserIdFromCache();
+      final authService = AuthService();
+      final idUsuario = await authService.getUserIdFromCache();
 
       if (idUsuario == null) {
         throw Exception('Usuário não autenticado');
@@ -252,7 +258,8 @@ class _BookingState extends State<Booking> {
     }
   }
 
-  Future<void> _atualizarContratoNaLista(ContratoModel contratoAtualizado) async {
+  Future<void> _atualizarContratoNaLista(
+      ContratoModel contratoAtualizado) async {
     try {
       // Buscar contrato atualizado do servidor
       final contratoCompleto = await _contratoRepository.buscarContratoPorId(
@@ -294,7 +301,8 @@ class _BookingState extends State<Booking> {
       print('🚀 Cancelando contrato no backend: ${contrato.idContrato}');
 
       // Atualizar status para cancelado
-      final contratoAtualizado = await _contratoRepository.atualizarStatusContrato(
+      final contratoAtualizado =
+          await _contratoRepository.atualizarStatusContrato(
         idContrato: contrato.idContrato!,
         status: 'cancelado',
         motivo: 'Cancelado pelo usuário',
@@ -338,7 +346,7 @@ class _BookingState extends State<Booking> {
   Future<void> _editarContrato(ContratoModel contrato) async {
     try {
       print('📝 Editando contrato: ${contrato.idContrato}');
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -372,7 +380,8 @@ class _BookingState extends State<Booking> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Confirmar Exclusão'),
-          content: const Text('Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.'),
+          content: const Text(
+              'Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -469,7 +478,8 @@ class _BookingState extends State<Booking> {
             child: Row(
               children: [
                 _buildChipFiltro('Todos', null),
-                ...listOptions.map((status) => _buildChipFiltro(status, status)),
+                ...listOptions
+                    .map((status) => _buildChipFiltro(status, status)),
               ],
             ),
           ),

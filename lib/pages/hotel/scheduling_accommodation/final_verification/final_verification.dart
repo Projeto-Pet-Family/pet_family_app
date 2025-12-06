@@ -6,6 +6,7 @@ import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verifi
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/informations/taxas_informations.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
+import 'package:pet_family_app/services/auth_service.dart';
 import 'package:pet_family_app/services/contrato_service.dart';
 import 'package:dio/dio.dart';
 import 'package:pet_family_app/widgets/app_bar_return.dart';
@@ -74,7 +75,8 @@ class _FinalVerificationState extends State<FinalVerification> {
   Future<void> _obterIdUsuario() async {
     try {
       final authProvider = AuthProvider();
-      final idUsuario = await authProvider.getUserIdFromCache();
+      final authService = AuthService();
+      final idUsuario = await authService.getUserIdFromCache();
 
       if (idUsuario == null) {
         print('⚠️ Usuário não encontrado no cache do AuthProvider');
@@ -674,10 +676,18 @@ class _FinalVerificationState extends State<FinalVerification> {
                       _idUsuario! > 0)
                     Column(
                       children: [
+                        /* AppButton(
+                          onPressed: _criarContrato,
+                          label: 'Confirmar e Criar Contrato',
+                          fontSize: 18,
+                        ), */
                         AppButton(
-                            onPressed: _criarContrato,
-                            label: 'Confirmar e Criar Contrato',
-                            fontSize: 18),
+                          onPressed: () {
+                            context.go('/payment');
+                          },
+                          label: 'Ir para pagamento',
+                          fontSize: 18,
+                        ),
                         const SizedBox(height: 16),
                       ],
                     ),
