@@ -227,7 +227,7 @@ class ContratoProvider with ChangeNotifier {
       'pendentes': pendentes,
       'concluidos': concluidos,
       'valor_total': _contratos.fold(0.0, (sum, contrato) {
-        return sum + (contrato.valorTotalContrato ?? 0);
+        return sum + (contrato.valorTotal ?? 0);
       }),
     };
   }

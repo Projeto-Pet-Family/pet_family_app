@@ -54,8 +54,11 @@ class _EditBookingState extends State<EditBooking> {
   }
 
   // Método para adicionar serviços
+  // Método para adicionar serviços
   void _adicionarServico() {
-    final servicosNoContrato = _contratoEditado.servicos ?? [];
+    final servicosNoContrato = _contratoEditado.servicosGerais ?? [];
+    final petsNoContrato =
+        _contratoEditado.pets ?? []; // ADICIONADO: obter pets
 
     // CONVERSÃO EXPLÍCITA - Linha 68 corrigida
     final List<ServiceModel> servicosConvertidos =
@@ -99,22 +102,33 @@ class _EditBookingState extends State<EditBooking> {
         idContrato: _contratoEditado.idContrato!,
         idHospedagem: _contratoEditado.idHospedagem!,
         servicosNoContrato: servicosConvertidos, // Use a lista convertida
-        onServicoAdicionado: (contratoAtualizado) {
-          setState(() {
-            _contratoEditado = contratoAtualizado;
-          });
-        },
+        petsNoContrato: petsNoContrato, // ADICIONADO: passar os pets
+        onServicoAdicionado:
+            _processarServicoAdicionado, // Usar método dedicado
       ),
     );
   }
 
+// Método para processar serviço adicionado
   void _processarServicoAdicionado(ContratoModel contratoAtualizado) {
+    print('🔄 Serviço adicionado, atualizando estado...');
+    print('📊 Serviços antes: ${_contratoEditado.servicosGerais?.length ?? 0}');
+    print('📊 Serviços depois: ${contratoAtualizado.servicosGerais?.length ?? 0}');
+
+    // Limpar o cache de serviços para forçar recarregamento
+    if (_cacheAlteracoes.containsKey('servicos')) {
+      _cacheAlteracoes.remove('servicos');
+    }
+
+    // Adicionar os novos serviços ao cache
+    _cacheAlteracoes['servicos'] = contratoAtualizado.servicosGerais ?? [];
+
+    // Atualizar o estado local
     setState(() {
-      _contratoEditado = contratoAtualizado;
+      _contratoEditado = contratoAtualizado.copyWith();
     });
 
-    // Atualizar cache
-    _cacheAlteracoes['servicos'] = contratoAtualizado.servicos ?? [];
+    print('✅ Serviços atualizados: ${_contratoEditado.servicosGerais?.length ?? 0}');
 
     // Notificar callback
     if (widget.onContratoEditado != null) {
@@ -266,7 +280,7 @@ class _EditBookingState extends State<EditBooking> {
       });
 
       // Atualizar cache de serviços
-      _cacheAlteracoes['servicos'] = contratoAtualizado.servicos ?? [];
+      _cacheAlteracoes['servicos'] = contratoAtualizado.servicosGerais ?? [];
       return;
     }
 
@@ -303,7 +317,7 @@ class _EditBookingState extends State<EditBooking> {
 
       if (_cacheAlteracoes.containsKey('servicos')) {
         _contratoEditado = _contratoEditado.copyWith(
-          servicos: _cacheAlteracoes['servicos'],
+          servicosGerais: _cacheAlteracoes['servicos'],
         );
       }
 

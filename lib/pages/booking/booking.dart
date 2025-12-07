@@ -734,12 +734,12 @@ class _BookingState extends State<Booking> {
                     'Criado em', _formatarData(contrato.dataCriacao!)),
               if (contrato.pets != null && contrato.pets!.isNotEmpty)
                 _buildDetailItem('Pets', '${contrato.pets!.length} pet(s)'),
-              if (contrato.servicos != null && contrato.servicos!.isNotEmpty)
+              if (contrato.servicosGerais != null && contrato.servicosGerais!.isNotEmpty)
                 _buildDetailItem(
-                    'Serviços', '${contrato.servicos!.length} serviço(s)'),
-              if (contrato.totalServicos != null)
+                    'Serviços', '${contrato.servicosGerais!.length} serviço(s)'),
+              if (contrato.valorServicos != null)
                 _buildDetailItem('Valor Total',
-                    'R\$${contrato.totalServicos!.toStringAsFixed(2)}'),
+                    'R\$${contrato.valorServicos!.toStringAsFixed(2)}'),
             ],
           ),
         ),

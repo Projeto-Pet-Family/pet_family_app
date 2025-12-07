@@ -38,7 +38,7 @@ class _ChoosePetState extends State<ChoosePet> {
 
       if (usuarioId != null) {
         await petProvider.listarPetsPorUsuario(usuarioId);
-        
+
         if (petProvider.error == null) {
           setState(() {
             _pets = petProvider.pets;
@@ -168,9 +168,10 @@ class _ChoosePetState extends State<ChoosePet> {
     final selectedPetsList =
         _pets.where((pet) => _selectedPets.contains(pet.idPet)).toList();
 
-    // Salva detalhes dos pets selecionados antes de navegar
+    // Salva TUDO no cache (sem ir para API ainda)
     _salvarDetalhesPetsNoCache(selectedPetsList);
 
+    // Navega sem enviar para API
     context.go('/choose-data', extra: {
       'selectedPets': _selectedPets.toList(),
       'pets': selectedPetsList,
@@ -270,11 +271,11 @@ class _ChoosePetState extends State<ChoosePet> {
 
                   // Botão para limpar seleção
                   if (_selectedPets.isNotEmpty)
-                  AppButton(
+                    AppButton(
                       onPressed: _limparPetsSelecionados,
                       label: 'Limpar seleção',
                       fontSize: 18,
-                      buttonColor:Colors.redAccent ,
+                      buttonColor: Colors.redAccent,
                     ),
 
                   if (_selectedPets.isNotEmpty) const SizedBox(height: 16),

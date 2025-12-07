@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class ChooseServiceTemplate extends StatefulWidget {
+class ChooseServiceTemplate extends StatelessWidget {
   final String name;
   final bool isSelected;
   final VoidCallback onTap;
@@ -13,76 +13,72 @@ class ChooseServiceTemplate extends StatefulWidget {
   });
 
   @override
-  State<ChooseServiceTemplate> createState() => _ChooseServiceTemplateState();
-}
-
-class _ChooseServiceTemplateState extends State<ChooseServiceTemplate> {
-  bool _isTapped = false;
-
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _isTapped = true),
-      onTapUp: (_) => setState(() => _isTapped = false),
-      onTapCancel: () => setState(() => _isTapped = false),
-      onTap: () {
-        setState(() => _isTapped = false);
-        widget.onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: widget.isSelected
-                ? Colors.green
-                : _isTapped
-                    ? Colors.green
-                    : Colors.grey,
-            width: widget.isSelected ? 2 : 1,
+      onTap: onTap,
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(50),
-          color: widget.isSelected
-              ? Colors.green[50]
-              : _isTapped
-                  ? Colors.grey[100]
-                  : Colors.white,
-          boxShadow: _isTapped
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                widget.name,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight:
-                      widget.isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: widget.isSelected ? Colors.green : Colors.black,
+        color: isSelected ? Colors.blue[50] : Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? Colors.blue : Colors.grey.shade300,
+                  border: Border.all(
+                    color: isSelected ? Colors.blue : Colors.grey.shade400,
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(
+                        Icons.check,
+                        size: 16,
+                        color: Colors.white,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name.split(' - ')[0],
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.blue : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      name.contains(' - ') ? name.split(' - ')[1] : '',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isSelected ? Colors.blue[700] : Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                widget.isSelected
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                color: widget.isSelected ? Colors.green : Colors.grey,
-                key: ValueKey(widget.isSelected),
+              Icon(
+                isSelected ? Icons.remove_circle : Icons.add_circle,
+                color: isSelected ? Colors.red : Colors.blue,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

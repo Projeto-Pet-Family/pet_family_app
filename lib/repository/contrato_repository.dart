@@ -10,7 +10,7 @@ abstract class ContratoRepository {
     required String dataFim,
     List<Map<String, dynamic>>? servicos,
   });
-  
+
   Future<ContratoModel> criarContrato({
     required int idHospedagem,
     required int idUsuario,
@@ -20,52 +20,50 @@ abstract class ContratoRepository {
     List<Map<String, dynamic>>? servicos,
     String status = 'em_aprovacao',
   });
-  
+
   Future<ContratoModel> buscarContratoPorId(int idContrato);
-  
+
   Future<List<ContratoModel>> listarContratosPorUsuario(int idUsuario);
-  
+
   Future<List<ContratoModel>> listarContratosPorUsuarioEStatus(
-    int idUsuario, 
-    String status
-  );
-  
+      int idUsuario, String status);
+
   Future<ContratoModel> atualizarStatusContrato({
     required int idContrato,
     required String status,
     String? motivo,
   });
-  
+
   Future<Map<String, dynamic>> obterTransicoesStatus(int idContrato);
-  
+
   Future<ContratoModel> adicionarServicoContrato({
     required int idContrato,
-    required List<int> servicosIds,
+    required List<Map<String, dynamic>> servicosPorPet,
   });
-  
+
   Future<ContratoModel> adicionarPetContrato({
     required int idContrato,
     required List<int> pets,
   });
-  
+
   Future<ContratoModel> atualizarDatasContrato({
     required int idContrato,
     String? dataInicio,
     String? dataFim,
   });
-  
+
   Future<Map<String, dynamic>> removerServicoContrato({
     required int idContrato,
     required int idServico,
   });
-  
+
   Future<Map<String, dynamic>> removerPetContrato({
     required int idContrato,
     required int idPet,
   });
-  
+
   Future<Map<String, dynamic>> obterCalculoDetalhadoContrato(int idContrato);
-  
+
   Future<Map<String, dynamic>> excluirContrato(int idContrato);
 }
 
@@ -107,17 +105,30 @@ class ContratoRepositoryImpl implements ContratoRepository {
   }) async {
     try {
       print('📝 Repository: Criando contrato');
+      print('   Hospedagem: $idHospedagem');
+      print('   Usuário: $idUsuario');
+      print('   Pets: $pets');
+      print('   Serviços enviados: ${servicos?.length ?? 0}');
+
+      if (servicos != null) {
+        print('   Detalhes serviços:');
+        for (var s in servicos) {
+          print('     - Pet ${s['idPet']}: ${s['servicos']}');
+        }
+      }
+
       final response = await contratoService.criarContrato(
         idHospedagem: idHospedagem,
         idUsuario: idUsuario,
         dataInicio: dataInicio,
         dataFim: dataFim,
         pets: pets,
-        servicos: servicos,
+        servicos: servicos, // Verificar se está passando
         status: status,
       );
-      
-      return ContratoModel.fromJson(response['data']);
+
+      print('✅ Repository: Contrato criado, resposta: ${response.keys}');
+      return ContratoModel.fromJson(response['data'] ?? response);
     } catch (e) {
       print('❌ Repository: Erro ao criar contrato: $e');
       rethrow;
@@ -148,12 +159,12 @@ class ContratoRepositoryImpl implements ContratoRepository {
 
   @override
   Future<List<ContratoModel>> listarContratosPorUsuarioEStatus(
-    int idUsuario, 
-    String status
-  ) async {
+      int idUsuario, String status) async {
     try {
-      print('📋 Repository: Listando contratos do usuário $idUsuario com status: $status');
-      return await contratoService.listarContratosPorUsuarioEStatus(idUsuario, status);
+      print(
+          '📋 Repository: Listando contratos do usuário $idUsuario com status: $status');
+      return await contratoService.listarContratosPorUsuarioEStatus(
+          idUsuario, status);
     } catch (e) {
       print('❌ Repository: Erro ao listar contratos por status: $e');
       rethrow;
@@ -193,16 +204,21 @@ class ContratoRepositoryImpl implements ContratoRepository {
   @override
   Future<ContratoModel> adicionarServicoContrato({
     required int idContrato,
-    required List<int> servicosIds,
+    required List<Map<String, dynamic>> servicosPorPet,
   }) async {
     try {
-      print('➕ Repository: Adicionando serviço ao contrato');
-      return await contratoService.adicionarServicoContrato(
+      print('➕ Adicionando serviços ao contrato $idContrato');
+      print('   Serviços por pet: $servicosPorPet');
+
+      final result = await contratoService.adicionarServicoContrato(
         idContrato: idContrato,
-        servicosIds: servicosIds,
+        servicosPorPet: servicosPorPet,
       );
+
+      print('✅ Serviços adicionados com sucesso!');
+      return ContratoModel.fromJson(result as Map<String, dynamic>);
     } catch (e) {
-      print('❌ Repository: Erro ao adicionar serviço: $e');
+      print('❌ Erro ao adicionar serviços ao contrato: $e');
       rethrow;
     }
   }
@@ -278,7 +294,8 @@ class ContratoRepositoryImpl implements ContratoRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> obterCalculoDetalhadoContrato(int idContrato) async {
+  Future<Map<String, dynamic>> obterCalculoDetalhadoContrato(
+      int idContrato) async {
     try {
       print('🧮 Repository: Obtendo cálculo detalhado');
       return await contratoService.obterCalculoDetalhadoContrato(idContrato);

@@ -197,11 +197,6 @@ class _BookingTemplateState extends State<BookingTemplate> {
   }
 
   void _abrirModalDenuncia() {
-    if (!widget.contrato.podeDenunciar) {
-      _mostrarMensagemDenunciaNaoDisponivel();
-      return;
-    }
-
     DenunciaModal.show(
       context: context,
       contrato: widget.contrato,
@@ -220,7 +215,7 @@ class _BookingTemplateState extends State<BookingTemplate> {
 
   // NOVO: Abrir modal para remover serviços
   Future<void> _abrirModalRemoverServico() async {
-    if (widget.contrato.servicos == null || widget.contrato.servicos!.isEmpty) {
+    if (widget.contrato.servicosGerais == null || widget.contrato.servicosGerais!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Não há serviços para remover')),
       );
@@ -241,7 +236,7 @@ class _BookingTemplateState extends State<BookingTemplate> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => RemoverServicoModal(
-        servicos: widget.contrato.servicos!,
+        servicos: widget.contrato.servicosGerais!,
       ),
     );
 
@@ -307,8 +302,8 @@ class _BookingTemplateState extends State<BookingTemplate> {
       );
 
       // Atualiza a lista de serviços localmente
-      if (widget.contrato.servicos != null) {
-        widget.contrato.servicos!.removeWhere((servico) {
+      if (widget.contrato.servicosGerais != null) {
+        widget.contrato.servicosGerais!.removeWhere((servico) {
           if (servico is Map<String, dynamic>) {
             return servico['id'] == idServico;
           }
@@ -813,8 +808,8 @@ class _BookingTemplateState extends State<BookingTemplate> {
 
     // Verificar condições para mostrar botões de remoção
     final podeRemoverServico = widget.onRemoverServico != null &&
-        widget.contrato.servicos != null &&
-        widget.contrato.servicos!.isNotEmpty &&
+        widget.contrato.servicosGerais != null &&
+        widget.contrato.servicosGerais!.isNotEmpty &&
         widget.contrato.podeEditar;
 
     final podeRemoverPet = widget.onRemoverPet != null &&
