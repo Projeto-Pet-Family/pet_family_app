@@ -53,7 +53,7 @@ class _FinalVerificationState extends State<FinalVerification> {
         sendTimeout: const Duration(seconds: 30),
       ));
 
-      final contratoService = ContratoService(dio: dio, client: http.Client());
+      final contratoService = ContratoService(dio);
       _contratoRepository =
           ContratoRepositoryImpl(contratoService: contratoService);
 
@@ -61,7 +61,7 @@ class _FinalVerificationState extends State<FinalVerification> {
     } catch (e) {
       print('❌ Erro ao inicializar ContratoRepository: $e');
       final dio = Dio();
-      final contratoService = ContratoService(dio: dio, client: http.Client());
+      final contratoService = ContratoService(dio);
       _contratoRepository =
           ContratoRepositoryImpl(contratoService: contratoService);
     }

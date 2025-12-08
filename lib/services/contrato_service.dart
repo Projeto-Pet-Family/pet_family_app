@@ -8,7 +8,7 @@ import 'package:pet_family_app/models/contrato_model.dart';
 class ContratoService {
   final Dio _dio;
 
-  ContratoService({required Dio dio, required Client client}) : _dio = dio;
+  ContratoService(this._dio);
 
   // Configuração base
   String get _baseUrl => 'https://bepetfamily.onrender.com';
@@ -159,19 +159,61 @@ class ContratoService {
         options: Options(headers: _headers),
       );
 
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response data type: ${response.data.runtimeType}');
+
       if (response.statusCode == 200) {
-        final data = response.data;
-        print('✅ Contrato encontrado: ${data['idcontrato']}');
-        return ContratoModel.fromJson(data);
+        final responseData = response.data;
+
+        // Verificar a estrutura da resposta
+        if (responseData is Map<String, dynamic>) {
+          // Verificar se tem estrutura {success: true, data: {...}}
+          if (responseData.containsKey('success') &&
+              responseData['success'] == true &&
+              responseData.containsKey('data')) {
+            print('✅ Estrutura detectada: {success: true, data: {...}}');
+            final data = responseData['data'];
+
+            if (data is Map<String, dynamic>) {
+              print('📊 Data do contrato extraída com sucesso');
+              return ContratoModel.fromJson(data);
+            } else if (data is Map) {
+              // Converter Map<dynamic, dynamic> para Map<String, dynamic>
+              final Map<dynamic, dynamic> dynamicMap = data;
+              final Map<String, dynamic> stringMap = {};
+              dynamicMap.forEach((key, value) {
+                stringMap[key.toString()] = value;
+              });
+              print('📊 Data convertida para Map<String, dynamic>');
+              return ContratoModel.fromJson(stringMap);
+            } else {
+              print('❌ Data não é um mapa: ${data.runtimeType}');
+              throw Exception('Formato de dados inválido do servidor');
+            }
+          } else {
+            // Se não tem estrutura {success, data}, usar diretamente
+            print('✅ Usando resposta direta (sem estrutura success/data)');
+            return ContratoModel.fromJson(responseData);
+          }
+        } else {
+          print('❌ Response não é um Map: ${responseData.runtimeType}');
+          throw Exception('Formato de resposta inesperado do servidor');
+        }
       } else {
         throw Exception(
-            'Contrato não encontrado: Status ${response.statusCode}');
+            'Erro ao buscar contrato: Status ${response.statusCode}\n'
+            'Response: ${response.data}');
       }
     } on DioException catch (e) {
+      print('❌ DioException ao buscar contrato por id:');
+      print('   Type: ${e.type}');
+      print('   Message: ${e.message}');
+      print('   Response: ${e.response?.data}');
+
       _handleError(e);
       rethrow;
     } catch (e) {
-      print('❌ Erro ao buscar contrato: $e');
+      print('❌ Erro ao buscar contrato por id: $e');
       rethrow;
     }
   }
@@ -312,15 +354,47 @@ class ContratoService {
         options: Options(headers: _headers),
       );
 
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response data: ${response.data}');
+
       if (response.statusCode == 200) {
-        final data = response.data['data'];
-        print('✅ Status atualizado com sucesso!');
-        return ContratoModel.fromJson(data);
+        final responseData = response.data;
+
+        if (responseData is Map &&
+            responseData.containsKey('success') &&
+            responseData['success'] == true &&
+            responseData.containsKey('data')) {
+          final data = responseData['data'];
+          print(
+              '✅ Status atualizado com sucesso! Estrutura success/data detectada');
+
+          if (data is Map) {
+            final Map<String, dynamic> jsonMap;
+            if (data is Map<String, dynamic>) {
+              jsonMap = data;
+            } else {
+              jsonMap = {};
+              data.forEach((key, value) {
+                jsonMap[key.toString()] = value;
+              });
+            }
+            return ContratoModel.fromJson(jsonMap);
+          } else {
+            return await buscarContratoPorId(idContrato);
+          }
+        } else {
+          return await buscarContratoPorId(idContrato);
+        }
       } else {
         throw Exception(
             'Erro ao atualizar status: Status ${response.statusCode}');
       }
     } on DioException catch (e) {
+      print('❌ DioException ao atualizar status:');
+      print('   Type: ${e.type}');
+      print('   Message: ${e.message}');
+      print('   Response: ${e.response?.data}');
+
       _handleError(e);
       rethrow;
     } catch (e) {
@@ -450,6 +524,8 @@ class ContratoService {
   }
 
   // 9. Adicionar pet ao contrato
+  // services/contrato_service.dart - Atualize o método adicionarPetContrato
+
   Future<ContratoModel> adicionarPetContrato({
     required int idContrato,
     required List<int> pets,
@@ -462,17 +538,96 @@ class ContratoService {
       final response = await _dio.post(
         '$_baseUrl/contrato/$idContrato/pet',
         data: json.encode(body),
-        options: Options(headers: _headers),
+        options: Options(
+          headers: _headers,
+          validateStatus: (status) {
+            // Aceitar status 200 e 500 (pois o servidor pode retornar 500 mas ainda ter adicionado)
+            return status! == 200 || status == 201 || status == 500;
+          },
+        ),
       );
 
-      if (response.statusCode == 200) {
-        final data = response.data['data'];
-        print('✅ Pet(s) adicionado(s) com sucesso!');
-        return ContratoModel.fromJson(data);
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+
+        // Extrair dados da estrutura {success, data}
+        if (responseData is Map &&
+            responseData.containsKey('success') &&
+            responseData['success'] == true &&
+            responseData.containsKey('data')) {
+          final data = responseData['data'];
+          print(
+              '✅ Pet(s) adicionado(s) com sucesso! Estrutura success/data detectada');
+
+          if (data is Map) {
+            // Converter para Map<String, dynamic> se necessário
+            final Map<String, dynamic> jsonMap;
+            if (data is Map<String, dynamic>) {
+              jsonMap = data;
+            } else {
+              // Converter Map<dynamic, dynamic>
+              jsonMap = {};
+              data.forEach((key, value) {
+                jsonMap[key.toString()] = value;
+              });
+            }
+
+            return ContratoModel.fromJson(jsonMap);
+          } else {
+            // Se não é um mapa, buscar contrato atualizado separadamente
+            print(
+                '⚠️ Data não é mapa, buscando contrato atualizado separadamente');
+            return await buscarContratoPorId(idContrato);
+          }
+        } else {
+          // Usar resposta direta ou buscar contrato atualizado
+          print(
+              '⚠️ Sem estrutura success/data, buscando contrato atualizado separadamente');
+          return await buscarContratoPorId(idContrato);
+        }
+      } else if (response.statusCode == 500) {
+        // Tratar erro 500 - pode ser que o pet foi adicionado mas houve erro no cálculo
+        print('⚠️ Servidor retornou 500, mas o pet pode ter sido adicionado');
+        print('📦 Mensagem de erro: ${response.data}');
+
+        try {
+          // Tentar buscar o contrato atualizado mesmo com erro 500
+          return await buscarContratoPorId(idContrato);
+        } catch (e) {
+          print('❌ Não foi possível buscar contrato após erro 500: $e');
+          throw Exception(
+              'Pet(s) adicionado(s) localmente devido a erro no cálculo do servidor');
+        }
       } else {
-        throw Exception('Erro ao adicionar pet: Status ${response.statusCode}');
+        final errorMsg =
+            response.data is Map && response.data.containsKey('message')
+                ? response.data['message']
+                : 'Erro ao adicionar pet: Status ${response.statusCode}';
+        throw Exception(errorMsg);
       }
     } on DioException catch (e) {
+      print('❌ DioException ao adicionar pet:');
+      print('   Type: ${e.type}');
+      print('   Message: ${e.message}');
+      print('   Response: ${e.response?.data}');
+
+      if (e.response?.statusCode == 500) {
+        // Se for erro 500, tentar buscar o contrato de qualquer forma
+        print(
+            '⚠️ Erro 500 do servidor, tentando buscar contrato atualizado...');
+        try {
+          return await buscarContratoPorId(idContrato);
+        } catch (e2) {
+          print('❌ Não foi possível buscar contrato após erro 500: $e2');
+          throw Exception(
+              'Erro no cálculo do servidor ao adicionar pet. Pet(s) podem ter sido adicionados.');
+        }
+      }
+
+      // Chamar _handleError para outros erros
       _handleError(e);
       rethrow;
     } catch (e) {
@@ -787,6 +942,220 @@ class ContratoService {
     } catch (e) {
       print('❌ Erro ao carregar pets existentes: $e');
       rethrow;
+    }
+  }
+
+  Future<ContratoModel> excluirServicosContrato({
+    required int idContrato,
+    required List<Map<String, dynamic>> servicosPorPet,
+  }) async {
+    try {
+      print('🗑️ Excluindo serviços do contrato $idContrato');
+      print('📦 Serviços por pet: $servicosPorPet');
+
+      // Validar o formato
+      for (var item in servicosPorPet) {
+        if (!item.containsKey('servicos') ||
+            !(item['servicos'] is List) ||
+            (item['servicos'] as List).isEmpty) {
+          throw Exception(
+              'Formato inválido. Cada item deve ter: {idPet: X, servicos: [Y, Z, ...]}');
+        }
+      }
+
+      final payload = {
+        "servicosPorPet": servicosPorPet,
+      };
+
+      print('📤 Payload para exclusão: $payload');
+
+      final response = await _dio.delete(
+        '$_baseUrl/contrato/$idContrato/servico',
+        data: payload,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final responseData = response.data;
+
+        // Extrair dados da estrutura {success, data}
+        if (responseData is Map &&
+            responseData.containsKey('success') &&
+            responseData['success'] == true &&
+            responseData.containsKey('data')) {
+          final data = responseData['data'];
+          print('✅ Serviço(s) excluído(s) com sucesso!');
+
+          if (data is Map) {
+            final Map<String, dynamic> jsonMap;
+            if (data is Map<String, dynamic>) {
+              jsonMap = data;
+            } else {
+              // Converter Map<dynamic, dynamic> para Map<String, dynamic>
+              jsonMap = {};
+              data.forEach((key, value) {
+                jsonMap[key.toString()] = value;
+              });
+            }
+
+            return ContratoModel.fromJson(jsonMap);
+          } else {
+            // Se não é um mapa, buscar contrato atualizado separadamente
+            print(
+                '⚠️ Data não é mapa, buscando contrato atualizado separadamente');
+            return await buscarContratoPorId(idContrato);
+          }
+        } else {
+          // Usar resposta direta ou buscar contrato atualizado
+          print(
+              '⚠️ Sem estrutura success/data, buscando contrato atualizado separadamente');
+          return await buscarContratoPorId(idContrato);
+        }
+      } else if (response.statusCode == 400) {
+        // Erro de validação
+        final errorData = response.data;
+        String errorMessage = 'Erro ao excluir serviço(s)';
+
+        if (errorData is Map) {
+          if (errorData.containsKey('message')) {
+            errorMessage = errorData['message'];
+          } else if (errorData.containsKey('servicosNaoEncontrados')) {
+            errorMessage = 'Alguns serviços não foram encontrados no contrato';
+          } else if (errorData.containsKey('servicosExistentes')) {
+            errorMessage = 'Alguns serviços não existem no contrato';
+          }
+        }
+
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 404) {
+        throw Exception('Contrato não encontrado');
+      } else {
+        throw Exception(
+            'Erro ao excluir serviço(s): Status ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('❌ DioException ao excluir serviços:');
+      print('   Type: ${e.type}');
+      print('   Message: ${e.message}');
+
+      if (e.response != null) {
+        print('   Status: ${e.response?.statusCode}');
+        print('   Response: ${e.response?.data}');
+
+        if (e.response?.statusCode == 400) {
+          final errorData = e.response?.data;
+          if (errorData is Map && errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          }
+        }
+      }
+
+      throw Exception('Erro ao excluir serviço(s): ${e.message}');
+    } catch (e) {
+      print('❌ Erro ao excluir serviços: $e');
+      rethrow;
+    }
+  }
+
+  // Método auxiliar para formatar a lista de exclusão
+  List<Map<String, dynamic>> formatarServicosParaExcluir({
+    required int idPet,
+    required List<int> idsServicos,
+  }) {
+    return [
+      {
+        'idPet': idPet,
+        'servicos': idsServicos,
+      }
+    ];
+  }
+
+  Future<ContratoModel> excluirPetDoContrato({
+    required int idContrato,
+    required int idPet,
+  }) async {
+    try {
+      print('🗑️ Excluindo pet $idPet do contrato $idContrato');
+
+      final response = await _dio.delete(
+        '$_baseUrl/contrato/$idContrato/pet/$idPet',
+        options: Options(
+          headers: _headers,
+          validateStatus: (status) {
+            // Aceitar status 200 e 204 como sucesso
+            return status! < 300 || status == 500;
+          },
+        ),
+      );
+
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('✅ Pet excluído com sucesso!');
+
+        // Em vez de tentar parsear a resposta, buscar o contrato atualizado
+        return await buscarContratoPorId(idContrato);
+      } else if (response.statusCode == 500) {
+        // Se for erro 500, tentar buscar o contrato de qualquer forma
+        print(
+            '⚠️ Servidor retornou 500, mas tentando buscar contrato atualizado...');
+        try {
+          return await buscarContratoPorId(idContrato);
+        } catch (e) {
+          print('❌ Erro ao buscar contrato após erro 500: $e');
+          throw Exception(
+              'Pet removido, mas houve um erro no servidor. Contrato atualizado localmente.');
+        }
+      } else {
+        // Para outros erros
+        final errorMsg =
+            response.data is Map && response.data.containsKey('message')
+                ? response.data['message']
+                : 'Falha ao excluir pet: ${response.statusCode}';
+        throw Exception(errorMsg);
+      }
+    } on DioException catch (e) {
+      print('❌ Erro Dio ao excluir pet: $e');
+      if (e.response != null) {
+        print('📊 Resposta de erro: ${e.response?.data}');
+        print('📊 Status: ${e.response?.statusCode}');
+
+        // Se for erro 500, tentar mesmo assim buscar o contrato
+        if (e.response?.statusCode == 500) {
+          print(
+              '⚠️ Erro 500 do servidor, tentando buscar contrato atualizado...');
+          try {
+            return await buscarContratoPorId(idContrato);
+          } catch (e2) {
+            print('❌ Não foi possível buscar contrato após erro 500: $e2');
+            throw Exception(
+                'Erro no servidor ao excluir pet. Tente novamente.');
+          }
+        }
+      }
+
+      // Para outros erros de rede
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        throw Exception(
+            'Erro de conexão. Verifique sua internet e tente novamente.');
+      }
+
+      rethrow;
+    } catch (e) {
+      print('❌ Erro ao excluir pet: $e');
+      throw Exception('Erro inesperado: ${e.toString()}');
     }
   }
 }

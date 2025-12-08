@@ -187,8 +187,7 @@ class _DataInformationState extends State<DataInformation> {
       print('  📅 Tipo: ${isDataInicio ? "Início" : "Fim"}');
 
       final ContratoModel contratoAtualizado = await ContratoService(
-        dio: Dio(),
-        client: http.Client(),
+        Dio(),
       ).atualizarDatasContrato(
         idContrato: widget.contrato.idContrato!,
         dataInicio: isDataInicio ? dataFormatada : null,

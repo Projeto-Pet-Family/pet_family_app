@@ -9,6 +9,7 @@ class PetModel {
   final String? sexo;
   final DateTime? nascimento;
   final String? observacoes;
+  final List<dynamic>? servicos; // ADICIONADO: Campo para serviços do pet
 
   // Campos opcionais para joins
   final String? nomeUsuario;
@@ -26,6 +27,7 @@ class PetModel {
     this.sexo,
     this.nascimento,
     this.observacoes,
+    this.servicos, // ADICIONADO
     this.nomeUsuario,
     this.descricaoPorte,
     this.descricaoEspecie,
@@ -45,6 +47,7 @@ class PetModel {
           ? DateTime.parse(json['nascimento'])
           : null,
       observacoes: json['observacoes'],
+      servicos: json['servicos'], // ADICIONADO: Parse serviços
       nomeUsuario: json['nomeusuario'] ?? json['nomeUsuario'],
       descricaoPorte: json['descricaoporte'] ?? json['descricaoPorte'],
       descricaoEspecie: json['descricaoespecie'] ?? json['descricaoEspecie'],
@@ -62,6 +65,7 @@ class PetModel {
       'sexo': sexo,
       if (nascimento != null) 'nascimento': nascimento!.toIso8601String(),
       if (observacoes != null) 'observacoes': observacoes,
+      if (servicos != null) 'servicos': servicos, // ADICIONADO
     };
   }
 
@@ -75,6 +79,7 @@ class PetModel {
     String? sexo,
     DateTime? nascimento,
     String? observacoes,
+    List<dynamic>? servicos, // ADICIONADO
     String? nomeUsuario,
     String? descricaoPorte,
     String? descricaoEspecie,
@@ -90,6 +95,7 @@ class PetModel {
       sexo: sexo ?? this.sexo,
       nascimento: nascimento ?? this.nascimento,
       observacoes: observacoes ?? this.observacoes,
+      servicos: servicos ?? this.servicos, // ADICIONADO
       nomeUsuario: nomeUsuario ?? this.nomeUsuario,
       descricaoPorte: descricaoPorte ?? this.descricaoPorte,
       descricaoEspecie: descricaoEspecie ?? this.descricaoEspecie,
@@ -113,7 +119,7 @@ class PetModel {
       sexo: map['sexo'],
       descricaoPorte: map['descricaoPorte'],
       idPorte: map['idPorte'],
-      // add other fields as needed
+      servicos: map['servicos'], // ADICIONADO
     );
   }
 
@@ -129,7 +135,7 @@ class PetModel {
       'sexo': sexo,
       'descricaoPorte': descricaoPorte,
       'idPorte': idPorte,
-      // add other fields as needed
+      'servicos': servicos, // ADICIONADO
     };
   }
 }

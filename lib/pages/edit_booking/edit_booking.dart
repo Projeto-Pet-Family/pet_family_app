@@ -8,7 +8,6 @@ import 'package:pet_family_app/pages/booking/template/add/add_service_modal.dart
 import 'package:pet_family_app/pages/edit_booking/informations/data/data_information.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/services/services_information.dart';
 import 'package:pet_family_app/pages/edit_booking/informations/your_pets/your_pets_informations.dart';
-import 'package:pet_family_app/pages/edit_booking/modal/booking_edited.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 
 class EditBooking extends StatefulWidget {
@@ -46,6 +45,10 @@ class _EditBookingState extends State<EditBooking> {
   final Map<String, dynamic> _cacheAlteracoes = {};
   late Dio _dio;
 
+  // Estados para controle de exclusão de serviços
+  bool _modoExclusaoServicos = false;
+  final List<int> _servicosSelecionadosParaExclusao = [];
+
   @override
   void initState() {
     super.initState();
@@ -53,26 +56,130 @@ class _EditBookingState extends State<EditBooking> {
     _dio = Dio();
   }
 
-  // Método para adicionar serviços
+  // Método para alternar modo de exclusão
+  void _alternarModoExclusaoServicos() {
+    final temServicos = _contratoEditado.servicosGerais?.isNotEmpty ?? false;
+
+    if (!temServicos && !_modoExclusaoServicos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não há serviços para excluir'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _modoExclusaoServicos = !_modoExclusaoServicos;
+      if (!_modoExclusaoServicos) {
+        _servicosSelecionadosParaExclusao.clear();
+      }
+    });
+  }
+
+  // Toggle seleção de serviço
+  void _toggleSelecaoServico(int idServico) {
+    setState(() {
+      if (_servicosSelecionadosParaExclusao.contains(idServico)) {
+        _servicosSelecionadosParaExclusao.remove(idServico);
+      } else {
+        _servicosSelecionadosParaExclusao.add(idServico);
+      }
+    });
+  }
+
+  // Excluir serviços selecionados
+  Future<void> _excluirServicosSelecionados() async {
+    if (_servicosSelecionadosParaExclusao.isEmpty) return;
+
+    try {
+      print(
+          '🗑️ Excluindo serviços selecionados: $_servicosSelecionadosParaExclusao');
+
+      // Função auxiliar para extrair ID do serviço
+      int? _extrairIdServico(dynamic servico) {
+        if (servico == null) return null;
+
+        if (servico is ServiceModel) {
+          return servico.idservico;
+        } else if (servico is Map<String, dynamic>) {
+          final dynamic id = servico['idservico'];
+          if (id is int) return id;
+          if (id is String) return int.tryParse(id);
+          return null;
+        }
+        return null;
+      }
+
+      // Filtrar serviços, removendo os selecionados
+      final servicosAtuais = _contratoEditado.servicosGerais ?? [];
+      final servicosFiltrados = servicosAtuais.where((servico) {
+        final id = _extrairIdServico(servico);
+        if (id == null) return true; // Mantém se não conseguir extrair ID
+        return !_servicosSelecionadosParaExclusao.contains(id);
+      }).toList();
+
+      print('📊 Total de serviços antes: ${servicosAtuais.length}');
+      print('📊 Total de serviços depois: ${servicosFiltrados.length}');
+
+      // Atualizar o contrato
+      final contratoAtualizado = _contratoEditado.copyWith(
+        servicosGerais: servicosFiltrados,
+      );
+
+      // Atualizar cache
+      _cacheAlteracoes['servicos'] = servicosFiltrados;
+
+      final quantidadeExcluida = _servicosSelecionadosParaExclusao.length;
+
+      setState(() {
+        _contratoEditado = contratoAtualizado;
+        _servicosSelecionadosParaExclusao.clear();
+        _modoExclusaoServicos = false;
+      });
+
+      // Notificar callback
+      if (widget.onContratoEditado != null) {
+        widget.onContratoEditado!(contratoAtualizado);
+      }
+
+      // Mostrar mensagem de sucesso
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('$quantidadeExcluida serviço(s) excluído(s) com sucesso!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e, stackTrace) {
+      print('❌ Erro ao excluir serviços: $e');
+      print('📝 Stack trace: $stackTrace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir serviços: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   // Método para adicionar serviços
   void _adicionarServico() {
     final servicosNoContrato = _contratoEditado.servicosGerais ?? [];
-    final petsNoContrato =
-        _contratoEditado.pets ?? []; // ADICIONADO: obter pets
+    final petsNoContrato = _contratoEditado.pets ?? [];
 
-    // CONVERSÃO EXPLÍCITA - Linha 68 corrigida
+    // Converter serviços para ServiceModel
     final List<ServiceModel> servicosConvertidos =
         servicosNoContrato.map((item) {
       if (item is ServiceModel) {
         return item;
       } else if (item is Map<String, dynamic>) {
-        // Tente converter para ServiceModel
         try {
           return ServiceModel.fromJson(item);
         } catch (e) {
-          print('❌ Erro ao converter item para ServiceModel: $e');
-          print('❌ Item: $item');
-          // Retorna um ServiceModel vazio ou lança exceção
           return ServiceModel(
             idservico: item['idservico'] ?? 0,
             idhospedagem: item['idhospedagem'] ?? 0,
@@ -83,8 +190,6 @@ class _EditBookingState extends State<EditBooking> {
           );
         }
       } else {
-        print('❌ Tipo inesperado: ${item.runtimeType}');
-        // Retorna um ServiceModel padrão para evitar erro
         return ServiceModel(
           idservico: 0,
           idhospedagem: 0,
@@ -101,21 +206,17 @@ class _EditBookingState extends State<EditBooking> {
       builder: (context) => AddServiceModal(
         idContrato: _contratoEditado.idContrato!,
         idHospedagem: _contratoEditado.idHospedagem!,
-        servicosNoContrato: servicosConvertidos, // Use a lista convertida
-        petsNoContrato: petsNoContrato, // ADICIONADO: passar os pets
-        onServicoAdicionado:
-            _processarServicoAdicionado, // Usar método dedicado
+        servicosNoContrato: servicosConvertidos,
+        petsNoContrato: petsNoContrato,
+        onServicoAdicionado: _processarServicoAdicionado,
       ),
     );
   }
 
-// Método para processar serviço adicionado
   void _processarServicoAdicionado(ContratoModel contratoAtualizado) {
     print('🔄 Serviço adicionado, atualizando estado...');
-    print('📊 Serviços antes: ${_contratoEditado.servicosGerais?.length ?? 0}');
-    print('📊 Serviços depois: ${contratoAtualizado.servicosGerais?.length ?? 0}');
 
-    // Limpar o cache de serviços para forçar recarregamento
+    // Limpar o cache de serviços
     if (_cacheAlteracoes.containsKey('servicos')) {
       _cacheAlteracoes.remove('servicos');
     }
@@ -127,8 +228,6 @@ class _EditBookingState extends State<EditBooking> {
     setState(() {
       _contratoEditado = contratoAtualizado.copyWith();
     });
-
-    print('✅ Serviços atualizados: ${_contratoEditado.servicosGerais?.length ?? 0}');
 
     // Notificar callback
     if (widget.onContratoEditado != null) {
@@ -145,103 +244,37 @@ class _EditBookingState extends State<EditBooking> {
     );
   }
 
-  // Método para adicionar pets
   void _adicionarPet() {
     final petsNoContrato = _contratoEditado.pets ?? [];
-
-    print('🎯 Abrindo modal AddPetModal');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        // Criar uma referência para o contexto do modal
-        final BuildContext modalContext = context;
-
         return AddPetModal(
           idContrato: _contratoEditado.idContrato!,
           idUsuario: _contratoEditado.idUsuario,
           petsNoContrato: petsNoContrato,
-          onPetAdicionado: (contratoAtualizado) {
-            print('🔄 Pet adicionado, atualizando estado...');
-
-            // Atualizar o estado local
-            _processarPetAdicionado(contratoAtualizado);
-
-            // Fechar o modal atual
-            Navigator.of(modalContext).pop();
-
-            // Reabrir o modal com dados atualizados
-            _adicionarPet(); // Chama a si mesmo recursivamente
-
-            // Notificar callback externo
-            if (widget.onContratoEditado != null) {
-              widget.onContratoEditado!(contratoAtualizado);
-            }
-
-            // Mostrar mensagem de sucesso
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Pet adicionado com sucesso!'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
+          onPetAdicionado: _processarPetAdicionado,
         );
       },
     );
   }
 
-  void _reabrirModalPetAtualizado(ContratoModel contratoAtualizado) {
-    // Pequeno delay para garantir que o modal anterior foi fechado
-    Future.delayed(Duration(milliseconds: 300), () {
-      if (!mounted) return;
-
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => AddPetModal(
-          idContrato: contratoAtualizado.idContrato!,
-          idUsuario: contratoAtualizado.idUsuario,
-          petsNoContrato: contratoAtualizado.pets ?? [], // Lista ATUALIZADA
-          onPetAdicionado: (novoContratoAtualizado) {
-            // Processar novo pet adicionado (recursivo)
-            _processarPetAdicionado(novoContratoAtualizado);
-            Navigator.of(context).pop();
-            _reabrirModalPetAtualizado(novoContratoAtualizado);
-
-            if (widget.onContratoEditado != null) {
-              widget.onContratoEditado!(novoContratoAtualizado);
-            }
-          },
-        ),
-      );
-    });
-  }
-
-  // No EditBooking, método _processarPetAdicionado:
   void _processarPetAdicionado(ContratoModel contratoAtualizado) {
-    print('🔄 Processando pet adicionado');
-    print('📊 Pets antes: ${_contratoEditado.pets?.length ?? 0}');
-    print('📊 Pets depois: ${contratoAtualizado.pets?.length ?? 0}');
+    print('🔄 Processando pet adicionado - Contrato recebido:');
+    print('📊 ID Contrato: ${contratoAtualizado.idContrato}');
+    print('🐕 Total de pets: ${contratoAtualizado.pets?.length ?? 0}');
 
-    // Limpar o cache de pets para forçar recarregamento
-    if (_cacheAlteracoes.containsKey('pets')) {
-      _cacheAlteracoes.remove('pets');
-    }
-
-    // Adicionar os novos pets ao cache
-    _cacheAlteracoes['pets'] = contratoAtualizado.pets ?? [];
-
-    // Atualizar o estado local
+    // Forçar uma atualização completa do estado
     setState(() {
-      _contratoEditado = contratoAtualizado.copyWith();
-    });
+      // IMPORTANTE: Criar uma nova instância completamente nova
+      _contratoEditado = ContratoModel.fromJson(contratoAtualizado.toJson());
 
-    print('✅ Pets atualizados: ${_contratoEditado.pets?.length ?? 0}');
+      // Atualizar o cache
+      _cacheAlteracoes['pets'] = _contratoEditado.pets ?? [];
+    });
 
     // Mostrar mensagem de sucesso
     ScaffoldMessenger.of(context).showSnackBar(
@@ -251,58 +284,64 @@ class _EditBookingState extends State<EditBooking> {
         duration: Duration(seconds: 2),
       ),
     );
+
+    // Notificar o callback pai
+    if (widget.onContratoEditado != null) {
+      widget.onContratoEditado!(_contratoEditado);
+    }
+
+    // Forçar rebuild de widgets específicos
+    _forcarAtualizacaoTela();
+  }
+
+// Adicione este método para forçar atualização da tela
+  void _forcarAtualizacaoTela() {
+    // Usar um Future para garantir que o estado seja atualizado
+    Future.delayed(Duration.zero, () {
+      if (mounted) {
+        setState(() {
+          // Marcar que precisa recarregar
+          // Isso vai forçar o YourPetsInformations a recarregar
+        });
+      }
+    });
   }
 
   void _onContratoAtualizado(ContratoModel contratoAtualizado,
       {String? tipoAlteracao}) {
-    print(
-        '🔄 _onContratoAtualizado chamado no EditBooking - Tipo: $tipoAlteracao');
+    print('🔄 _onContratoAtualizado - Tipo: $tipoAlteracao');
 
-    // Armazena no cache apenas as alterações específicas
+    // Para serviços removidos
+    if (tipoAlteracao == 'servico_removido') {
+      _contratoEditado = contratoAtualizado.copyWith();
+      _cacheAlteracoes['servicos'] = contratoAtualizado.servicosGerais ?? [];
+      return;
+    }
+
+    // Para pets removidos
+    if (tipoAlteracao == 'pet_removido') {
+      _contratoEditado = contratoAtualizado.copyWith();
+      _cacheAlteracoes['pets'] = contratoAtualizado.pets ?? [];
+      return;
+    }
+
+    // Para alterações de datas
     if (tipoAlteracao == 'data_inicio' &&
         contratoAtualizado.dataInicio != widget.contrato.dataInicio) {
       _cacheAlteracoes['dataInicio'] = contratoAtualizado.dataInicio;
-      print(
-          '💾 Data início armazenada no cache: ${contratoAtualizado.dataInicio}');
     }
 
     if (tipoAlteracao == 'data_fim' &&
         contratoAtualizado.dataFim != widget.contrato.dataFim) {
       _cacheAlteracoes['dataFim'] = contratoAtualizado.dataFim;
-      print('💾 Data fim armazenada no cache: ${contratoAtualizado.dataFim}');
     }
 
-    // Para serviços removidos, atualiza imediatamente a UI
-    if (tipoAlteracao == 'servico_removido') {
-      print('🔄 Serviço removido - atualizando UI imediatamente');
-      setState(() {
-        _contratoEditado = contratoAtualizado.copyWith();
-      });
-
-      // Atualizar cache de serviços
-      _cacheAlteracoes['servicos'] = contratoAtualizado.servicosGerais ?? [];
-      return;
-    }
-
-    // Para pets removidos, atualiza imediatamente a UI
-    if (tipoAlteracao == 'pet_removido') {
-      print('🔄 Pet removido - atualizando UI imediatamente');
-      setState(() {
-        _contratoEditado = contratoAtualizado.copyWith();
-      });
-
-      // Atualizar cache de pets
-      _cacheAlteracoes['pets'] = contratoAtualizado.pets ?? [];
-      return;
-    }
-
-    // Atualiza a UI com os dados em cache
+    // Atualizar UI com cache
     _aplicarCacheAoContrato();
   }
 
   void _aplicarCacheAoContrato() {
     setState(() {
-      // Aplica as alterações do cache ao contrato editado
       if (_cacheAlteracoes.containsKey('dataInicio')) {
         _contratoEditado = _contratoEditado.copyWith(
           dataInicio: _cacheAlteracoes['dataInicio'],
@@ -327,24 +366,13 @@ class _EditBookingState extends State<EditBooking> {
         );
       }
     });
-
-    print('📊 Estado atual do cache:');
-    _cacheAlteracoes.forEach((key, value) {
-      if (value is List) {
-        print('  - $key: ${value.length} item(s)');
-      } else {
-        print('  - $key: $value');
-      }
-    });
   }
 
   bool _existemAlteracoes() {
     return _cacheAlteracoes.isNotEmpty;
   }
 
-  // Verificar se o contrato está em status editável
   bool _podeAdicionar() {
-    // Status que permitem adição de serviços/pets
     final statusEditaveis = ['em_aprovacao', 'pendente', 'confirmado'];
     return statusEditaveis.contains(_contratoEditado.status);
   }
@@ -357,18 +385,17 @@ class _EditBookingState extends State<EditBooking> {
     }
 
     print('💾 Salvando alterações na API...');
-    print('📊 Alterações a serem salvas: $_cacheAlteracoes');
 
     try {
-      // Simula o salvamento na API
+      // Simular salvamento na API
       await _salvarAlteracoesNaAPI();
 
-      // Notifica o callback
+      // Notificar callback
       if (widget.onContratoEditado != null) {
         widget.onContratoEditado!(_contratoEditado);
       }
 
-      // Mostra popup de sucesso
+      // Mostrar popup de sucesso
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -425,7 +452,7 @@ class _EditBookingState extends State<EditBooking> {
         ),
       );
 
-      // Fecha o modal de edição
+      // Fechar modal
       _fecharModal();
     } catch (e) {
       print('❌ Erro ao salvar alterações: $e');
@@ -434,11 +461,8 @@ class _EditBookingState extends State<EditBooking> {
   }
 
   Future<void> _salvarAlteracoesNaAPI() async {
-    // Simula o salvamento na API
     await Future.delayed(Duration(milliseconds: 500));
     print('✅ Alterações salvas com sucesso na API');
-
-    // Limpa o cache após salvar
     _cacheAlteracoes.clear();
   }
 
@@ -454,7 +478,6 @@ class _EditBookingState extends State<EditBooking> {
 
   void _fecharModal() {
     if (_existemAlteracoes()) {
-      // Pergunta se deseja descartar as alterações
       _mostrarDialogoConfirmacaoSaida();
     } else {
       Navigator.of(context).pop();
@@ -474,10 +497,13 @@ class _EditBookingState extends State<EditBooking> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop(); // Fecha o diálogo
-              Navigator.of(context).pop(); // Fecha o modal
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
             },
-            child: Text('Sair', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Sair',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -486,6 +512,184 @@ class _EditBookingState extends State<EditBooking> {
 
   String _formatarData(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  // Widget para construir o cabeçalho da seção de serviços
+  Widget _buildCabecalhoServicos(bool podeAdicionar) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Título e botões
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              'Serviços Adicionais',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xff8692DE),
+              ),
+            ),
+
+            // Botões de ação
+            Row(
+              children: [
+                AppButton(
+                  onPressed: podeAdicionar ? _adicionarServico : null,
+                  label: 'Adicionar',
+                  fontSize: 14,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  buttonColor: podeAdicionar
+                      ? const Color(0xff8692DE)
+                      : Colors.grey[300],
+                  textButtonColor: podeAdicionar ? Colors.white : Colors.grey,
+                  borderRadius: BorderRadius.circular(50),
+                  widthFactor: null,
+                  minWidth: null,
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // Banner do modo exclusão (aparece só quando ativado)
+        if (_modoExclusaoServicos)
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red[100]!),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      color: Colors.red[600],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Modo Exclusão',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Selecione os serviços que deseja excluir',
+                            style: TextStyle(
+                              color: Colors.red[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Botão Cancelar
+                    TextButton(
+                      onPressed: _alternarModoExclusaoServicos,
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          color: Colors.red[600],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Contador e botão excluir (só aparece se houver selecionados)
+                if (_servicosSelecionadosParaExclusao.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.red[200]!),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${_servicosSelecionadosParaExclusao.length} selecionado(s)',
+                                style: TextStyle(
+                                  color: Colors.red[800],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _servicosSelecionadosParaExclusao.clear();
+                                });
+                              },
+                              child: Text(
+                                'Limpar',
+                                style: TextStyle(
+                                  color: Colors.red[600],
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _excluirServicosSelecionados,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Excluir'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -503,7 +707,7 @@ class _EditBookingState extends State<EditBooking> {
       ),
       child: Column(
         children: [
-          // Header no estilo ShowMoreModal
+          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
@@ -548,7 +752,7 @@ class _EditBookingState extends State<EditBooking> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Banner de informações do contrato (inspirado no ShowMoreModal)
+                  // Banner de informações do contrato
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -601,18 +805,12 @@ class _EditBookingState extends State<EditBooking> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 16),
-
-                        // Divisor
                         Container(
                           height: 1,
                           color: Colors.white.withOpacity(0.3),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // Informações principais
                         Row(
                           children: [
                             const Icon(
@@ -633,7 +831,6 @@ class _EditBookingState extends State<EditBooking> {
                             ),
                           ],
                         ),
-
                         if (widget.contrato.hospedagemEndereco != null) ...[
                           const SizedBox(height: 12),
                           Row(
@@ -663,8 +860,6 @@ class _EditBookingState extends State<EditBooking> {
                             ],
                           ),
                         ],
-
-                        // Indicador de alterações pendentes
                         if (_existemAlteracoes()) ...[
                           const SizedBox(height: 12),
                           Container(
@@ -702,7 +897,7 @@ class _EditBookingState extends State<EditBooking> {
 
                   const SizedBox(height: 32),
 
-                  // Data Information com card
+                  // Data Information
                   const Text(
                     'Datas da Hospedagem',
                     style: TextStyle(
@@ -712,7 +907,6 @@ class _EditBookingState extends State<EditBooking> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
                   DataInformation(
                     contrato: _contratoEditado,
                     onContratoAtualizado: _onContratoAtualizado,
@@ -721,51 +915,21 @@ class _EditBookingState extends State<EditBooking> {
 
                   const SizedBox(height: 32),
 
-                  // Services Information com card
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Serviços Adicionais',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xff8692DE),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      AppButton(
-                        onPressed: podeAdicionar ? _adicionarServico : null,
-                        label: 'Adicionar',
-                        fontSize: 14,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        buttonColor: podeAdicionar
-                            ? const Color(0xff8692DE)
-                            : Colors.grey[300],
-                        textButtonColor:
-                            podeAdicionar ? Colors.white : Colors.grey,
-                        borderRadius: BorderRadius.circular(50),
-                        widthFactor: null,
-                        minWidth: null,
-                      ),
-                    ],
-                  ),
+                  // Services Information
+                  _buildCabecalhoServicos(podeAdicionar),
                   const SizedBox(height: 12),
 
                   ServicesInformation(
                     contrato: _contratoEditado,
-                    onContratoAtualizado: _onContratoAtualizado,
                     editavel: podeAdicionar,
+                    modoExclusao: _modoExclusaoServicos,
+                    servicosSelecionados: _servicosSelecionadosParaExclusao,
+                    onServicoSelecionado: _toggleSelecaoServico,
                   ),
 
                   const SizedBox(height: 32),
 
+                  // Pets incluídos
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -806,10 +970,12 @@ class _EditBookingState extends State<EditBooking> {
                     contrato: _contratoEditado,
                     onContratoAtualizado: _onContratoAtualizado,
                     editavel: podeAdicionar,
+                    dio: Dio(),
                   ),
 
                   const SizedBox(height: 32),
 
+                  // Botões de ação
                   AppButton(
                     onPressed: _onSalvarAlteracoes,
                     label: 'Salvar Alterações',

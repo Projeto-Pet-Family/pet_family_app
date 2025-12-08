@@ -70,7 +70,7 @@ class _BookingState extends State<Booking> {
       ));
 
       // Inicializar o serviço
-      final contratoService = ContratoService(dio: dio, client: http.Client());
+      final contratoService = ContratoService(dio);
 
       // Inicializar o repository
       _contratoRepository =
@@ -81,7 +81,7 @@ class _BookingState extends State<Booking> {
       print('❌ Erro ao inicializar ContratoRepository: $e');
       // Fallback para evitar erro de late initialization
       final dio = Dio();
-      final contratoService = ContratoService(dio: dio, client: http.Client());
+      final contratoService = ContratoService(dio);
       _contratoRepository =
           ContratoRepositoryImpl(contratoService: contratoService);
     }

@@ -1,5 +1,7 @@
 // models/contrato_model.dart - VERSÃO COMPLETA COM TODOS OS GETTERS
 
+import 'package:pet_family_app/models/service_model.dart';
+
 class ContratoModel {
   final int? idContrato;
   final int idHospedagem;
@@ -281,6 +283,37 @@ class ContratoModel {
       
       throw FormatException('Erro ao converter JSON para ContratoModel: $e\nJSON keys: ${json.keys.toList()}');
     }
+  }
+
+  ContratoModel removeServicoGeral(int idServico) {
+    final novosServicos = List<ServiceModel>.from(servicosGerais ?? [])
+      .where((servico) => servico.idservico != idServico)
+      .toList();
+    
+    return copyWith(servicosGerais: novosServicos);
+  }
+
+  ContratoModel removeServicoDoPet(int idPet, int idServico) {
+    final novosPets = List<dynamic>.from(pets ?? [])
+      .map((pet) {
+        if (pet is Map<String, dynamic> && pet['idpet'] == idPet) {
+          // Se o pet tem serviços, remove o específico
+          if (pet['servicos'] != null && pet['servicos'] is List) {
+            final servicos = List<dynamic>.from(pet['servicos'])
+              .where((servico) => servico['idservico'] != idServico)
+              .toList();
+            
+            return {
+              ...pet,
+              'servicos': servicos,
+            };
+          }
+        }
+        return pet;
+      })
+      .toList();
+    
+    return copyWith(pets: novosPets);
   }
 
   // MÉTODO: Converter para Map (para compatibilidade)
