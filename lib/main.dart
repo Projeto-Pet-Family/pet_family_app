@@ -1,9 +1,7 @@
 // main.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import 'package:pet_family_app/models/contrato_model.dart';
-import 'package:pet_family_app/pages/message/message.dart';
+import 'package:pet_family_app/global_refresh_provider.dart';
 import 'package:pet_family_app/providers/hospedagem_provider.dart';
 import 'package:pet_family_app/providers/message_provider.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
@@ -15,7 +13,6 @@ import 'package:pet_family_app/repository/pet/especie_repository.dart';
 import 'package:pet_family_app/repository/pet/pet_repository.dart';
 import 'package:pet_family_app/repository/pet/porte_repository.dart';
 import 'package:pet_family_app/repository/pet/raca_repository.dart';
-import 'package:pet_family_app/repository/service_repository.dart';
 import 'package:pet_family_app/repository/user_repository.dart';
 import 'package:pet_family_app/services/message_service.dart';
 import 'package:pet_family_app/services/pet/especie_service.dart';
@@ -26,27 +23,6 @@ import 'package:pet_family_app/services/user_service.dart';
 import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/providers/pet/pet_provider.dart';
-
-// Pages
-import 'package:pet_family_app/navigation/bottom_navigation.dart';
-import 'package:pet_family_app/pages/edit_booking/edit_booking.dart';
-import 'package:pet_family_app/pages/forgot_password/pages/forgot_password.dart';
-import 'package:pet_family_app/pages/hotel/hotel.dart';
-import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_data/choose_data.dart';
-import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_pet/choose_pet.dart';
-import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_services/choose_service.dart';
-import 'package:pet_family_app/pages/hotel/scheduling_accommodation/final_verification/final_verification.dart';
-import 'package:pet_family_app/pages/login/login.dart';
-import 'package:pet_family_app/pages/payment/payment.dart';
-import 'package:pet_family_app/pages/payment/payment_process.dart';
-import 'package:pet_family_app/pages/payment/payment_sucess.dart';
-import 'package:pet_family_app/pages/profile/edit/edit_pet/edit_pet.dart';
-import 'package:pet_family_app/pages/profile/edit/edit_profile/edit_profile.dart';
-import 'package:pet_family_app/pages/profile/profile.dart';
-import 'package:pet_family_app/pages/register/confirm_datas.dart';
-import 'package:pet_family_app/pages/register/insert_datas_pet.dart';
-import 'package:pet_family_app/pages/register/insert_your_address.dart';
-import 'package:pet_family_app/pages/register/insert_your_datas.dart';
 import 'package:pet_family_app/router/app_router.dart';
 
 void main() {
@@ -62,6 +38,7 @@ class MyApp extends StatelessWidget {
       providers: [
         // Auth Provider deve vir primeiro
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => GlobalRefreshProvider()),
         
         // Outros providers
         ChangeNotifierProvider<HospedagemProvider>(

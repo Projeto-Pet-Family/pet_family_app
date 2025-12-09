@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/global_refresh_wrapper.dart';
 import 'package:pet_family_app/models/pet/pet_model.dart';
 import 'package:pet_family_app/models/service_model.dart';
 import 'package:pet_family_app/pages/hotel/scheduling_accommodation/choose_services/choose_service_template.dart';
@@ -898,110 +899,6 @@ class _ChooseServiceState extends State<ChooseService> {
         child: Column(
           children: [
             AppBarReturn(route: '/choose-data'),
-            GestureDetector(
-              onTap: () {
-                print('🔍 === BOTÃO DEBUG PRESSIONADO ===');
-                print('   Estado atual:');
-                print('   - Pets IDs: $_selectedPetIds');
-                print('   - Pets nomes: $_selectedPetNames');
-                print('   - Pets count: $_selectedPetCount');
-                print('   - Pets detalhes: $_petDetails');
-                print('   - Serviços: ${_services.length}');
-                print('   - Serviços selecionados: ${_servicosPorPet.length}');
-
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Debug Info'),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Pets IDs: $_selectedPetIds'),
-                          Text('Pets Nomes: $_selectedPetNames'),
-                          Text('Pets Count: $_selectedPetCount'),
-                          Text('Pets Detalhes:'),
-                          for (var petId in _selectedPetIds)
-                            Text('  - ${_petNamesMap[petId]} (ID: $petId)'),
-                          const SizedBox(height: 10),
-                          Text('Serviços: ${_services.length}'),
-                          Text(
-                              'Serviços Selecionados: ${_servicosPorPet.length}'),
-                          const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              final todasChaves = prefs.getKeys();
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('SharedPreferences'),
-                                  content: SingleChildScrollView(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        for (var chave in todasChaves)
-                                          Text('$chave: ${prefs.get(chave)}'),
-                                      ],
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Fechar'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ver SharedPreferences'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Fechar'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _carregarDadosIniciais();
-                        },
-                        child: const Text('Recarregar'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.bug_report, color: Colors.white, size: 16),
-                    SizedBox(width: 8),
-                    Text(
-                      'DEBUG INFO',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

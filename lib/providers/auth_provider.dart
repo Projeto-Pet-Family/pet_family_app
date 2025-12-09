@@ -6,7 +6,7 @@ import 'package:pet_family_app/services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  
+
   // Estado do provider
   UsuarioModel? _usuario;
   int? _usuarioId;
@@ -23,7 +23,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _isAuthenticated;
   String? get errorMessage => _errorMessage;
   bool get hasCheckedAuth => _hasCheckedAuth;
-  
+  bool get isLoggedIn => _isAuthenticated && _usuarioId != null;
+
   // Dados do usuário (conveniência)
   String? get nomeUsuario => _usuario?.nome;
   String? get emailUsuario => _usuario?.email;
@@ -37,7 +38,45 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODOS DE INICIALIZAÇÃO ==========
-  
+
+  Future<void> loadUserData() async {
+    try {
+      if (_isInitializing) return;
+
+      _isLoading = true;
+      _errorMessage = null;
+      _safeNotifyListeners();
+
+      print('🔄 AuthProvider: Carregando dados do usuário...');
+
+      // 1. Primeiro verifica autenticação
+      await _checkAuthentication();
+
+      // 2. Se autenticado, busca dados completos
+      if (_isAuthenticated && _usuarioId != null) {
+        final user = await _authService.getCurrentUser();
+
+        if (user != null) {
+          _usuario = user;
+          print('✅ Dados do usuário carregados: ${user.nome}');
+        } else {
+          print('⚠️ Usuário autenticado mas dados não encontrados');
+          // Tenta recarregar do cache
+          await _recarregarDadosUsuario();
+        }
+      } else {
+        print('ℹ️ Usuário não autenticado, não há dados para carregar');
+      }
+    } catch (error, stackTrace) {
+      _errorMessage = 'Erro ao carregar dados do usuário: $error';
+      print('❌ ERRO em loadUserData: $_errorMessage');
+      print('Stack trace: $stackTrace');
+    } finally {
+      _isLoading = false;
+      _safeNotifyListeners();
+    }
+  }
+
   void _delayedInitialize() {
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _checkAuthentication();
@@ -47,27 +86,27 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _checkAuthentication() async {
     // Evitar múltiplas inicializações simultâneas
     if (_isInitializing) return;
-    
+
     _isInitializing = true;
-    
+
     try {
       _isLoading = true;
       _safeNotifyListeners();
 
       print('🔍 Verificando autenticação do usuário...');
-      
+
       // Verificar se há token válido
       final isLoggedIn = await _authService.isLoggedIn();
       print('📊 Status de login (cache): $isLoggedIn');
-      
+
       if (isLoggedIn) {
         // Carregar ID do usuário do cache
         _usuarioId = await _authService.getUserIdFromCache();
         print('📋 ID carregado do cache: $_usuarioId');
-        
+
         // Carregar dados completos do usuário
         final user = await _authService.getCurrentUser();
-        
+
         if (user != null && _usuarioId != null) {
           _usuario = user;
           _isAuthenticated = true;
@@ -82,7 +121,7 @@ class AuthProvider extends ChangeNotifier {
         print('ℹ️ Usuário não autenticado (cache vazio)');
         _isAuthenticated = false;
       }
-      
+
       _hasCheckedAuth = true;
       print('🎯 Verificação de autenticação concluída');
     } catch (error, stackTrace) {
@@ -99,7 +138,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO DE LOGIN ==========
-  
+
   Future<bool> login(String email, String senha) async {
     try {
       _isLoading = true;
@@ -107,7 +146,7 @@ class AuthProvider extends ChangeNotifier {
       _safeNotifyListeners();
 
       print('🔐 Tentando login para: $email');
-      
+
       final result = await _authService.login(email, senha);
 
       if (result['success'] == true) {
@@ -116,17 +155,18 @@ class AuthProvider extends ChangeNotifier {
         _isAuthenticated = true;
         _errorMessage = null;
         _hasCheckedAuth = true;
-        
+
         print('✅ Login realizado com sucesso');
         print('👤 Usuário: ${_usuario?.nome}');
         print('🆔 ID: $_usuarioId');
-        
+
         _safeNotifyListeners();
         return true;
       } else {
-        _errorMessage = result['message'] as String? ?? 'Erro desconhecido no login';
+        _errorMessage =
+            result['message'] as String? ?? 'Erro desconhecido no login';
         _isAuthenticated = false;
-        
+
         print('❌ Login falhou: $_errorMessage');
         _safeNotifyListeners();
         return false;
@@ -134,10 +174,10 @@ class AuthProvider extends ChangeNotifier {
     } catch (error, stackTrace) {
       _errorMessage = 'Erro ao conectar com o servidor: $error';
       _isAuthenticated = false;
-      
+
       print('❌ ERRO no login: $_errorMessage');
       print('Stack trace: $stackTrace');
-      
+
       _safeNotifyListeners();
       return false;
     } finally {
@@ -146,14 +186,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO DE LOGOUT ==========
-  
+
   Future<void> logout() async {
     try {
       _isLoading = true;
       _safeNotifyListeners();
 
       print('🚪 Iniciando logout...');
-      
+
       await _authService.logout();
 
       // Limpar estado local
@@ -162,7 +202,7 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = false;
       _errorMessage = null;
       _hasCheckedAuth = true;
-      
+
       print('✅ Logout realizado com sucesso');
     } catch (error, stackTrace) {
       _errorMessage = 'Erro ao fazer logout: $error';
@@ -175,7 +215,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO DE ALTERAÇÃO DE SENHA ==========
-  
+
   Future<bool> alterarSenha(String senhaAtual, String novaSenha) async {
     try {
       if (_usuario == null || _usuario!.idUsuario == null) {
@@ -198,7 +238,7 @@ class AuthProvider extends ChangeNotifier {
       if (result['success'] == true) {
         // Recarregar dados do usuário após alteração
         await _recarregarDadosUsuario();
-        
+
         _errorMessage = null;
         print('✅ Senha alterada com sucesso');
         return true;
@@ -219,7 +259,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODOS DE RECUPERAÇÃO DE SENHA ==========
-  
+
   Future<bool> solicitarRecuperacaoSenha(String email) async {
     try {
       _isLoading = true;
@@ -235,7 +275,8 @@ class AuthProvider extends ChangeNotifier {
         print('✅ Solicitação de recuperação enviada com sucesso');
         return true;
       } else {
-        _errorMessage = result['message'] as String? ?? 'Erro ao solicitar recuperação';
+        _errorMessage =
+            result['message'] as String? ?? 'Erro ao solicitar recuperação';
         print('❌ Erro na recuperação de senha: $_errorMessage');
         return false;
       }
@@ -265,7 +306,8 @@ class AuthProvider extends ChangeNotifier {
         print('✅ Senha redefinida com sucesso');
         return true;
       } else {
-        _errorMessage = result['message'] as String? ?? 'Erro ao redefinir senha';
+        _errorMessage =
+            result['message'] as String? ?? 'Erro ao redefinir senha';
         print('❌ Erro ao redefinir senha: $_errorMessage');
         return false;
       }
@@ -281,7 +323,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODOS DE ATUALIZAÇÃO ==========
-  
+
   Future<void> recarregarUsuario() async {
     try {
       _isLoading = true;
@@ -291,7 +333,7 @@ class AuthProvider extends ChangeNotifier {
       print('🔄 Recarregando dados do usuário...');
 
       await _recarregarDadosUsuario();
-      
+
       print('✅ Dados do usuário recarregados');
     } catch (error, stackTrace) {
       _errorMessage = 'Erro ao recarregar usuário: $error';
@@ -322,7 +364,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODOS AUXILIARES ==========
-  
+
   Future<void> checkAuthentication() async {
     if (!_hasCheckedAuth) {
       await _checkAuthentication();
@@ -343,7 +385,7 @@ class AuthProvider extends ChangeNotifier {
     _usuarioId = usuario.idUsuario;
     _isAuthenticated = true;
     _hasCheckedAuth = true;
-    
+
     print('👤 Usuário definido manualmente: ${usuario.nome} (ID: $_usuarioId)');
     _safeNotifyListeners();
   }
@@ -353,10 +395,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO SEGURO PARA NOTIFICAÇÃO ==========
-  
+
   void _safeNotifyListeners() {
     // Evitar notificar durante o build
-    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (hasListeners) notifyListeners();
       });
@@ -366,11 +409,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO DE VALIDAÇÃO DE SESSAO ==========
-  
+
   Future<bool> validarSessao() async {
     try {
       print('🔐 Validando sessão atual...');
-      
+
       final token = await _authService.getToken();
       if (token == null) {
         print('❌ Sessão inválida: token não encontrado');
@@ -380,7 +423,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Aqui você pode adicionar validações adicionais
       // como verificar expiração do token, etc.
-      
+
       print('✅ Sessão válida');
       return true;
     } catch (error) {
@@ -391,7 +434,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO PARA ATUALIZAR DADOS DO USUÁRIO ==========
-  
+
   void atualizarDadosUsuario(UsuarioModel novosDados) {
     if (_usuario != null) {
       _usuario = novosDados;
@@ -401,23 +444,23 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== MÉTODO PARA LIMPAR CACHE ==========
-  
+
   Future<void> limparCache() async {
     print('🧹 Limpando cache de autenticação...');
     await _authService.logout();
-    
+
     _usuario = null;
     _usuarioId = null;
     _isAuthenticated = false;
     _errorMessage = null;
     _hasCheckedAuth = false;
-    
+
     print('✅ Cache limpo');
     _safeNotifyListeners();
   }
 
   // ========== MÉTODO PARA VERIFICAR CONEXÃO ==========
-  
+
   Future<bool> verificarConexao() async {
     try {
       // Verificar se o token existe
@@ -429,7 +472,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== DISPOSE ==========
-  
+
   @override
   void dispose() {
     print('👋 AuthProvider disposado');

@@ -22,6 +22,25 @@ class MensagemProvider with ChangeNotifier {
   String? get error => _error;
   int get totalNaoLidasMobile => _totalNaoLidasMobile;
 
+  Future<void> carregarTodasConversas({required int idUsuario}) async {
+    _setLoading(true);
+    try {
+      print('📱 MensagemProvider: Carregando todas as conversas...');
+
+      // 1. Carrega a lista de conversas resumidas
+      await carregarConversasMobile(idusuario: idUsuario);
+
+      print('✅ ${_conversasMobile.length} conversas carregadas');
+
+      _error = null;
+    } catch (e) {
+      _error = 'Erro ao carregar conversas: $e';
+      print('❌ Erro: $_error');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   List<Mensagem> getConversaMobile(int idusuario, int idhospedagem) {
     final key = '${idusuario}_$idhospedagem';
     final conversa = _conversasDetalhadasMobile[key] ?? [];
