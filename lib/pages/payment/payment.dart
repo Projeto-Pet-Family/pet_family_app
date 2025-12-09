@@ -4,7 +4,6 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pet_family_app/global_refresh_wrapper.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/repository/contrato_repository.dart';
 import 'package:pet_family_app/services/contrato_service.dart' as contrato_svc;

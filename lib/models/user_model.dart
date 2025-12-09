@@ -10,6 +10,7 @@ class UsuarioModel {
   final String senha;
   final bool? esqueceuSenha;
   final DateTime? dataCadastro;
+  final Map<String, dynamic>? petData; // 👈 Adicionar como opcional
 
   UsuarioModel({
     this.idUsuario,
@@ -20,6 +21,7 @@ class UsuarioModel {
     required this.senha,
     this.esqueceuSenha = false,
     this.dataCadastro,
+    this.petData, // 👈 Adicionar ao construtor
   });
 
   factory UsuarioModel.fromJson(Map<String, dynamic> json) {
@@ -29,24 +31,27 @@ class UsuarioModel {
       cpf: json['cpf'],
       email: json['email'],
       telefone: json['telefone'],
-      senha: json['senha'] ?? '', // Não vem na resposta normalmente
+      senha: json['senha'] ?? '',
       esqueceuSenha: json['esqueceusenha'] ?? json['esqueceuSenha'] ?? false,
       dataCadastro: json['datacadastro'] != null
           ? DateTime.parse(json['datacadastro'])
           : null,
+      petData: json['petData'], // 👈 Carregar do JSON
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> data = {
       'nome': nome,
       'cpf': cpf,
       'email': email,
       'telefone': telefone,
       'senha': senha,
       'esqueceuSenha': esqueceuSenha ?? false,
-      'dataCadastro': dataCadastro?.toIso8601String(),
+      if (dataCadastro != null) 'dataCadastro': dataCadastro!.toIso8601String(),
+      if (petData != null && petData!.isNotEmpty) 'petData': petData, // 👈 Incluir se existir
     };
+    return data;
   }
 
   UsuarioModel copyWith({
@@ -58,8 +63,7 @@ class UsuarioModel {
     String? senha,
     bool? esqueceuSenha,
     DateTime? dataCadastro,
-    int? idCargo,
-    PetModel? petCriado,
+    Map<String, dynamic>? petData, // 👈 Adicionar no copyWith
   }) {
     return UsuarioModel(
       idUsuario: idUsuario ?? this.idUsuario,
@@ -70,6 +74,7 @@ class UsuarioModel {
       senha: senha ?? this.senha,
       esqueceuSenha: esqueceuSenha ?? this.esqueceuSenha,
       dataCadastro: dataCadastro ?? this.dataCadastro,
+      petData: petData ?? this.petData, // 👈 Copiar petData
     );
   }
 }

@@ -1,7 +1,6 @@
 // main.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:pet_family_app/global_refresh_provider.dart';
 import 'package:pet_family_app/providers/hospedagem_provider.dart';
 import 'package:pet_family_app/providers/message_provider.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
@@ -38,7 +37,6 @@ class MyApp extends StatelessWidget {
       providers: [
         // Auth Provider deve vir primeiro
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => GlobalRefreshProvider()),
         
         // Outros providers
         ChangeNotifierProvider<HospedagemProvider>(

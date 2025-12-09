@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/providers/pet/especie_provider.dart';
 import 'package:pet_family_app/providers/pet/porte_provider.dart';
 import 'package:pet_family_app/providers/pet/raca_provider.dart';
-import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
@@ -255,13 +254,13 @@ class _InsertDatasPetState extends State<InsertDatasPet> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const PetFamilyAppBar(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
           child: Center(
             child: Column(
               children: [
-                AppBarReturn(route: '/'),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 40),
                   child: Text(

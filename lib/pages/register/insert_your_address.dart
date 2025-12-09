@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:pet_family_app/widgets/app_drop_down.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:brasil_fields/brasil_fields.dart';
 
 class InsertYourAddress extends StatefulWidget {
   const InsertYourAddress({super.key});
@@ -24,9 +26,33 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
 
   // Lista de estados brasileiros
   final List<String> statesList = [
-    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
-    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 
-    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+    'AC',
+    'AL',
+    'AP',
+    'AM',
+    'BA',
+    'CE',
+    'DF',
+    'ES',
+    'GO',
+    'MA',
+    'MT',
+    'MS',
+    'MG',
+    'PA',
+    'PB',
+    'PR',
+    'PE',
+    'PI',
+    'RJ',
+    'RN',
+    'RS',
+    'RO',
+    'RR',
+    'SC',
+    'SP',
+    'SE',
+    'TO'
   ];
 
   // Chaves para o cache
@@ -47,14 +73,14 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
   // Salvar dados no cache
   Future<void> _saveAddressData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     await prefs.setString(_cepKey, cepController.text);
     await prefs.setString(_streetKey, streetController.text);
     await prefs.setString(_numberKey, numberController.text);
     await prefs.setString(_complementKey, complementController.text);
     await prefs.setString(_neighborhoodKey, neighborhoodController.text);
     await prefs.setString(_cityKey, cityController.text);
-    
+
     // Só salva o estado se for um valor válido da lista
     if (_selectedState != null && statesList.contains(_selectedState)) {
       await prefs.setString(_stateKey, _selectedState!);
@@ -66,7 +92,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
   // Carregar dados do cache
   Future<void> _loadAddressData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     setState(() {
       cepController.text = prefs.getString(_cepKey) ?? '';
       streetController.text = prefs.getString(_streetKey) ?? '';
@@ -74,7 +100,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
       complementController.text = prefs.getString(_complementKey) ?? '';
       neighborhoodController.text = prefs.getString(_neighborhoodKey) ?? '';
       cityController.text = prefs.getString(_cityKey) ?? '';
-      
+
       // Carrega o estado apenas se for um valor válido
       final savedState = prefs.getString(_stateKey);
       if (savedState != null && statesList.contains(savedState)) {
@@ -92,7 +118,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
   // Limpar dados do cache
   Future<void> _clearAddressData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     await prefs.remove(_cepKey);
     await prefs.remove(_streetKey);
     await prefs.remove(_numberKey);
@@ -100,7 +126,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
     await prefs.remove(_neighborhoodKey);
     await prefs.remove(_cityKey);
     await prefs.remove(_stateKey);
-    
+
     setState(() {
       cepController.clear();
       streetController.clear();
@@ -153,42 +179,15 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                
-                // Mapa placeholder
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.map_outlined, size: 50, color: Colors.grey),
-                      SizedBox(height: 10),
-                      Text(
-                        'Mapa (Google Maps)',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        'Configure a API key para habilitar',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 AppTextField(
                   controller: cepController,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CepInputFormatter()
+                  ],
                   labelText: 'CEP',
                   hintText: 'Digite seu CEP',
                   onChanged: (value) {
@@ -247,7 +246,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                   },
                 ),
                 const SizedBox(height: 15),
-                
+
                 // Dropdown para Estado
                 AppDropDown<String>(
                   value: _selectedState,
@@ -263,11 +262,12 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                   isRequired: true,
                   errorMessage: 'Por favor, selecione o estado',
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Botão para limpar apenas o estado (solução temporária)
-                if (_selectedState != null && !statesList.contains(_selectedState!))
+                if (_selectedState != null &&
+                    !statesList.contains(_selectedState!))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: OutlinedButton(
@@ -280,7 +280,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                       child: const Text('Corrigir Estado (Valor Inválido)'),
                     ),
                   ),
-                
+
                 AppButton(
                   onPressed: _isFormValid
                       ? () async {
@@ -291,9 +291,9 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                   label: 'Próximo',
                   fontSize: 20,
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Botão para limpar cache
                 OutlinedButton(
                   onPressed: _clearAddressData,

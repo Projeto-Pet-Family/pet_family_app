@@ -1,4 +1,6 @@
+import 'package:brasil_fields/brasil_fields.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
@@ -145,6 +147,10 @@ class _InsertYourDatasState extends State<InsertYourDatas> {
                 AppTextField(
                   controller: cpfController,
                   labelText: 'CPF',
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CpfInputFormatter()
+                  ],
                   hintText: 'Digite seu CPF',
                   onChanged: (value) {
                     _saveUserData();
@@ -155,6 +161,10 @@ class _InsertYourDatasState extends State<InsertYourDatas> {
                 AppTextField(
                   controller: phoneController,
                   labelText: 'Telefone',
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    TelefoneInputFormatter()
+                  ],
                   hintText: 'Digite seu telefone',
                   onChanged: (value) {
                     _saveUserData();
@@ -165,6 +175,7 @@ class _InsertYourDatasState extends State<InsertYourDatas> {
                 AppTextField(
                   controller: emailController,
                   labelText: 'E-mail',
+                  keyboardType: TextInputType.emailAddress,
                   hintText: 'Digite seu E-mail',
                   onChanged: (value) {
                     _saveUserData();

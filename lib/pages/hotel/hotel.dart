@@ -10,6 +10,7 @@ import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/providers/hospedagem_provider.dart';
 import 'package:pet_family_app/pages/message/message.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pet_family_app/services/auth_service.dart'; // Adicionado
 
 class Hotel extends StatefulWidget {
   final Map<String, dynamic>? hotelData;
@@ -25,14 +26,55 @@ class Hotel extends StatefulWidget {
 class _HotelState extends State<Hotel> {
   late HospedagemProvider _hospedagemProvider;
   bool _isInitialized = false;
+  int? _idUsuarioLogado;
+  final AuthService _authService = AuthService(); // Adicionado
 
   @override
   void initState() {
     super.initState();
     _isInitialized = false;
+    _carregarUsuarioLogado(); // Alterado o nome do método
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
+  }
+
+  Future<void> _carregarUsuarioLogado() async {
+    try {
+      print('🔍 Iniciando carregamento do usuário logado...');
+      
+      // Primeiro tenta usar o AuthService que funciona no Booking
+      final userId = await _authService.getUserIdFromCache();
+      
+      if (userId != null) {
+        _idUsuarioLogado = userId;
+        print('✅ ID do usuário carregado via AuthService: $_idUsuarioLogado');
+      } else {
+        // Fallback para SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        
+        // Tenta várias chaves possíveis
+        _idUsuarioLogado = prefs.getInt('idUsuario') ??
+                          prefs.getInt('idusuario') ??
+                          prefs.getInt('user_id') ??
+                          prefs.getInt('userId');
+        
+        if (_idUsuarioLogado != null) {
+          print('✅ ID do usuário carregado via SharedPreferences: $_idUsuarioLogado');
+        } else {
+          print('⚠️ ID do usuário não encontrado em nenhum cache');
+          
+          // Debug: Mostra todas as chaves disponíveis
+          final allKeys = prefs.getKeys();
+          print('📋 Chaves disponíveis no SharedPreferences:');
+          for (var key in allKeys) {
+            print('   $key: ${prefs.get(key)}');
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar ID do usuário: $e');
+    }
   }
 
   Future<void> _salvarHotelNoCache() async {
@@ -76,43 +118,84 @@ class _HotelState extends State<Hotel> {
     }
   }
 
-  void _abrirTelaMensagem(BuildContext context) {
+  void _abrirTelaMensagem(BuildContext context) async {
+    print('🎯 Botão de mensagem clicado - Hotel: ${widget.hotelData?['nome']}');
+
     if (widget.hotelData == null || widget.hotelData?['idhospedagem'] == null) {
+      print('❌ Dados do hotel incompletos');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dados do hotel incompletos')),
+        const SnackBar(
+          content: Text('Dados do hotel incompletos'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    _obterIdUsuarioLogado().then((idUsuario) {
-      if (idUsuario == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuário não identificado')),
-        );
-        return;
-      }
+    // Recarrega o ID do usuário antes de verificar (garantia)
+    await _carregarUsuarioLogado();
+    
+    print('🔍 Verificando usuário após recarga - ID: $_idUsuarioLogado');
+    
+    if (_idUsuarioLogado == null) {
+      print('🚫 Usuário não logado, mostrando diálogo de login');
+      _mostrarDialogoLoginNecessario(context);
+      return;
+    }
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => Message(
-            idusuario: idUsuario,
-            idhospedagem: widget.hotelData!['idhospedagem'],
-            nomeHospedagem: widget.hotelData!['nome'] ?? 'Hospedagem',
-          ),
+    print('✅ Usuário logado, navegando para tela de mensagens');
+    print('📤 Dados sendo enviados:');
+    print('   👤 ID Usuário: $_idUsuarioLogado');
+    print('   🏨 ID Hotel: ${widget.hotelData!['idhospedagem']}');
+    print('   🏨 Nome: ${widget.hotelData!['nome']}');
+
+    // Navega para a tela de mensagens
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Message(
+          idusuario: _idUsuarioLogado!,
+          idhospedagem: widget.hotelData!['idhospedagem'],
+          nomeHospedagem: widget.hotelData!['nome'] ?? 'Hospedagem',
         ),
-      );
+      ),
+    ).then((value) {
+      print('↩️ Retornou da tela de mensagens');
     });
   }
 
-  Future<int?> _obterIdUsuarioLogado() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt('idUsuario');
-    } catch (e) {
-      print('❌ Erro ao obter ID do usuário: $e');
-      return null;
-    }
+  void _mostrarDialogoLoginNecessario(BuildContext context) {
+    print('🔄 Mostrando diálogo de login necessário');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Login necessário'),
+        content: const Text('Você precisa estar logado para enviar mensagens.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              print('❌ Login cancelado');
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              print('➡️ Navegando para login via GoRouter');
+              Navigator.of(context).pop(); // Fecha o diálogo
+              
+              // Salva os dados do hotel para poder voltar depois do login
+              await _salvarHotelNoCache();
+              
+              // Navega para login usando GoRouter
+              context.go('/login');
+            },
+            child: const Text('Fazer Login'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _salvarValorDiariaNoCache(String valorDiaria) async {
@@ -215,7 +298,6 @@ class _HotelState extends State<Hotel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Ícone e Nome do Hotel
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -225,8 +307,8 @@ class _HotelState extends State<Hotel> {
                 Text(
                   nome,
                   style: const TextStyle(
-                    fontSize: 35, // REDUZIDO de 50 para 35
-                    fontWeight: FontWeight.w300, // Alterado de w200 para w300
+                    fontSize: 35,
+                    fontWeight: FontWeight.w300,
                     color: Colors.black,
                   ),
                 ),
@@ -235,20 +317,18 @@ class _HotelState extends State<Hotel> {
           ],
         ),
         
-        // Endereço completo
         Padding(
           padding: const EdgeInsets.only(top: 20, bottom: 12),
           child: Text(
             enderecoCompleto,
             style: const TextStyle(
-              fontWeight: FontWeight.w300, // Alterado de w100 para w300
+              fontWeight: FontWeight.w300,
               color: Colors.black,
-              fontSize: 16, // Aumentado de 15 para 16
+              fontSize: 16,
             ),
           ),
         ),
         
-        // Valor da diária (AGORA ABAIXO DO ENDEREÇO)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -286,7 +366,7 @@ class _HotelState extends State<Hotel> {
                   Text(
                     '$valorDiaria / dia',
                     style: const TextStyle(
-                      fontSize: 22, // Ajustado de 25 para 22
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -313,7 +393,7 @@ class _HotelState extends State<Hotel> {
           'Serviços extras',
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w300, // Alterado de w200 para w300
+            fontWeight: FontWeight.w300,
             color: Colors.black,
           ),
         ),
@@ -342,7 +422,7 @@ class _HotelState extends State<Hotel> {
             Text(
               'Carregando serviços...',
               style: TextStyle(
-                fontWeight: FontWeight.w300, // Alterado de w100 para w300
+                fontWeight: FontWeight.w300,
                 color: Colors.grey,
               ),
             ),
@@ -371,7 +451,7 @@ class _HotelState extends State<Hotel> {
             Text(
               error.length > 50 ? '${error.substring(0, 50)}...' : error,
               style: const TextStyle(
-                fontWeight: FontWeight.w300, // Alterado de w100 para w300
+                fontWeight: FontWeight.w300,
                 color: Colors.grey,
                 fontSize: 14,
               ),
@@ -405,7 +485,7 @@ class _HotelState extends State<Hotel> {
             const Text(
               'Nenhum serviço extra disponível',
               style: TextStyle(
-                fontWeight: FontWeight.w300, // Alterado de w100 para w300
+                fontWeight: FontWeight.w300,
                 color: Colors.grey,
                 fontSize: 16,
               ),
@@ -414,7 +494,7 @@ class _HotelState extends State<Hotel> {
             Text(
               'Esta hospedagem ainda não cadastrou serviços extras',
               style: TextStyle(
-                fontWeight: FontWeight.w300, // Alterado de w100 para w300
+                fontWeight: FontWeight.w300,
                 color: Colors.grey[400],
                 fontSize: 14,
               ),
@@ -457,7 +537,10 @@ class _HotelState extends State<Hotel> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              onPressed: () => _abrirTelaMensagem(context),
+              onPressed: () {
+                print('💬 Botão "Enviar mensagem" pressionado');
+                _abrirTelaMensagem(context);
+              },
               child: IntrinsicWidth(
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -468,7 +551,7 @@ class _HotelState extends State<Hotel> {
                       'Enviar mensagem',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w300, // Alterado de w200 para w300
+                        fontWeight: FontWeight.w300,
                         color: Colors.black,
                       ),
                     ),
@@ -513,11 +596,8 @@ class _HotelState extends State<Hotel> {
     final valorDiaria = widget.hotelData?['valor_diaria']?.toString() ?? '0.00';
 
     if (hotelId != null) {
-      // Salva os dados no cache
       _salvarHotelNoCache();
       _salvarValorDiariaNoCache(valorDiaria);
-
-      // Garante que o id da hospedagem está salvo no cache
       _salvarIdHospedagemNoCache(hotelId);
 
       context.go(

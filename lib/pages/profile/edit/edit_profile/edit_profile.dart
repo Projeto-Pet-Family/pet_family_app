@@ -1,10 +1,9 @@
 // lib/screens/edit_profile/edit_profile.dart
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/user_model.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_profile/edited_profile_modal.dart';
+import 'package:pet_family_app/providers/user_provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
-import 'package:pet_family_app/services/user_service.dart';
 import 'package:provider/provider.dart';
 import 'edit_profile_view.dart';
 
@@ -20,9 +19,11 @@ class _EditProfileState extends State<EditProfile> {
   late TextEditingController _emailController;
   late TextEditingController _telefoneController;
   late TextEditingController _cpfController;
-  bool _isRefreshing = false;
   bool _isSalvando = false;
-  late UserService _userService;
+  bool _dadosCarregados = false;
+  bool _carregandoUsuario = true;
+  bool _erroCarregamento = false;
+  String _mensagemErro = '';
 
   @override
   void initState() {
@@ -31,33 +32,81 @@ class _EditProfileState extends State<EditProfile> {
     _emailController = TextEditingController();
     _telefoneController = TextEditingController();
     _cpfController = TextEditingController();
-    _userService = UserService(client: http.Client());
     
-    // Carregar os dados assim que o widget for inicializado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _carregarDadosIniciais();
+      _carregarUsuario(context);
     });
   }
 
-  void _carregarDadosIniciais() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // Se não tem usuário, tenta recarregar
-    if (authProvider.usuario == null) {
-      print('🔄 Nenhum usuário no AuthProvider, tentando recarregar...');
-      authProvider.recarregarUsuario();
-    } else {
-      // Já tem usuário, carregar dados nos controllers
-      _carregarDadosParaEdicao(authProvider.usuario!);
+  Future<void> _carregarUsuario(BuildContext context) async {
+    try {
+      print('🔄 Iniciando carregamento do usuário...');
+      
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+      
+      // Verificar status do AuthProvider
+      print('👤 AuthProvider status:');
+      print('  - isLoggedIn: ${authProvider.isLoggedIn}');
+      print('  - usuarioId: ${authProvider.usuarioId}');
+      print('  - usuario: ${authProvider.usuario?.nome}');
+      print('  - isLoading: ${authProvider.isLoading}');
+      
+      if (!authProvider.hasCheckedAuth) {
+        print('⏳ Aguardando verificação de autenticação...');
+        await authProvider.checkAuthentication();
+      }
+      
+      if (authProvider.isLoggedIn && authProvider.usuarioId != null) {
+        print('✅ Usuário autenticado. ID: ${authProvider.usuarioId}');
+        
+        // Se o AuthProvider já tem os dados do usuário
+        if (authProvider.usuario != null) {
+          print('📋 Usando dados do AuthProvider: ${authProvider.usuario!.nome}');
+          usuarioProvider.setUsuario(authProvider.usuario!);
+        } 
+        // Se não, busca do UsuarioProvider
+        else if (usuarioProvider.usuarioLogado == null) {
+          print('🔍 Buscando dados do usuário via UsuarioProvider...');
+          await usuarioProvider.buscarUsuarioPorId(authProvider.usuarioId!);
+        }
+        
+        // Verificar se conseguiu obter os dados
+        if (usuarioProvider.usuarioLogado != null) {
+          print('✅ Dados do usuário carregados: ${usuarioProvider.usuarioLogado!.nome}');
+        } else {
+          print('⚠️ Não foi possível carregar dados do usuário');
+          _erroCarregamento = true;
+          _mensagemErro = 'Não foi possível carregar seus dados. Tente novamente.';
+        }
+      } else {
+        print('❌ Usuário não autenticado no AuthProvider');
+        _erroCarregamento = true;
+        _mensagemErro = 'Você precisa fazer login para acessar esta página.';
+      }
+    } catch (e, stackTrace) {
+      print('❌ Erro ao carregar usuário: $e');
+      print('Stack trace: $stackTrace');
+      _erroCarregamento = true;
+      _mensagemErro = 'Erro ao carregar perfil: $e';
+    } finally {
+      if (mounted) {
+        setState(() {
+          _carregandoUsuario = false;
+        });
+      }
     }
   }
 
   void _carregarDadosParaEdicao(UsuarioModel usuario) {
-    print('📝 Carregando dados para edição: ${usuario.nome}');
-    _nomeController.text = usuario.nome;
-    _emailController.text = usuario.email ?? '';
-    _telefoneController.text = usuario.telefone ?? '';
-    _cpfController.text = usuario.cpf ?? '';
+    if (!_dadosCarregados && usuario.nome.isNotEmpty) {
+      print('📝 Carregando dados para edição: ${usuario.nome}');
+      _nomeController.text = usuario.nome;
+      _emailController.text = usuario.email ?? '';
+      _telefoneController.text = usuario.telefone ?? '';
+      _cpfController.text = usuario.cpf ?? '';
+      _dadosCarregados = true;
+    }
   }
 
   Future<void> _abrirModalEdicao(
@@ -89,22 +138,12 @@ class _EditProfileState extends State<EditProfile> {
     );
 
     if (result == true) {
-      _mostrarLoadingEAtualizar();
-    }
-  }
-
-  void _mostrarLoadingEAtualizar() {
-    setState(() {
-      _isRefreshing = true;
-    });
-
-    Future.delayed(const Duration(milliseconds: 500), () {
+      // Recarrega os dados após salvar
+      _dadosCarregados = false;
       if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
+        await _recarregarUsuario(context);
       }
-    });
+    }
   }
 
   Future<void> _salvarAlteracoes(BuildContext context) async {
@@ -116,80 +155,67 @@ class _EditProfileState extends State<EditProfile> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      if (authProvider.usuario == null || authProvider.usuario!.idUsuario == null) {
-        print('❌ Nenhum usuário logado no AuthProvider');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erro: Nenhum usuário logado'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+      
+      // Verificar autenticação antes de salvar
+      if (!authProvider.isLoggedIn || authProvider.usuarioId == null) {
+        print('❌ Usuário não autenticado');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro: Sessão expirada. Faça login novamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
 
-      final usuarioId = authProvider.usuario!.idUsuario!;
       final dadosAtualizados = {
         'nome': _nomeController.text.trim(),
         'email': _emailController.text.trim(),
         'telefone': _telefoneController.text.trim(),
         'cpf': _cpfController.text.trim(),
+        'idUsuario': authProvider.usuarioId,
       };
 
-      print('📤 Enviando dados atualizados para API: $dadosAtualizados');
-      print('👤 ID do usuário: $usuarioId');
+      print('📤 Enviando dados atualizados: $dadosAtualizados');
       
-      // Chamar a API para atualizar o perfil
-      final resultado = await _userService.atualizarPerfil(usuarioId, dadosAtualizados);
-      
-      if (resultado['success'] == true) {
-        print('✅ Perfil atualizado na API com sucesso!');
+      // Atualizar no UsuarioProvider
+      final sucesso = await usuarioProvider.atualizarPerfil(dadosAtualizados);
+
+      if (sucesso && context.mounted) {
+        print('✅ Perfil atualizado com sucesso!');
         
-        // Atualizar localmente no provider
-        final usuarioAtualizado = resultado['usuario'] ?? authProvider.usuario!.copyWith(
-          nome: dadosAtualizados['nome'],
-          email: dadosAtualizados['email'],
-          telefone: dadosAtualizados['telefone'],
-          cpf: dadosAtualizados['cpf'],
+        // Atualizar também no AuthProvider
+        if (usuarioProvider.usuarioLogado != null) {
+          authProvider.atualizarDadosUsuario(usuarioProvider.usuarioLogado!);
+        }
+        
+        Navigator.pop(context, true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Perfil atualizado com sucesso!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
         );
-        
-        if (usuarioAtualizado is UsuarioModel) {
-          authProvider.atualizarDadosUsuario(usuarioAtualizado);
-        }
-
-        if (context.mounted) {
-          Navigator.pop(context, true);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Perfil atualizado com sucesso!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        print('❌ Erro da API: ${resultado['message']}');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro: ${resultado['message'] ?? "Erro desconhecido"}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+      } else if (context.mounted) {
+        print('❌ Erro ao atualizar perfil');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao atualizar perfil. Tente novamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Exceção ao salvar: $e');
+      print('Stack trace: $stackTrace');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: $e'),
+            content: Text('Erro: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -203,6 +229,31 @@ class _EditProfileState extends State<EditProfile> {
     }
   }
 
+  Future<void> _recarregarUsuario(BuildContext context) async {
+    if (mounted) {
+      setState(() {
+        _carregandoUsuario = true;
+        _erroCarregamento = false;
+        _mensagemErro = '';
+        _dadosCarregados = false;
+      });
+      
+      await _carregarUsuario(context);
+    }
+  }
+
+  void _tentarNovamente(BuildContext context) {
+    _recarregarUsuario(context);
+  }
+
+  void _irParaLogin(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(
+      context, 
+      '/login', 
+      (route) => false
+    );
+  }
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -214,115 +265,93 @@ class _EditProfileState extends State<EditProfile> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        final usuario = authProvider.usuario;
+    return Scaffold(
+      body: Consumer2<AuthProvider, UsuarioProvider>(
+        builder: (context, authProvider, usuarioProvider, child) {
+          // Obter usuário de ambas as fontes
+          UsuarioModel? usuario = authProvider.usuario ?? usuarioProvider.usuarioLogado;
+          
+          print('=== Status do EditProfile ===');
+          print('Carregando: $_carregandoUsuario');
+          print('Erro: $_erroCarregamento');
+          print('Mensagem erro: $_mensagemErro');
+          print('AuthProvider.usuario: ${authProvider.usuario?.nome}');
+          print('UsuarioProvider.usuarioLogado: ${usuarioProvider.usuarioLogado?.nome}');
+          print('=============================');
 
-        print('👤 AuthProvider.usuario: $usuario');
-        print('🔄 AuthProvider.isLoading: ${authProvider.isLoading}');
-
-        // Se está carregando
-        if (authProvider.isLoading && usuario == null) {
-          return Scaffold(
-            body: Center(
+          // Tela de loading
+          if (_carregandoUsuario || authProvider.isLoading || usuarioProvider.loading) {
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 20),
-                  const Text('Carregando perfil...'),
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text('Carregando seu perfil...'),
                 ],
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        // Se não tem usuário
-        if (usuario == null) {
-          print('⚠️ Nenhum usuário encontrado no AuthProvider');
-          
-          // Aguarda um pouco e tenta redirecionar
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context, 
-                '/login', 
-                (route) => false
-              );
-            }
-          });
-          
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.person_off,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Usuário não encontrado',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Redirecionando para login...',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 20),
-                  const CircularProgressIndicator(),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Se está atualizando
-        if (_isRefreshing) {
-          return Stack(
-            children: [
-              EditProfileView(
-                usuario: usuario,
-                onEditarPressed: () => _abrirModalEdicao(context, usuario),
-                isLoading: true,
-              ),
-              Container(
-                color: Colors.black.withOpacity(0.3),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          // Tela de erro
+          if (_erroCarregamento || usuario == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _mensagemErro.contains('login') 
+                        ? Icons.login 
+                        : Icons.error_outline,
+                      size: 64,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _mensagemErro.contains('login') 
+                        ? 'Sessão expirada' 
+                        : 'Erro ao carregar',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      SizedBox(height: 20),
-                      Text(
-                        'Atualizando perfil...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _mensagemErro,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 30),
+                    if (_mensagemErro.contains('login'))
+                      ElevatedButton(
+                        onPressed: () => _irParaLogin(context),
+                        child: const Text('Fazer Login'),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: () => _tentarNovamente(context),
+                        child: const Text('Tentar Novamente'),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
-            ],
-          );
-        }
+            );
+          }
 
-        // Tela normal
-        return EditProfileView(
-          usuario: usuario,
-          onEditarPressed: () => _abrirModalEdicao(context, usuario),
-          isLoading: false,
-        );
-      },
+          // Carrega os dados quando o usuário estiver disponível
+          _carregarDadosParaEdicao(usuario);
+
+          return EditProfileView(
+            usuario: usuario,
+            onEditarPressed: () => _abrirModalEdicao(context, usuario),
+            isLoading: false,
+          );
+        },
+      ),
     );
   }
 }
