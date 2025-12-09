@@ -95,7 +95,6 @@ class _AddServiceModalState extends State<AddServiceModal> {
     } catch (e) {
       print('❌ Erro ao carregar serviços da hospedagem: $e');
       setState(() => _carregando = false);
-
     }
   }
 
@@ -412,26 +411,6 @@ class _AddServiceModalState extends State<AddServiceModal> {
                           ),
                         ),
                       ),
-
-                    if (temPetsSemServico) const SizedBox(width: 8),
-
-                    // Checkbox para seleção múltipla (serviços gerais)
-                    Checkbox(
-                      value: selecionado,
-                      onChanged: jaAdicionadoNoContrato
-                          ? null
-                          : (value) {
-                              setState(() {
-                                if (value == true) {
-                                  _servicosSelecionados.add(servico);
-                                } else {
-                                  _servicosSelecionados.removeWhere(
-                                      (s) => s.idservico == servico.idservico);
-                                }
-                              });
-                            },
-                      activeColor: const Color(0xff8692DE),
-                    ),
                   ],
                 ),
               ],
@@ -598,53 +577,6 @@ class _AddServiceModalState extends State<AddServiceModal> {
                       ),
                     ),
 
-                    // Instruções
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Serviços disponíveis nesta hospedagem',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '• Ícone azul: Serviço já adicionado ao contrato',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          Text(
-                            '• Ícone verde: Serviço já adicionado a algum pet',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          Text(
-                            '• "Adicionar a Pet": Vincular serviço a pets específicos',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          Text(
-                            '• Checkbox: Selecionar para adicionar como serviço geral',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
                     // Contador de selecionados
                     if (_servicosSelecionados.isNotEmpty)
                       Padding(
@@ -686,75 +618,6 @@ class _AddServiceModalState extends State<AddServiceModal> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: _buildListaServicos(),
-                      ),
-                    ),
-
-                    // Botões
-                    Container(
-                      padding: EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: Offset(0, -2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          if (widget.petsNoContrato.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: AppButton(
-                                onPressed: _servicosSelecionados.isNotEmpty
-                                    ? () => _adicionarServicosGerais()
-                                    : null,
-                                label: 'Adicionar como Serviços Gerais',
-                                fontSize: 14,
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                buttonColor: _servicosSelecionados.isEmpty
-                                    ? Colors.grey[300]
-                                    : Colors.blue[800],
-                                textButtonColor: _servicosSelecionados.isEmpty
-                                    ? Colors.grey[600]
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                            ),
-                          AppButton(
-                            onPressed:
-                                _enviando || _servicosSelecionados.isEmpty
-                                    ? null
-                                    : () => _adicionarServicosGerais(),
-                            label: _enviando
-                                ? 'Adicionando...'
-                                : 'Adicionar Selecionados',
-                            fontSize: 16,
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            buttonColor: _servicosSelecionados.isEmpty
-                                ? Colors.grey[300]
-                                : Color(0xff8692DE),
-                            textButtonColor: _servicosSelecionados.isEmpty
-                                ? Colors.grey[600]
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          SizedBox(height: 12),
-                          AppButton(
-                            onPressed: _enviando
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            label: 'Cancelar',
-                            fontSize: 16,
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            buttonColor: Colors.white,
-                            textButtonColor: Colors.black,
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                        ],
                       ),
                     ),
                   ],

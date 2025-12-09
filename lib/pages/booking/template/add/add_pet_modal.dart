@@ -334,60 +334,6 @@ class _AddPetModalState extends State<AddPetModal> {
     }
   }
 
-  Widget _buildHeaderEspecifico() {
-    if (widget.idServicoSelecionado != null) {
-      return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.blue[700],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Adicionar serviço aos pets do contrato',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blue[700],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Apenas pets que ainda não possuem este serviço serão mostrados',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      );
-    }
-    return const SizedBox();
-  }
-
   bool _isPetDesabilitado(PetModel pet) {
     return _petsDesabilitados.contains(pet.idPet);
   }
@@ -637,13 +583,6 @@ class _AddPetModalState extends State<AddPetModal> {
     );
   }
 
-  String _getBotaoPrincipal() {
-    if (widget.idServicoSelecionado != null) {
-      return _enviando ? 'Adicionando Serviço...' : 'Adicionar Serviço aos Pets Selecionados';
-    }
-    return _enviando ? 'Adicionando...' : 'Adicionar Pets Selecionados';
-  }
-
   void _mostrarMensagem(String mensagem) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -737,8 +676,6 @@ class _AddPetModalState extends State<AddPetModal> {
 
                     const SizedBox(height: 16),
 
-                    _buildHeaderEspecifico(),
-
                     if (_petsSelecionados.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -799,7 +736,7 @@ class _AddPetModalState extends State<AddPetModal> {
                             onPressed: _enviando || _petsSelecionados.isEmpty
                                 ? null
                                 : _adicionarPets,
-                            label: _getBotaoPrincipal(),
+                            label: 'Adicionar serviço',
                             fontSize: 16,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             buttonColor: _petsSelecionados.isEmpty

@@ -13,18 +13,81 @@ class Profile extends StatefulWidget {
 
 class _ProfileState extends State<Profile> {
   bool _carregando = false;
+  bool _erroCarregamento = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _verificarAutenticacao();
+  }
+
+  Future<void> _verificarAutenticacao() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Se não tem usuário, tenta verificar se está autenticado
+    if (authProvider.usuario == null) {
+      setState(() {
+        _carregando = true;
+      });
+
+      try {
+        // Usar o método correto do AuthProvider
+        await authProvider.checkAuthentication();
+
+        // Verificar se agora tem usuário
+        if (authProvider.usuario == null) {
+          // Se ainda não tem usuário, redireciona para login
+          if (mounted) {
+            Future.delayed(Duration.zero, () {
+              context.go('/login');
+            });
+          }
+        }
+      } catch (e) {
+        setState(() {
+          _erroCarregamento = true;
+        });
+
+        print('❌ Erro ao verificar autenticação: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _carregando = false;
+          });
+        }
+      }
+    }
+  }
 
   Future<void> _recarregarPerfil() async {
     setState(() {
       _carregando = true;
+      _erroCarregamento = false;
     });
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.recarregarUsuario();
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.recarregarUsuario();
+    } catch (e) {
+      setState(() {
+        _erroCarregamento = true;
+      });
 
-    setState(() {
-      _carregando = false;
-    });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao carregar perfil: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+        });
+      }
+    }
   }
 
   @override
@@ -34,18 +97,82 @@ class _ProfileState extends State<Profile> {
         builder: (context, authProvider, child) {
           final usuario = authProvider.usuario;
 
-          if (usuario == null || _carregando) {
+          // Se tem erro de carregamento
+          if (_erroCarregamento) {
             return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 20),
-                Text('Carregando perfil...'),
-              ],
-            ));
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Erro ao carregar perfil',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Não foi possível carregar as informações do seu perfil.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _recarregarPerfil,
+                      child: Text('Tentar novamente'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
+          // Se está carregando (apenas no primeiro carregamento)
+          if (usuario == null && _carregando) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text('Carregando perfil...'),
+                ],
+              ),
+            );
+          }
+
+          // Se não tem usuário nem está carregando, tenta redirecionar
+          if (usuario == null) {
+            // Aguarda um pouco e tenta redirecionar
+            Future.delayed(Duration.zero, () {
+              if (mounted) {
+                context.go('/login');
+              }
+            });
+
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text('Redirecionando para login...'),
+                ],
+              ),
+            );
+          }
+
+          // Se chegou aqui, tem usuário e pode mostrar o perfil
           final nome = usuario.nome;
           final email = usuario.email;
           final telefone = usuario.telefone;
@@ -57,23 +184,12 @@ class _ProfileState extends State<Profile> {
                 children: [
                   SizedBox(height: 50),
 
-                  // Header com refresh
-                  Row(
-                    children: [
-                      Spacer(),
-                      Text(
-                        'Meu Perfil',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Spacer(),
-                      IconButton(
-                        icon: Icon(Icons.refresh),
-                        onPressed: _recarregarPerfil,
-                      ),
-                    ],
+                  Text(
+                    'Meu Perfil',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
 
                   SizedBox(height: 30),
@@ -104,45 +220,12 @@ class _ProfileState extends State<Profile> {
                         SizedBox(width: 16),
 
                         // Dados do usuário
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                nome,
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              if (email != null && email.isNotEmpty)
-                                Text(
-                                  email,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              if (telefone != null && telefone.isNotEmpty)
-                                Text(
-                                  telefone,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              SizedBox(height: 8),
-                              // Mostrar ID do usuário (opcional - para debug)
-                              Text(
-                                'ID: ${usuario.idUsuario ?? 'N/A'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
+                        Text(
+                          nome,
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
                         ),
                       ],

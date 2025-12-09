@@ -96,73 +96,11 @@ class ServicesInformation extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cabeçalho
-          Row(
-            children: [
-              const Icon(
-                Icons.construction_outlined,
-                color: Color(0xff8692DE),
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Serviços Adicionais',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xff8692DE),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Nenhum serviço adicionado',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           
           const SizedBox(height: 12),
-          
-          // Mensagem
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              'Adicione serviços extras para sua hospedagem',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          
-          // Mostrar pets se houver
+
           if (pets.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Divider(color: Colors.grey[300]),
-            const SizedBox(height: 12),
-            
-            Text(
-              'Pets incluídos no contrato:',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Grid de pets
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -181,33 +119,6 @@ class ServicesInformation extends StatelessWidget {
             
             const SizedBox(height: 8),
             
-            // Mensagem de instrução
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Color(0xff8692DE).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 20,
-                    color: Color(0xff8692DE),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Você pode adicionar serviços específicos para cada pet ou serviços gerais',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xff8692DE),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ],
       ),

@@ -182,7 +182,7 @@ class _LoginState extends State<Login> {
                     ),
                   ),
 
-                  const Padding(
+                  /* const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Divider(
                       thickness: 1,
@@ -219,7 +219,7 @@ class _LoginState extends State<Login> {
                         ),
                       ],
                     ),
-                  ),
+                  ), */
                 ],
               ),
             ),

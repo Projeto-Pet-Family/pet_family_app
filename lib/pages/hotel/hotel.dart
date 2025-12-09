@@ -200,7 +200,7 @@ class _HotelState extends State<Hotel> {
         _buildHotelHeader(hotel),
         _buildServicesSection(hospedagemProvider),
         _buildDivider(),
-        _buildEmployeesSection(),
+        /* _buildEmployeesSection(), */
         _buildActionButtons(),
       ],
     );
@@ -215,6 +215,7 @@ class _HotelState extends State<Hotel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Ícone e Nome do Hotel
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -224,53 +225,78 @@ class _HotelState extends State<Hotel> {
                 Text(
                   nome,
                   style: const TextStyle(
-                    fontSize: 50,
-                    fontWeight: FontWeight.w200,
+                    fontSize: 35, // REDUZIDO de 50 para 35
+                    fontWeight: FontWeight.w300, // Alterado de w200 para w300
                     color: Colors.black,
                   ),
                 ),
               ],
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF159800),
-                borderRadius: BorderRadius.circular(8),
+          ],
+        ),
+        
+        // Endereço completo
+        Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 12),
+          child: Text(
+            enderecoCompleto,
+            style: const TextStyle(
+              fontWeight: FontWeight.w300, // Alterado de w100 para w300
+              color: Colors.black,
+              fontSize: 16, // Aumentado de 15 para 16
+            ),
+          ),
+        ),
+        
+        // Valor da diária (AGORA ABAIXO DO ENDEREÇO)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF159800),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'VALOR DA DIÁRIA',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const Icon(
+                    Icons.monetization_on_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     '$valorDiaria / dia',
                     style: const TextStyle(
-                      fontSize: 25,
+                      fontSize: 22, // Ajustado de 25 para 22
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  enderecoCompleto,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w100,
-                    color: Colors.black,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
+
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 20),
           child: Divider(color: Color(0xFFCCCCCC), thickness: 1),
@@ -287,7 +313,7 @@ class _HotelState extends State<Hotel> {
           'Serviços extras',
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w200,
+            fontWeight: FontWeight.w300, // Alterado de w200 para w300
             color: Colors.black,
           ),
         ),
@@ -316,7 +342,7 @@ class _HotelState extends State<Hotel> {
             Text(
               'Carregando serviços...',
               style: TextStyle(
-                fontWeight: FontWeight.w100,
+                fontWeight: FontWeight.w300, // Alterado de w100 para w300
                 color: Colors.grey,
               ),
             ),
@@ -345,7 +371,7 @@ class _HotelState extends State<Hotel> {
             Text(
               error.length > 50 ? '${error.substring(0, 50)}...' : error,
               style: const TextStyle(
-                fontWeight: FontWeight.w100,
+                fontWeight: FontWeight.w300, // Alterado de w100 para w300
                 color: Colors.grey,
                 fontSize: 14,
               ),
@@ -379,7 +405,7 @@ class _HotelState extends State<Hotel> {
             const Text(
               'Nenhum serviço extra disponível',
               style: TextStyle(
-                fontWeight: FontWeight.w100,
+                fontWeight: FontWeight.w300, // Alterado de w100 para w300
                 color: Colors.grey,
                 fontSize: 16,
               ),
@@ -388,7 +414,7 @@ class _HotelState extends State<Hotel> {
             Text(
               'Esta hospedagem ainda não cadastrou serviços extras',
               style: TextStyle(
-                fontWeight: FontWeight.w100,
+                fontWeight: FontWeight.w300, // Alterado de w100 para w300
                 color: Colors.grey[400],
                 fontSize: 14,
               ),
@@ -419,33 +445,6 @@ class _HotelState extends State<Hotel> {
         ),
       );
 
-  Widget _buildEmployeesSection() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Funcionários',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w100,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                EmployeeTemplate(),
-                EmployeeTemplate(),
-                EmployeeTemplate(),
-                EmployeeTemplate(),
-                EmployeeTemplate(),
-              ],
-            ),
-          ),
-        ],
-      );
-
   Widget _buildActionButtons() => Column(
         children: [
           const SizedBox(height: 40),
@@ -469,7 +468,7 @@ class _HotelState extends State<Hotel> {
                       'Enviar mensagem',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w200,
+                        fontWeight: FontWeight.w300, // Alterado de w200 para w300
                         color: Colors.black,
                       ),
                     ),

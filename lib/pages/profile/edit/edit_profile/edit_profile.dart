@@ -1,8 +1,10 @@
 // lib/screens/edit_profile/edit_profile.dart
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:pet_family_app/models/user_model.dart';
 import 'package:pet_family_app/pages/profile/edit/edit_profile/edited_profile_modal.dart';
-import 'package:pet_family_app/providers/user_provider.dart'; // Importe apenas o UserProvider
+import 'package:pet_family_app/providers/auth_provider.dart';
+import 'package:pet_family_app/services/user_service.dart';
 import 'package:provider/provider.dart';
 import 'edit_profile_view.dart';
 
@@ -20,6 +22,7 @@ class _EditProfileState extends State<EditProfile> {
   late TextEditingController _cpfController;
   bool _isRefreshing = false;
   bool _isSalvando = false;
+  late UserService _userService;
 
   @override
   void initState() {
@@ -28,29 +31,33 @@ class _EditProfileState extends State<EditProfile> {
     _emailController = TextEditingController();
     _telefoneController = TextEditingController();
     _cpfController = TextEditingController();
+    _userService = UserService(client: http.Client());
     
     // Carregar os dados assim que o widget for inicializado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _carregarDadosIniciais(context);
+      _carregarDadosIniciais();
     });
   }
 
-  void _carregarDadosIniciais(BuildContext context) {
-    final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+  void _carregarDadosIniciais() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Se não tem usuário logado, tenta buscar do ID no cache
-    if (usuarioProvider.usuarioLogado == null) {
-      print('🔄 Buscando usuário logado no provider...');
-      // Você pode adicionar lógica aqui para buscar o usuário se necessário
+    // Se não tem usuário, tenta recarregar
+    if (authProvider.usuario == null) {
+      print('🔄 Nenhum usuário no AuthProvider, tentando recarregar...');
+      authProvider.recarregarUsuario();
+    } else {
+      // Já tem usuário, carregar dados nos controllers
+      _carregarDadosParaEdicao(authProvider.usuario!);
     }
   }
 
   void _carregarDadosParaEdicao(UsuarioModel usuario) {
     print('📝 Carregando dados para edição: ${usuario.nome}');
     _nomeController.text = usuario.nome;
-    _emailController.text = usuario.email;
-    _telefoneController.text = usuario.telefone;
-    _cpfController.text = usuario.cpf;
+    _emailController.text = usuario.email ?? '';
+    _telefoneController.text = usuario.telefone ?? '';
+    _cpfController.text = usuario.cpf ?? '';
   }
 
   Future<void> _abrirModalEdicao(
@@ -108,20 +115,22 @@ class _EditProfileState extends State<EditProfile> {
     });
 
     try {
-      final usuarioProvider =
-          Provider.of<UsuarioProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      if (usuarioProvider.usuarioLogado == null) {
-        print('❌ Nenhum usuário logado no UsuarioProvider');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro: Nenhum usuário logado'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (authProvider.usuario == null || authProvider.usuario!.idUsuario == null) {
+        print('❌ Nenhum usuário logado no AuthProvider');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erro: Nenhum usuário logado'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
+      final usuarioId = authProvider.usuario!.idUsuario!;
       final dadosAtualizados = {
         'nome': _nomeController.text.trim(),
         'email': _emailController.text.trim(),
@@ -129,29 +138,49 @@ class _EditProfileState extends State<EditProfile> {
         'cpf': _cpfController.text.trim(),
       };
 
-      print('📤 Enviando dados atualizados: $dadosAtualizados');
+      print('📤 Enviando dados atualizados para API: $dadosAtualizados');
+      print('👤 ID do usuário: $usuarioId');
       
-      final sucesso = await usuarioProvider.atualizarPerfil(dadosAtualizados);
-
-      if (sucesso && context.mounted) {
-        print('✅ Perfil atualizado com sucesso!');
-        Navigator.pop(context, true);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Perfil atualizado com sucesso!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
+      // Chamar a API para atualizar o perfil
+      final resultado = await _userService.atualizarPerfil(usuarioId, dadosAtualizados);
+      
+      if (resultado['success'] == true) {
+        print('✅ Perfil atualizado na API com sucesso!');
+        
+        // Atualizar localmente no provider
+        final usuarioAtualizado = resultado['usuario'] ?? authProvider.usuario!.copyWith(
+          nome: dadosAtualizados['nome'],
+          email: dadosAtualizados['email'],
+          telefone: dadosAtualizados['telefone'],
+          cpf: dadosAtualizados['cpf'],
         );
-      } else if (context.mounted) {
-        print('❌ Erro ao atualizar perfil: ${usuarioProvider.error}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro: ${usuarioProvider.error}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        
+        if (usuarioAtualizado is UsuarioModel) {
+          authProvider.atualizarDadosUsuario(usuarioAtualizado);
+        }
+
+        if (context.mounted) {
+          Navigator.pop(context, true);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Perfil atualizado com sucesso!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        print('❌ Erro da API: ${resultado['message']}');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro: ${resultado['message'] ?? "Erro desconhecido"}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('❌ Exceção ao salvar: $e');
@@ -160,6 +189,7 @@ class _EditProfileState extends State<EditProfile> {
           SnackBar(
             content: Text('Erro: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -184,15 +214,15 @@ class _EditProfileState extends State<EditProfile> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<UsuarioProvider>(
-      builder: (context, usuarioProvider, child) {
-        final usuario = usuarioProvider.usuarioLogado;
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final usuario = authProvider.usuario;
 
-        print('👤 UsuarioProvider.usuarioLogado: $usuario');
-        print('🔄 UsuarioProvider.loading: ${usuarioProvider.loading}');
+        print('👤 AuthProvider.usuario: $usuario');
+        print('🔄 AuthProvider.isLoading: ${authProvider.isLoading}');
 
-        if (usuario == null) {
-          print('⚠️ Nenhum usuário encontrado no UsuarioProvider');
+        // Se está carregando
+        if (authProvider.isLoading && usuario == null) {
           return Scaffold(
             body: Center(
               child: Column(
@@ -201,21 +231,58 @@ class _EditProfileState extends State<EditProfile> {
                   const CircularProgressIndicator(),
                   const SizedBox(height: 20),
                   const Text('Carregando perfil...'),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Tentar recarregar
-                      usuarioProvider.buscarUsuarioPorId(3); // ID do cache
-                    },
-                    child: const Text('Tentar novamente'),
-                  ),
                 ],
               ),
             ),
           );
         }
 
-        if (_isRefreshing || usuarioProvider.loading) {
+        // Se não tem usuário
+        if (usuario == null) {
+          print('⚠️ Nenhum usuário encontrado no AuthProvider');
+          
+          // Aguarda um pouco e tenta redirecionar
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.pushNamedAndRemoveUntil(
+                context, 
+                '/login', 
+                (route) => false
+              );
+            }
+          });
+          
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.person_off,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Usuário não encontrado',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Redirecionando para login...',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+                  const CircularProgressIndicator(),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Se está atualizando
+        if (_isRefreshing) {
           return Stack(
             children: [
               EditProfileView(
@@ -249,6 +316,7 @@ class _EditProfileState extends State<EditProfile> {
           );
         }
 
+        // Tela normal
         return EditProfileView(
           usuario: usuario,
           onEditarPressed: () => _abrirModalEdicao(context, usuario),
