@@ -1,5 +1,6 @@
 // main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Adicione este import
 import 'package:http/http.dart' as http;
 import 'package:pet_family_app/providers/hospedagem_provider.dart';
 import 'package:pet_family_app/providers/message_provider.dart';
@@ -23,8 +24,20 @@ import 'package:provider/provider.dart';
 import 'package:pet_family_app/providers/auth_provider.dart';
 import 'package:pet_family_app/providers/pet/pet_provider.dart';
 import 'package:pet_family_app/router/app_router.dart';
+import 'package:pet_family_app/providers/message/socket_service.dart';
 
 void main() {
+  // Configuração das barras do sistema ANTES de iniciar o app
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+
+  // Opcional: modo de tela cheia com imersão controlada
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   runApp(const MyApp());
 }
 
@@ -37,7 +50,7 @@ class MyApp extends StatelessWidget {
       providers: [
         // Auth Provider deve vir primeiro
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        
+
         // Outros providers
         ChangeNotifierProvider<HospedagemProvider>(
           create: (_) => HospedagemProvider(),
@@ -56,6 +69,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
+        ChangeNotifierProvider(create: (_) => SocketProvider()),
         ChangeNotifierProvider<MensagemProvider>(
           create: (_) => MensagemProvider(
             MensagemRepository(
@@ -96,7 +110,54 @@ class MyApp extends StatelessWidget {
                 bodyLarge: TextStyle(fontWeight: FontWeight.normal),
                 titleMedium: TextStyle(fontWeight: FontWeight.w500),
               ),
+              scaffoldBackgroundColor: Colors.white,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                systemOverlayStyle: SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  systemNavigationBarColor: Colors.transparent,
+                  systemNavigationBarIconBrightness: Brightness.dark,
+                ),
+              ),
             ),
+            // AQUI ESTÁ O AJUSTE CRÍTICO
+            builder: (context, router) {
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  systemNavigationBarColor: Colors.transparent,
+                  systemNavigationBarIconBrightness: Brightness.dark,
+                  // Para Android 10+ com tema escuro automático
+                  statusBarBrightness:
+                      MediaQuery.of(context).platformBrightness,
+                ),
+                child: MediaQuery(
+                  // Remove o padding do topo do MediaQuery
+                  data: MediaQuery.of(context).copyWith(
+                    viewPadding: EdgeInsets.only(
+                      top: 0, // Remove o padding do topo
+                      bottom: MediaQuery.of(context).viewPadding.bottom,
+                      left: MediaQuery.of(context).viewPadding.left,
+                      right: MediaQuery.of(context).viewPadding.right,
+                    ),
+                  ),
+                  child: SafeArea(
+                    // SafeArea apenas no topo
+                    top: true,
+                    bottom: false,
+                    left: false,
+                    right: false,
+                    minimum: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top,
+                    ),
+                    child: router ?? const SizedBox(),
+                  ),
+                ),
+              );
+            },
             routerConfig: AppRouter.router,
           );
         },

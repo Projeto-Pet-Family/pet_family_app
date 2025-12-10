@@ -32,9 +32,9 @@ class Home extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.pets),
+                  SizedBox.shrink(),
                   Text('PetFamily'),
-                  Icon(Icons.notifications)
+                  SizedBox.shrink(),
                 ],
               ),
               SizedBox(height: 20),

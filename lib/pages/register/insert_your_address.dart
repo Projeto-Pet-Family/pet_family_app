@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_family_app/services/via_cep_service.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
-import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:pet_family_app/widgets/app_drop_down.dart';
+import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:brasil_fields/brasil_fields.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:async';
 
 class InsertYourAddress extends StatefulWidget {
   const InsertYourAddress({super.key});
@@ -23,6 +27,12 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
   TextEditingController neighborhoodController = TextEditingController();
   TextEditingController cityController = TextEditingController();
   String? _selectedState;
+
+  // Variáveis para controle da busca de CEP
+  bool _isLoadingCep = false;
+  String? _cepError;
+  Timer? _debounceTimer;
+  final int _cepDebounceMs = 800;
 
   // Lista de estados brasileiros
   final List<String> statesList = [
@@ -135,6 +145,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
       neighborhoodController.clear();
       cityController.clear();
       _selectedState = null;
+      _cepError = null;
     });
   }
 
@@ -145,6 +156,105 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
     setState(() {
       _selectedState = null;
     });
+  }
+
+  // Método para limpar campos de endereço (exceto CEP)
+  void _clearAddressFields() {
+    setState(() {
+      streetController.clear();
+      numberController.clear();
+      complementController.clear();
+      neighborhoodController.clear();
+      cityController.clear();
+      _selectedState = null;
+      _cepError = null;
+    });
+  }
+
+  // Método para consultar CEP automaticamente
+  Future<void> _fetchAddressFromCep(String cep) async {
+    // Remove formatação
+    final cleanCep = cep.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    // Verifica se tem 8 dígitos
+    if (cleanCep.length != 8) {
+      setState(() {
+        _cepError = cleanCep.isNotEmpty ? 'CEP incompleto' : null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingCep = true;
+      _cepError = null;
+    });
+
+    try {
+      final address = await ViaCepService.fetchAddress(cep);
+      
+      if (address != null && address.isValid) {
+        setState(() {
+          // Preenche os campos automaticamente
+          streetController.text = address.logradouro;
+          complementController.text = address.complemento;
+          neighborhoodController.text = address.bairro;
+          cityController.text = address.localidade;
+          _selectedState = address.uf;
+          
+          // Remove foco do campo CEP para evitar teclado
+          FocusScope.of(context).requestFocus(FocusNode());
+        });
+        
+        // Salva os dados automaticamente
+        await _saveAddressData();
+      } else if (address != null && !address.isValid) {
+        setState(() {
+          _cepError = 'CEP não encontrado';
+        });
+      } else {
+        setState(() {
+          _cepError = 'Erro ao buscar endereço';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _cepError = 'Erro ao buscar CEP. Tente novamente.';
+      });
+    } finally {
+      setState(() {
+        _isLoadingCep = false;
+      });
+    }
+  }
+
+  // Método para lidar com digitação no campo CEP
+  void _onCepChanged(String value) {
+    // Cancela o timer anterior
+    if (_debounceTimer != null) {
+      _debounceTimer!.cancel();
+    }
+    
+    // Limpa mensagens de erro
+    if (_cepError != null) {
+      setState(() {
+        _cepError = null;
+      });
+    }
+    
+    // Configura novo timer para debounce
+    _debounceTimer = Timer(Duration(milliseconds: _cepDebounceMs), () {
+      final cleanCep = value.replaceAll(RegExp(r'[^0-9]'), '');
+      if (cleanCep.length == 8) {
+        _fetchAddressFromCep(value);
+      } else if (cleanCep.isNotEmpty) {
+        setState(() {
+          _cepError = 'CEP incompleto';
+        });
+      }
+    });
+    
+    // Salva dados imediatamente
+    _saveAddressData();
   }
 
   bool get _isFormValid {
@@ -180,22 +290,36 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                 ),
                 const SizedBox(height: 30),
 
-                const SizedBox(height: 30),
-
-                AppTextField(
-                  controller: cepController,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CepInputFormatter()
+                // Campo CEP com busca automática
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppTextField(
+                      controller: cepController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        CepInputFormatter()
+                      ],
+                      labelText: 'CEP',
+                      hintText: 'Digite seu CEP',
+                      onChanged: _onCepChanged,
+                    ),
+                    if (_isLoadingCep)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0, left: 4.0),
+                        child: Text(
+                          'Buscando endereço...',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
                   ],
-                  labelText: 'CEP',
-                  hintText: 'Digite seu CEP',
-                  onChanged: (value) {
-                    _saveAddressData();
-                    setState(() {});
-                  },
                 ),
+                
                 const SizedBox(height: 15),
+                
                 AppTextField(
                   controller: streetController,
                   labelText: 'Rua',
@@ -293,20 +417,6 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
                 ),
 
                 const SizedBox(height: 20),
-
-                // Botão para limpar cache
-                OutlinedButton(
-                  onPressed: _clearAddressData,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey,
-                    side: const BorderSide(color: Colors.grey),
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                  child: const Text('Limpar Endereço'),
-                ),
               ],
             ),
           ),
@@ -317,6 +427,7 @@ class _InsertYourAddressState extends State<InsertYourAddress> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     cepController.dispose();
     streetController.dispose();
     numberController.dispose();

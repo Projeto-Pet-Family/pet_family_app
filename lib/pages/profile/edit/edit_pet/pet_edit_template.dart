@@ -22,6 +22,8 @@ class PetEditTemplate extends StatelessWidget {
 
   // Ícones para diferentes espécies
   IconData _getPetIcon(String especie) {
+    if (especie.isEmpty) return Icons.pets; // Ícone padrão
+    
     switch (especie.toLowerCase()) {
       case 'cachorro':
         return Icons.pets;
@@ -43,7 +45,9 @@ class PetEditTemplate extends StatelessWidget {
 
   // Cores baseadas no sexo do pet
   Color _getSexColor(String? sexo) {
-    switch (sexo?.toLowerCase()) {
+    if (sexo == null) return Colors.grey[100]!;
+    
+    switch (sexo.toLowerCase()) {
       case 'macho':
         return Colors.blue[50]!;
       case 'fêmea':
@@ -55,7 +59,9 @@ class PetEditTemplate extends StatelessWidget {
   }
 
   Color _getSexTextColor(String? sexo) {
-    switch (sexo?.toLowerCase()) {
+    if (sexo == null) return Colors.grey[800]!;
+    
+    switch (sexo.toLowerCase()) {
       case 'macho':
         return Colors.blue[800]!;
       case 'fêmea':
@@ -67,7 +73,9 @@ class PetEditTemplate extends StatelessWidget {
   }
 
   String _getSexSymbol(String? sexo) {
-    switch (sexo?.toLowerCase()) {
+    if (sexo == null) return '?';
+    
+    switch (sexo.toLowerCase()) {
       case 'macho':
         return '♂';
       case 'fêmea':
@@ -128,12 +136,16 @@ class PetEditTemplate extends StatelessWidget {
                     // Nome e sexo
                     Row(
                       children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -164,14 +176,15 @@ class PetEditTemplate extends StatelessWidget {
                     const SizedBox(height: 6),
                     
                     // Espécie e Raça
-                    Text(
-                      raca.isNotEmpty ? '$especie • $raca' : especie,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black54,
+                    if (especie.isNotEmpty || raca.isNotEmpty)
+                      Text(
+                        _formatarEspecieRaca(especie, raca),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black54,
+                        ),
                       ),
-                    ),
                     
                     // Idade e Porte
                     if ((idade != null && idade!.isNotEmpty) || 
@@ -214,7 +227,7 @@ class PetEditTemplate extends StatelessWidget {
                               ),
                             if (porte != null && porte!.isNotEmpty)
                               Text(
-                                'Porte ${porte!.toLowerCase()}',
+                                'Porte $porte',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey[600],
@@ -239,5 +252,16 @@ class PetEditTemplate extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatarEspecieRaca(String especie, String raca) {
+    if (especie.isNotEmpty && raca.isNotEmpty) {
+      return '$especie • $raca';
+    } else if (especie.isNotEmpty) {
+      return especie;
+    } else if (raca.isNotEmpty) {
+      return raca;
+    }
+    return ''; // Retorna vazio se ambos forem vazios
   }
 }

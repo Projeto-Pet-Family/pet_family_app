@@ -996,12 +996,12 @@ class _BookingTemplateState extends State<BookingTemplate> {
           if (podeRemoverPet) _buildBotaoRemoverPet(),
 
           // Botão Enviar Mensagem (se aplicável)
-          if (widget.contrato.estaAtivo)
+          /* if (widget.contrato.estaAtivo)
             _buildBotaoPadrao(
               label: 'Enviar mensagem',
               onPressed: () => _abrirTelaMensagem(),
               icon: const Icon(Icons.message, size: 20),
-            ),
+            ), */
 
           // Botão Avaliação (APENAS quando status for 'concluido')
           if (podeAvaliar) _buildBotaoAvaliacao(),

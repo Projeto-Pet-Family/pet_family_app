@@ -1,8 +1,10 @@
 // providers/auth_provider.dart
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:pet_family_app/models/user_model.dart';
 import 'package:pet_family_app/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -15,6 +17,7 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   bool _hasCheckedAuth = false;
   bool _isInitializing = false;
+  bool _rememberMe = false;
 
   // GETTERS
   UsuarioModel? get usuario => _usuario;
@@ -24,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasCheckedAuth => _hasCheckedAuth;
   bool get isLoggedIn => _isAuthenticated && _usuarioId != null;
+  bool get rememberMe => _rememberMe;
 
   // Dados do usuário (conveniência)
   String? get nomeUsuario => _usuario?.nome;
@@ -95,6 +99,9 @@ class AuthProvider extends ChangeNotifier {
 
       print('🔍 Verificando autenticação do usuário...');
 
+      // Carregar preferência "Lembrar de mim"
+      await _loadRememberMePreference();
+
       // Verificar se há token válido
       final isLoggedIn = await _authService.isLoggedIn();
       print('📊 Status de login (cache): $isLoggedIn');
@@ -135,6 +142,33 @@ class AuthProvider extends ChangeNotifier {
       _isInitializing = false;
       _safeNotifyListeners();
     }
+  }
+
+  // ========== MÉTODOS PARA "LEMBRAR DE MIM" ==========
+
+  Future<void> _loadRememberMePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _rememberMe = prefs.getBool('rememberMe') ?? false;
+      print('📝 Preferência "Lembrar de mim": $_rememberMe');
+    } catch (error) {
+      print('❌ Erro ao carregar preferência "Lembrar de mim": $error');
+      _rememberMe = false;
+    }
+  }
+
+  Future<void> setRememberMe(bool value) async {
+    _rememberMe = value;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('rememberMe', value);
+      print('💾 Preferência "Lembrar de mim" salva: $value');
+    } catch (error) {
+      print('❌ Erro ao salvar preferência "Lembrar de mim": $error');
+    }
+    
+    _safeNotifyListeners();
   }
 
   // ========== MÉTODO DE LOGIN ==========
@@ -454,6 +488,11 @@ class AuthProvider extends ChangeNotifier {
     _isAuthenticated = false;
     _errorMessage = null;
     _hasCheckedAuth = false;
+    _rememberMe = false;
+
+    // Limpar preferência "Lembrar de mim"
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('rememberMe');
 
     print('✅ Cache limpo');
     _safeNotifyListeners();

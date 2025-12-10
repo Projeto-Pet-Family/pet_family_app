@@ -31,6 +31,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+         <meta-data
+            android:name="android.enable_transparent_status_bar"
+            android:value="true" />
+        <meta-data
+            android:name="android.enable_transparent_navigation_bar"
+            android:value="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

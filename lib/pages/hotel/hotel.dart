@@ -528,7 +528,7 @@ class _HotelState extends State<Hotel> {
   Widget _buildActionButtons() => Column(
         children: [
           const SizedBox(height: 40),
-          Align(
+         /*  Align(
             alignment: Alignment.center,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -559,7 +559,7 @@ class _HotelState extends State<Hotel> {
                 ),
               ),
             ),
-          ),
+          ), */
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 50, 0, 40),
             child: AppButton(

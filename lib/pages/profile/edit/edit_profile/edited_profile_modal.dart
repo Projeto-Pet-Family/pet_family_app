@@ -102,10 +102,17 @@ class EditProfileModal extends StatelessWidget {
           const SizedBox(height: 8),
           TextFormField(
             controller: cpfController,
-            enabled: !isSalvando,
+            enabled: false, // Desabilita completamente a edição
             keyboardType: TextInputType.number,
+            style: TextStyle(
+              color:
+                  Colors.grey[800], // Cor mais escura para melhor legibilidade
+            ),
             decoration: InputDecoration(
               hintText: 'Digite seu CPF',
+              filled: true,
+              fillColor: Colors.grey[
+                  100], // Fundo cinza claro para indicar estado desabilitado
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey[300]!),
@@ -114,9 +121,9 @@ class EditProfileModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey[300]!),
               ),
-              focusedBorder: OutlineInputBorder(
+              disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFC0C9FF)),
+                borderSide: BorderSide(color: Colors.grey[300]!),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,

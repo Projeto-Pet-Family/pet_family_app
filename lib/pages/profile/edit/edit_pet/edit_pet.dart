@@ -202,6 +202,44 @@ class _EditPetState extends State<EditPet> {
     }
   }
 
+  // MÉTODO AUXILIAR: Formatar informações para exibição
+  String _formatarEspecie(String? especie) {
+    if (especie == null || especie.isEmpty || especie.toLowerCase().contains('não informado')) {
+      return ''; // Retorna string vazia
+    }
+    return especie;
+  }
+
+  String _formatarRaca(String? raca) {
+    if (raca == null || raca.isEmpty || raca.toLowerCase().contains('não informado')) {
+      return ''; // Retorna string vazia
+    }
+    return raca;
+  }
+
+  String? _formatarSexo(String? sexo) {
+    if (sexo == null || sexo.isEmpty || sexo.toLowerCase().contains('não informado')) {
+      return null; // Retorna null para não exibir
+    }
+    return sexo;
+  }
+
+  String? _formatarPorte(String? porte) {
+    if (porte == null || porte.isEmpty || porte.toLowerCase().contains('não informado')) {
+      return null; // Retorna null para não exibir
+    }
+    // Remove "Porte" se já estiver na string
+    porte = porte.replaceAll('Porte', '').trim();
+    return porte.isNotEmpty ? porte : null;
+  }
+
+  String? _formatarIdade(String? idade) {
+    if (idade == null || idade.isEmpty || idade == '0' || idade == '0 anos') {
+      return null; // Retorna null para não exibir
+    }
+    return idade;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -359,14 +397,21 @@ class _EditPetState extends State<EditPet> {
                               itemCount: petProvider.pets.length,
                               itemBuilder: (context, index) {
                                 final pet = petProvider.pets[index];
+                                
+                                // Formata os dados antes de passar para o template
+                                final especieFormatada = _formatarEspecie(pet.descricaoEspecie);
+                                final racaFormatada = _formatarRaca(pet.descricaoRaca);
+                                final sexoFormatado = _formatarSexo(pet.sexo);
+                                final porteFormatado = _formatarPorte(pet.descricaoPorte);
+                                final idadeFormatada = _formatarIdade(_calcularIdade(pet.nascimento));
+                                
                                 return PetEditTemplate(
-                                  name: pet.nome ?? 'Nome não informado',
-                                  especie:
-                                      pet.descricaoEspecie ?? 'Não informado',
-                                  raca: pet.descricaoRaca ?? 'Não informado',
-                                  idade: _calcularIdade(pet.nascimento),
-                                  sexo: pet.sexo ?? 'Não informado',
-                                  porte: pet.descricaoPorte ?? 'Não informado',
+                                  name: pet.nome ?? 'Sem nome',
+                                  especie: especieFormatada,
+                                  raca: racaFormatada,
+                                  idade: idadeFormatada,
+                                  sexo: sexoFormatado,
+                                  porte: porteFormatado,
                                   onTap: () => showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,
@@ -398,7 +443,7 @@ class _EditPetState extends State<EditPet> {
   }
 
   String _calcularIdade(DateTime? nascimento) {
-    if (nascimento == null) return '0';
+    if (nascimento == null) return '';
     try {
       final hoje = DateTime.now();
       final idade = hoje.year - nascimento.year;
@@ -408,7 +453,7 @@ class _EditPetState extends State<EditPet> {
       }
       return idade.toString();
     } catch (e) {
-      return '0';
+      return '';
     }
   }
 }

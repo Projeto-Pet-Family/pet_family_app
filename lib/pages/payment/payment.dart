@@ -1239,7 +1239,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       : null,
                   label: _isCreatingContract
                       ? 'Processando...'
-                      : 'Criar Contrato e Finalizar Reserva',
+                      : 'Finalizar Reserva',
                   fontSize: 18,
                   buttonColor: (_hasValidData &&
                           selectedPaymentMethod == 'Pagar no hotel' &&

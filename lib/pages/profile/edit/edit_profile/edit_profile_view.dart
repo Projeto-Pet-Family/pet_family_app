@@ -48,54 +48,6 @@ class EditProfileView extends StatelessWidget {
                     ),
                     const SizedBox(height: 30),
 
-                    // Foto de perfil
-                    Center(
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.grey[300],
-                            ),
-                            child: isLoading
-                                ? Center(
-                                    child: CircularProgressIndicator(
-                                      color: Colors.grey[600],
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Colors.grey[600],
-                                  ),
-                          ),
-                          if (!isLoading)
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(0xFFC0C9FF),
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  size: 20,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
                     const SizedBox(height: 40),
 
                     // Informações do usuário
@@ -129,20 +81,6 @@ class EditProfileView extends StatelessWidget {
                       isLoading: isLoading,
                       icon: Icons.phone_outlined,
                     ),
-                    const SizedBox(height: 16),
-
-                    if (usuario.dataCadastro != null)
-                      Column(
-                        children: [
-                          ProfileInfoItem(
-                            label: 'Data de Cadastro',
-                            value: usuario.dataCadastro?.toString() ?? '',
-                            isLoading: isLoading,
-                            icon: Icons.calendar_today_outlined,
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
 
                     const SizedBox(height: 40),
 

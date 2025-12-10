@@ -249,7 +249,7 @@ class _EditProfileState extends State<EditProfile> {
   void _irParaLogin(BuildContext context) {
     Navigator.pushNamedAndRemoveUntil(
       context, 
-      '/login', 
+      '/', 
       (route) => false
     );
   }

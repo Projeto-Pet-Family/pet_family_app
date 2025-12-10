@@ -192,46 +192,6 @@ class _ProfileState extends State<Profile> {
                     ),
                   ),
 
-                  SizedBox(height: 30),
-
-                  // Informações do usuário
-                  Container(
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        // Avatar
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFFC0C9FF),
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 16),
-
-                        // Dados do usuário
-                        Text(
-                          nome,
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   SizedBox(height: 40),
 
                   // Opções do perfil

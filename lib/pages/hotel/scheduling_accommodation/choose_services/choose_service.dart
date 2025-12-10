@@ -388,7 +388,28 @@ class _ChooseServiceState extends State<ChooseService> {
 
       await prefs.setStringList('selected_service_names', selectedServiceNames);
 
-      print('💾 Total de serviços salvo: R\$ ${totalValue.toStringAsFixed(2)}');
+      // Salva também os IDs dos serviços selecionados
+      final selectedServiceIds =
+          _servicosPorPet.keys.map((id) => id.toString()).toList();
+      await prefs.setStringList('selected_service_ids', selectedServiceIds);
+
+      // Salva preços individuais dos serviços para referência
+      for (final serviceId in _servicosPorPet.keys) {
+        final service = _services.firstWhere(
+          (s) => s.idServico == serviceId,
+          orElse: () => ServiceModel(
+            idservico: 0,
+            idhospedagem: 0,
+            descricao: '',
+            preco: 0,
+          ),
+        );
+        await prefs.setDouble('service_${serviceId}_price', service.preco);
+        await prefs.setString('service_${serviceId}_name', service.descricao);
+      }
+
+      print('💾 Total de serviços salvo: R\$${totalValue.toStringAsFixed(2)}');
+      print('💾 Nomes dos serviços: $selectedServiceNames');
     } catch (e) {
       print('❌ Erro ao salvar detalhes dos serviços: $e');
     }

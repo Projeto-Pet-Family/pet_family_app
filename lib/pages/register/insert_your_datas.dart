@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_family_app/widgets/app_bar_pet_family.dart';
+import 'package:pet_family_app/widgets/app_bar_return.dart';
 import 'package:pet_family_app/widgets/app_button.dart';
 import 'package:pet_family_app/widgets/app_text_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,136 +115,140 @@ class _InsertYourDatasState extends State<InsertYourDatas> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const PetFamilyAppBar(),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-          child: Center(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    'Insira seus dados',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                AppTextField(
-                  controller: nameController,
-                  labelText: 'Nome completo',
-                  hintText: 'Digite seu nome completo',
-                  onChanged: (value) {
-                    _saveUserData();
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 15),
-                AppTextField(
-                  controller: cpfController,
-                  labelText: 'CPF',
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CpfInputFormatter()
-                  ],
-                  hintText: 'Digite seu CPF',
-                  onChanged: (value) {
-                    _saveUserData();
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 15),
-                AppTextField(
-                  controller: phoneController,
-                  labelText: 'Telefone',
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    TelefoneInputFormatter()
-                  ],
-                  hintText: 'Digite seu telefone',
-                  onChanged: (value) {
-                    _saveUserData();
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 15),
-                AppTextField(
-                  controller: emailController,
-                  labelText: 'E-mail',
-                  keyboardType: TextInputType.emailAddress,
-                  hintText: 'Digite seu E-mail',
-                  onChanged: (value) {
-                    _saveUserData();
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 15),
-                AppTextField(
-                  controller: passwordController,
-                  labelText: 'Senha',
-                  hintText: 'Digite sua senha',
-                  obscureText: true,
-                  onChanged: (value) {
-                    _saveUserData();
-                    _checkPasswords();
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 15),
-                AppTextField(
-                  controller: confirmPasswordController,
-                  labelText: 'Confirmar senha',
-                  hintText: 'Confirme sua senha',
-                  obscureText: true,
-                  onChanged: (value) {
-                    _saveUserData();
-                    _checkPasswords();
-                    setState(() {});
-                  },
-                ),
-                
-                // Mensagem de erro para senhas
-                if (!_passwordsMatch && confirmPasswordController.text.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'As senhas não coincidem',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 14,
+        child: Column(
+          children: [
+            AppBarReturn(route: '/'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Text(
+                        'Insira seus dados',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 27,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
-                  ),
-                
-                const SizedBox(height: 30),
-                
-                // Debug: Mostrar estado do formulário (pode remover depois)
-                // Text('Formulário válido: $_isFormValid'),
-                // Text('Senhas coincidem: $_passwordsMatch'),
-                // Text('Senha: ${passwordController.text}'),
-                // Text('Confirmar: ${confirmPasswordController.text}'),
-                
-                AppButton(
-                  onPressed: _isFormValid
-                      ? () async {
-                          await _saveUserData(); // Garante que tudo está salvo
-                          context.go('/insert-your-address');
-                        }
-                      : null,
-                  label: 'Próximo',
-                  fontSize: 20,
+                    const SizedBox(height: 30),
+                    AppTextField(
+                      controller: nameController,
+                      labelText: 'Nome completo',
+                      hintText: 'Digite seu nome completo',
+                      onChanged: (value) {
+                        _saveUserData();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    AppTextField(
+                      controller: cpfController,
+                      labelText: 'CPF',
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        CpfInputFormatter()
+                      ],
+                      hintText: 'Digite seu CPF',
+                      onChanged: (value) {
+                        _saveUserData();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    AppTextField(
+                      controller: phoneController,
+                      labelText: 'Telefone',
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        TelefoneInputFormatter()
+                      ],
+                      hintText: 'Digite seu telefone',
+                      onChanged: (value) {
+                        _saveUserData();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    AppTextField(
+                      controller: emailController,
+                      labelText: 'E-mail',
+                      keyboardType: TextInputType.emailAddress,
+                      hintText: 'Digite seu E-mail',
+                      onChanged: (value) {
+                        _saveUserData();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    AppTextField(
+                      controller: passwordController,
+                      labelText: 'Senha',
+                      hintText: 'Digite sua senha',
+                      obscureText: true,
+                      onChanged: (value) {
+                        _saveUserData();
+                        _checkPasswords();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    AppTextField(
+                      controller: confirmPasswordController,
+                      labelText: 'Confirmar senha',
+                      hintText: 'Confirme sua senha',
+                      obscureText: true,
+                      onChanged: (value) {
+                        _saveUserData();
+                        _checkPasswords();
+                        setState(() {});
+                      },
+                    ),
+                    
+                    // Mensagem de erro para senhas
+                    if (!_passwordsMatch && confirmPasswordController.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'As senhas não coincidem',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    
+                    const SizedBox(height: 30),
+                    
+                    // Debug: Mostrar estado do formulário (pode remover depois)
+                    // Text('Formulário válido: $_isFormValid'),
+                    // Text('Senhas coincidem: $_passwordsMatch'),
+                    // Text('Senha: ${passwordController.text}'),
+                    // Text('Confirmar: ${confirmPasswordController.text}'),
+                    
+                    AppButton(
+                      onPressed: _isFormValid
+                          ? () async {
+                              await _saveUserData(); // Garante que tudo está salvo
+                              context.go('/insert-your-address');
+                            }
+                          : null,
+                      label: 'Próximo',
+                      fontSize: 20,
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                  ],
                 ),
-                
-                const SizedBox(height: 20),
-                
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

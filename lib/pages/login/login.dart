@@ -18,6 +18,28 @@ class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
 
   @override
+  void initState() {
+    super.initState();
+    // Carregar credenciais salvas quando a tela for aberta
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    // Este método poderia ser expandido para carregar credenciais
+    // criptografadas se necessário no futuro
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Verificar se "Lembrar de mim" está ativo
+      if (authProvider.rememberMe) {
+        // Aqui você pode carregar credenciais salvas
+        // Por enquanto, apenas mantém o checkbox marcado
+        print('📝 "Lembrar de mim" está ativo');
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
 
@@ -87,6 +109,31 @@ class _LoginState extends State<Login> {
                     },
                   ),
 
+                  // Checkbox "Lembrar de mim"
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: authProvider.rememberMe,
+                        onChanged: (value) async {
+                          await authProvider.setRememberMe(value ?? false);
+                        },
+                        activeColor: Color(0xFF8692DE),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Lembrar de mim',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF474343),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+
                   // Mensagem de erro
                   if (authProvider.errorMessage != null)
                     Padding(
@@ -100,8 +147,6 @@ class _LoginState extends State<Login> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-
-                  const SizedBox(height: 10),
 
                   // Link esqueceu senha
                   Align(
