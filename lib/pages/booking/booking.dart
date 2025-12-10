@@ -1,4 +1,4 @@
-// pages/booking/booking.dart
+// pages/booking/booking.dart - CÓDIGO COMPLETO ATUALIZADO
 import 'package:flutter/material.dart';
 import 'package:pet_family_app/models/contrato_model.dart';
 import 'package:pet_family_app/pages/booking/template/booking_template.dart';
@@ -7,8 +7,7 @@ import 'package:pet_family_app/services/auth_service.dart';
 import 'package:pet_family_app/services/contrato_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pet_family_app/providers/auth_provider.dart';
-import 'package:http/http.dart' as http;
+import 'package:pet_family_app/services/status_service.dart';
 
 class Booking extends StatefulWidget {
   const Booking({super.key});
@@ -20,6 +19,7 @@ class Booking extends StatefulWidget {
 class _BookingState extends State<Booking> {
   String? _optionSelected;
   late ContratoRepository _contratoRepository;
+  final StatusService _statusService = StatusService(); // SEM PARÂMETRO
   List<ContratoModel> _contratos = [];
   bool _isLoading = false;
   bool _isCreating = false;
@@ -39,8 +39,8 @@ class _BookingState extends State<Booking> {
     'aprovado': 'aprovado',
     'em execução': 'em_execucao',
     'concluido': 'concluido',
-    'Negado': 'negado',
-    'Cancelado': 'cancelado',
+    'negado': 'negado',
+    'cancelado': 'cancelado',
   };
 
   final Map<String, String> _statusDisplayMap = {
@@ -62,25 +62,21 @@ class _BookingState extends State<Booking> {
 
   void _inicializarRepository() {
     try {
-      // Inicializar o Dio
       final dio = Dio(BaseOptions(
+        baseUrl: 'https://bepetfamily.onrender.com',
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         sendTimeout: const Duration(seconds: 30),
       ));
 
-      // Inicializar o serviço
       final contratoService = ContratoService(dio);
-
-      // Inicializar o repository
       _contratoRepository =
           ContratoRepositoryImpl(contratoService: contratoService);
 
       print('✅ ContratoRepository inicializado com sucesso');
     } catch (e) {
       print('❌ Erro ao inicializar ContratoRepository: $e');
-      // Fallback para evitar erro de late initialization
-      final dio = Dio();
+      final dio = Dio(BaseOptions(baseUrl: 'https://bepetfamily.onrender.com'));
       final contratoService = ContratoService(dio);
       _contratoRepository =
           ContratoRepositoryImpl(contratoService: contratoService);
@@ -90,7 +86,6 @@ class _BookingState extends State<Booking> {
   Future<void> _criarContratoComCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final authProvider = AuthProvider();
       final authService = AuthService();
       final idUsuario = await authService.getUserIdFromCache();
 
@@ -147,10 +142,9 @@ class _BookingState extends State<Booking> {
       print('📅 Data Fim: $dataFim');
       print('🛎️ Serviços: $servicosFormatados');
 
-      // Criar contrato usando o método correto
       final contrato = await _contratoRepository.criarContrato(
-        idHospedagem: 1, // TODO: Obter idHospedagem do cache se necessário
-        idUsuario: idUsuario, // Adicionado ID do usuário
+        idHospedagem: 1,
+        idUsuario: idUsuario,
         dataInicio: dataInicio,
         dataFim: dataFim,
         pets: petIds,
@@ -166,7 +160,6 @@ class _BookingState extends State<Booking> {
         _isCreating = false;
       });
 
-      // Recarregar contratos para incluir o novo
       await _carregarContratos();
     } catch (e) {
       print('❌ Erro ao criar contrato: $e');
@@ -184,7 +177,6 @@ class _BookingState extends State<Booking> {
         _errorMessage = '';
       });
 
-      final authProvider = AuthProvider();
       final authService = AuthService();
       final idUsuario = await authService.getUserIdFromCache();
 
@@ -211,19 +203,14 @@ class _BookingState extends State<Booking> {
     }
   }
 
-  Future<void> _filtrarContratosPorStatus(String? status) async {
+  Future<void> _filtrarContratosPorStatus(String? statusDisplay) async {
     try {
-      if (status == null || status.isEmpty) {
-        await _carregarContratos();
-        return;
-      }
-
       setState(() {
         _isLoading = true;
         _errorMessage = '';
+        _optionSelected = statusDisplay;
       });
 
-      final authProvider = AuthProvider();
       final authService = AuthService();
       final idUsuario = await authService.getUserIdFromCache();
 
@@ -231,24 +218,45 @@ class _BookingState extends State<Booking> {
         throw Exception('Usuário não autenticado');
       }
 
-      final statusApi = _statusMap[status.toLowerCase()];
-      if (statusApi == null) {
-        throw Exception('Status inválido: $status');
+      print('🎯 Iniciando filtro por status: $statusDisplay');
+
+      if (statusDisplay == null || statusDisplay == 'Todos') {
+        // Carregar todos os contratos
+        print('📋 Mostrando todos os contratos');
+        await _carregarContratos();
+      } else {
+        // Converter status display para formato da API
+        final statusApi = _statusMap[statusDisplay];
+
+        if (statusApi == null) {
+          throw Exception('Status inválido: $statusDisplay');
+        }
+
+        print('🔍 Status para API: $statusApi');
+
+        // Usar o StatusService para filtrar
+        final resultado = await _statusService.filtrarContratosUsuarioPorStatus(
+          idUsuario: idUsuario,
+          status: [statusApi],
+        );
+
+        print('📊 Resultado do filtro: ${resultado['success']}');
+
+        if (resultado['success'] == true) {
+          final contratosFiltrados =
+              List<ContratoModel>.from(resultado['contratos'] ?? []);
+          setState(() {
+            _contratos = contratosFiltrados;
+            _isLoading = false;
+          });
+          print(
+              '✅ ${contratosFiltrados.length} contratos encontrados para "$statusDisplay"');
+        } else {
+          // Se a API falhar, fazer filtro local
+          print('⚠️ API falhou, fazendo filtro local...');
+          await _filtrarLocalmente(statusApi);
+        }
       }
-
-      final contratosFiltrados =
-          await _contratoRepository.listarContratosPorUsuarioEStatus(
-        idUsuario,
-        statusApi,
-      );
-
-      setState(() {
-        _contratos = contratosFiltrados;
-        _isLoading = false;
-      });
-
-      print(
-          '✅ ${contratosFiltrados.length} contratos encontrados para status: $status');
     } catch (e) {
       print('❌ Erro ao filtrar contratos: $e');
       setState(() {
@@ -258,10 +266,34 @@ class _BookingState extends State<Booking> {
     }
   }
 
+  Future<void> _filtrarLocalmente(String statusApi) async {
+    try {
+      // Primeiro carrega todos os contratos
+      await _carregarContratos();
+
+      // Depois filtra localmente
+      final contratosFiltrados = _contratos.where((contrato) {
+        return contrato.status == statusApi;
+      }).toList();
+
+      setState(() {
+        _contratos = contratosFiltrados;
+        _isLoading = false;
+      });
+
+      print('✅ ${contratosFiltrados.length} contratos encontrados localmente');
+    } catch (e) {
+      print('❌ Erro no filtro local: $e');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erro ao filtrar localmente: $e';
+      });
+    }
+  }
+
   Future<void> _atualizarContratoNaLista(
       ContratoModel contratoAtualizado) async {
     try {
-      // Buscar contrato atualizado do servidor
       final contratoCompleto = await _contratoRepository.buscarContratoPorId(
         contratoAtualizado.idContrato!,
       );
@@ -277,13 +309,11 @@ class _BookingState extends State<Booking> {
               '✅ Contrato ${contratoCompleto.idContrato} atualizado na lista');
           print('📊 Novo status: ${contratoCompleto.status}');
         } else {
-          // Se não encontrou, adicionar à lista
           _contratos.add(contratoCompleto);
         }
       });
     } catch (e) {
       print('❌ Erro ao atualizar contrato na lista: $e');
-      // Fallback: atualizar com os dados disponíveis
       setState(() {
         final index = _contratos.indexWhere(
           (c) => c.idContrato == contratoAtualizado.idContrato,
@@ -300,7 +330,6 @@ class _BookingState extends State<Booking> {
     try {
       print('🚀 Cancelando contrato no backend: ${contrato.idContrato}');
 
-      // Atualizar status para cancelado
       final contratoAtualizado =
           await _contratoRepository.atualizarStatusContrato(
         idContrato: contrato.idContrato!,
@@ -308,10 +337,8 @@ class _BookingState extends State<Booking> {
         motivo: 'Cancelado pelo usuário',
       );
 
-      // Atualizar na lista
       _atualizarContratoNaLista(contratoAtualizado);
 
-      // Mostrar mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
@@ -338,7 +365,6 @@ class _BookingState extends State<Booking> {
         ),
       );
 
-      // Recarregar contratos para garantir consistência
       await _carregarContratos();
     }
   }
@@ -375,7 +401,6 @@ class _BookingState extends State<Booking> {
     try {
       print('🗑️ Excluindo contrato: ${contrato.idContrato}');
 
-      // Mostrar diálogo de confirmação
       final confirmar = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -397,10 +422,8 @@ class _BookingState extends State<Booking> {
 
       if (confirmar != true) return;
 
-      // Excluir contrato
       await _contratoRepository.excluirContrato(contrato.idContrato!);
 
-      // Remover da lista
       setState(() {
         _contratos.removeWhere((c) => c.idContrato == contrato.idContrato);
       });
@@ -429,6 +452,7 @@ class _BookingState extends State<Booking> {
       setState(() {
         _isLoading = true;
         _errorMessage = '';
+        _optionSelected = null;
       });
 
       await _carregarContratos();
@@ -444,21 +468,6 @@ class _BookingState extends State<Booking> {
       setState(() {
         _errorMessage = 'Erro ao recarregar: $e';
       });
-    }
-  }
-
-  Future<void> _limparCacheECriarNovo() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('contrato_criado');
-      await prefs.remove('selected_start_date');
-      await prefs.remove('selected_end_date');
-      await prefs.remove('selected_pets');
-      await prefs.remove('selected_services');
-
-      await _criarContratoComCache();
-    } catch (e) {
-      print('❌ Erro ao limpar cache: $e');
     }
   }
 
@@ -534,6 +543,145 @@ class _BookingState extends State<Booking> {
     }
   }
 
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          Icon(
+            _optionSelected != null && _optionSelected != 'Todos'
+                ? Icons.filter_alt_off
+                : Icons.calendar_today,
+            size: 80,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            _optionSelected != null && _optionSelected != 'Todos'
+                ? 'Nenhum agendamento "$_optionSelected" encontrado'
+                : 'Nenhum agendamento encontrado',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _optionSelected != null && _optionSelected != 'Todos'
+                ? 'Tente selecionar outro filtro'
+                : 'Seus agendamentos aparecerão aqui',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _recarregarContratos,
+            child: const Text('Recarregar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContratosList() {
+    final contratosOrdenados = List<ContratoModel>.from(_contratos)
+      ..sort((a, b) => b.dataInicio.compareTo(a.dataInicio));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        ...contratosOrdenados.map((contrato) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: BookingTemplate(
+              contrato: contrato,
+              onTap: () {
+                _mostrarDetalhesContrato(contrato);
+              },
+              onEditar: () {
+                _editarContrato(contrato);
+              },
+              onCancelar: () {
+                _cancelarContratoNoBackend(contrato);
+              },
+              onExcluir: () {
+                _excluirContrato(contrato);
+              },
+              onContratoEditado: (contratoAtualizado) {
+                _atualizarContratoNaLista(contratoAtualizado);
+              },
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  void _mostrarDetalhesContrato(ContratoModel contrato) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detalhes do Agendamento'),
+        content: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailItem('ID', contrato.idContrato?.toString() ?? 'N/A'),
+              _buildDetailItem('Status', _obterNomeStatus(contrato.status)),
+              _buildDetailItem('Check-in', _formatarData(contrato.dataInicio)),
+              if (contrato.dataFim != null)
+                _buildDetailItem('Check-out', _formatarData(contrato.dataFim!)),
+              _buildDetailItem('Hospedagem', 'ID: ${contrato.idHospedagem}'),
+              if (contrato.hospedagemNome != null)
+                _buildDetailItem(
+                    'Nome da Hospedagem', contrato.hospedagemNome!),
+              if (contrato.dataCriacao != null)
+                _buildDetailItem(
+                    'Criado em', _formatarData(contrato.dataCriacao!)),
+              if (contrato.pets != null && contrato.pets!.isNotEmpty)
+                _buildDetailItem('Pets', '${contrato.pets!.length} pet(s)'),
+              if (contrato.servicosGerais != null &&
+                  contrato.servicosGerais!.isNotEmpty)
+                _buildDetailItem('Serviços',
+                    '${contrato.servicosGerais!.length} serviço(s)'),
+              if (contrato.valorServicos != null)
+                _buildDetailItem('Valor Total',
+                    'R\$${contrato.valorServicos!.toStringAsFixed(2)}'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value) {
+    return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Expanded(child: Text(value)),
+          ],
+        ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -567,7 +715,7 @@ class _BookingState extends State<Booking> {
               ),
               const SizedBox(height: 30),
 
-              // Filtro de status - mantido no scroll
+              // Filtro de status
               _buildFiltroStatus(),
               const SizedBox(height: 20),
 
@@ -631,140 +779,6 @@ class _BookingState extends State<Booking> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        children: [
-          Icon(
-            Icons.calendar_today,
-            size: 80,
-            color: Colors.grey[300],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Nenhum agendamento encontrado',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Seus agendamentos aparecerão aqui',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _recarregarContratos,
-            child: const Text('Recarregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContratosList() {
-    // Ordenar contratos por data de início (mais recentes primeiro)
-    final contratosOrdenados = List<ContratoModel>.from(_contratos)
-      ..sort((a, b) => b.dataInicio.compareTo(a.dataInicio));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        ...contratosOrdenados.map((contrato) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            child: BookingTemplate(
-              contrato: contrato,
-              onTap: () {
-                _mostrarDetalhesContrato(contrato);
-              },
-              onEditar: () {
-                _editarContrato(contrato);
-              },
-              onCancelar: () {
-                _cancelarContratoNoBackend(contrato);
-              },
-              onExcluir: () {
-                _excluirContrato(contrato);
-              },
-              onContratoEditado: (contratoAtualizado) {
-                _atualizarContratoNaLista(contratoAtualizado);
-              },
-            ),
-          );
-        }).toList(),
-      ],
-    );
-  }
-
-  void _mostrarDetalhesContrato(ContratoModel contrato) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Detalhes do Agendamento'),
-        content: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailItem('ID', contrato.idContrato?.toString() ?? 'N/A'),
-              _buildDetailItem('Status', _obterNomeStatus(contrato.status)),
-              _buildDetailItem('Check-in', _formatarData(contrato.dataInicio)),
-              if (contrato.dataFim != null)
-                _buildDetailItem('Check-out', _formatarData(contrato.dataFim!)),
-              _buildDetailItem('Hospedagem', 'ID: ${contrato.idHospedagem}'),
-              if (contrato.hospedagemNome != null)
-                _buildDetailItem(
-                    'Nome da Hospedagem', contrato.hospedagemNome!),
-              if (contrato.dataCriacao != null)
-                _buildDetailItem(
-                    'Criado em', _formatarData(contrato.dataCriacao!)),
-              if (contrato.pets != null && contrato.pets!.isNotEmpty)
-                _buildDetailItem('Pets', '${contrato.pets!.length} pet(s)'),
-              if (contrato.servicosGerais != null && contrato.servicosGerais!.isNotEmpty)
-                _buildDetailItem(
-                    'Serviços', '${contrato.servicosGerais!.length} serviço(s)'),
-              if (contrato.valorServicos != null)
-                _buildDetailItem('Valor Total',
-                    'R\$${contrato.valorServicos!.toStringAsFixed(2)}'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Expanded(child: Text(value)),
-        ],
       ),
     );
   }
